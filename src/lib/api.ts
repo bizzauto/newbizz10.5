@@ -585,25 +585,33 @@ export const socialAccountsAPI = {
   // Facebook
   getFacebookAuthUrl: () => apiClient.get('/social-accounts/facebook/auth/url'),
   getFacebookPages: () => apiClient.get('/social-accounts/facebook/pages'),
+  connectFacebook: (data: { fbPageId: string; fbAccessToken: string }) =>
+    apiClient.post('/social-accounts/facebook/connect', data),
   selectFacebookPage: (data: { pageId: string; pageAccessToken: string }) =>
     apiClient.post('/social-accounts/facebook/select-page', data),
   disconnectFacebook: () => apiClient.delete('/social-accounts/facebook/disconnect'),
-  
+
   // LinkedIn
   getLinkedInAuthUrl: () => apiClient.get('/social-accounts/linkedin/auth/url'),
   getLinkedInOrganizations: () => apiClient.get('/social-accounts/linkedin/organizations'),
+  connectLinkedIn: (data: { linkedinPageId: string; linkedinAccessToken: string }) =>
+    apiClient.post('/social-accounts/linkedin/connect', data),
   selectLinkedInOrganization: (data: { organizationId: string; accessToken: string }) =>
     apiClient.post('/social-accounts/linkedin/select-organization', data),
   disconnectLinkedIn: () => apiClient.delete('/social-accounts/linkedin/disconnect'),
-  
+
   // Twitter/X
   getTwitterAuthUrl: () => apiClient.get('/social-accounts/twitter/auth/url'),
+  connectTwitter: (data: { twitterUserId: string; twitterAccessToken: string }) =>
+    apiClient.post('/social-accounts/twitter/connect', data),
   refreshTwitterToken: () => apiClient.post('/social-accounts/twitter/refresh'),
   disconnectTwitter: () => apiClient.delete('/social-accounts/twitter/disconnect'),
-  
+
   // YouTube
   getYouTubeAuthUrl: () => apiClient.get('/social-accounts/youtube/auth/url'),
   getYouTubeChannels: () => apiClient.get('/social-accounts/youtube/channels'),
+  connectYouTube: (data: { youtubeChannelId: string; youtubeAccessToken: string }) =>
+    apiClient.post('/social-accounts/youtube/connect', data),
   selectYouTubeChannel: (data: { channelId: string; accessToken: string; refreshToken?: string }) =>
     apiClient.post('/social-accounts/youtube/select-channel', data),
   refreshYouTubeToken: () => apiClient.post('/social-accounts/youtube/refresh'),
