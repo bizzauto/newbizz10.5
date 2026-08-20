@@ -39,6 +39,7 @@ const mockPrisma = {
     count: jest.fn(),
     findMany: jest.fn(),
     findUnique: jest.fn(),
+    create: jest.fn().mockResolvedValue({ id: 'auto-created-business' }),
     update: jest.fn(),
     groupBy: jest.fn(),
   },
@@ -245,6 +246,12 @@ function resetMocks(): void {
     isActive: true,
     emailVerified: true,
   });
+
+  // The authenticate middleware auto-creates a business (and links it to the
+  // user) when the JWT has no businessId. Provide resolved values so the
+  // auto-create path completes instead of throwing and returning 403.
+  mockPrisma.business.create.mockResolvedValue({ id: 'auto-created-business' });
+  mockPrisma.user.update.mockResolvedValue({ id: 'super-admin-1' });
 
   const { CSRFService } = jest.requireMock('../src/server/services/csrf.service');
   CSRFService.generateToken.mockResolvedValue('csrf-token-xyz');
@@ -1070,6 +1077,24 @@ describe('Super Admin API', () => {
     });
 
     it('should return 500 on database error', async () => {
+      // Give the authenticated SUPER_ADMIN a businessId so the auth middleware
+      // does NOT trigger its auto-create path (which also calls user.update).
+      // This lets the rejected user.update reach the route handler as intended.
+      const { verifyToken } = jest.requireMock('../src/server/utils/auth');
+      verifyToken.mockResolvedValue({
+        id: 'super-admin-1',
+        email: 'super@admin.com',
+        businessId: 'biz-1',
+        role: 'SUPER_ADMIN',
+      });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'super-admin-1',
+        email: 'super@admin.com',
+        businessId: 'biz-1',
+        role: 'SUPER_ADMIN',
+        isActive: true,
+        emailVerified: true,
+      });
       mockPrisma.user.update.mockRejectedValue(new Error('Update failed'));
 
       const res = await request(app)
@@ -1149,6 +1174,24 @@ describe('Super Admin API', () => {
     });
 
     it('should return 500 on database error', async () => {
+      // Give the authenticated SUPER_ADMIN a businessId so the auth middleware
+      // does NOT trigger its auto-create path (which also calls user.update).
+      // This lets the rejected user.update reach the route handler as intended.
+      const { verifyToken } = jest.requireMock('../src/server/utils/auth');
+      verifyToken.mockResolvedValue({
+        id: 'super-admin-1',
+        email: 'super@admin.com',
+        businessId: 'biz-1',
+        role: 'SUPER_ADMIN',
+      });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: 'super-admin-1',
+        email: 'super@admin.com',
+        businessId: 'biz-1',
+        role: 'SUPER_ADMIN',
+        isActive: true,
+        emailVerified: true,
+      });
       mockPrisma.user.update.mockRejectedValue(new Error('Update failed'));
 
       const res = await request(app)

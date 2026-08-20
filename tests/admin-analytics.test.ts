@@ -24,11 +24,15 @@ const mockPrisma = {
   business: {
     count: jest.fn(),
     findMany: jest.fn(),
+    findUnique: jest.fn(),
+    create: jest.fn().mockResolvedValue({ id: 'auto-created-business' }),
+    update: jest.fn(),
     groupBy: jest.fn(),
   },
   user: {
     count: jest.fn(),
     findUnique: jest.fn(),
+    update: jest.fn().mockResolvedValue({ id: 'super-admin-1' }),
   },
   contact: {
     count: jest.fn(),

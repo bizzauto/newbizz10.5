@@ -40,6 +40,8 @@ const mockPrisma = {
   },
   business: {
     findUnique: jest.fn(),
+    create: jest.fn().mockResolvedValue({ id: 'auto-created-business' }),
+    update: jest.fn(),
   },
   auditLog: {
     findMany: jest.fn(),
@@ -410,7 +412,7 @@ describe('GET /api/team/members', () => {
       id: 'user-no-biz',
       businessId: null,
       role: 'MEMBER',
-      emailVerified: true,
+      emailVerified: false,
     });
 
     const res = await request(app)
