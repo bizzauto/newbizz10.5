@@ -99,9 +99,10 @@ export class HotLeadProcessor {
     contactId: string,
     leadData: any
   ): Promise<any> {
-    // Get or create default pipeline
+    // Get or create default pipeline (include stages to resolve the "Hot Lead" stage)
     let pipeline = await prisma.pipeline.findFirst({
       where: { businessId, name: 'Sales Pipeline' },
+      include: { stages: { orderBy: { order: 'asc' } } },
     });
 
     if (!pipeline) {
@@ -110,23 +111,36 @@ export class HotLeadProcessor {
           businessId,
           name: 'Sales Pipeline',
           description: 'Auto-created for hot leads',
-          stages: ['New Lead', 'Hot Lead', 'Contacted', 'Qualified', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'],
+          stages: {
+            create: [
+              { name: 'New Lead', order: 0, color: '#3B82F6' },
+              { name: 'Hot Lead', order: 1, color: '#EF4444' },
+              { name: 'Contacted', order: 2, color: '#F59E0B' },
+              { name: 'Qualified', order: 3, color: '#8B5CF6' },
+              { name: 'Proposal', order: 4, color: '#F97316' },
+              { name: 'Negotiation', order: 5, color: '#EC4899' },
+              { name: 'Closed Won', order: 6, color: '#10B981' },
+              { name: 'Closed Lost', order: 7, color: '#6B7280' },
+            ],
+          },
         },
+        include: { stages: { orderBy: { order: 'asc' } } },
       });
     }
 
-    // Get stage ID for "Hot Lead"
-    const stages = (pipeline.stages as string[]) || ['New Lead', 'Hot Lead', 'Contacted'];
-    const hotStageIndex = stages.indexOf('Hot Lead');
-    
+    // Resolve the "Hot Lead" stage
+    const stages = pipeline.stages || [];
+    const hotStage = stages.find((s) => s.name === 'Hot Lead') || stages[0];
+
     // Create deal
     const deal = await prisma.contact.update({
       where: { id: contactId },
       data: {
         dealStage: 'Hot Lead',
         pipelineId: pipeline.id,
+        stageId: hotStage?.id ?? null,
+        stageName: hotStage?.name ?? 'Hot Lead',
         dealValue: this.estimateDealValue(leadData),
-        dealNotes: `Auto-added as hot lead. Score: ${leadData.score}. Source: ${leadData.source}`,
         tags: {
           push: ['Hot Lead', 'Auto-Processed'],
         },
@@ -218,7 +232,8 @@ export class HotLeadProcessor {
           type: 'hot_lead',
           title: '🔥 Hot Lead Alert',
           message: `${leadData.name} from ${leadData.source} (Score: ${leadData.score})`,
-          data: { contactId, leadScore: leadData.score },
+          entityType: 'contact',
+          entityId: contactId,
         },
       });
     }
@@ -301,16 +316,24 @@ export class HotLeadProcessor {
     ];
 
     for (const template of defaultTemplates) {
-      await prisma.messageTemplate.create({
-        data: {
-          businessId,
-          name: template.name,
-          content: template.content,
-          category: 'lead_followup',
-          isActive: true,
-          variables: ['name', 'product', 'company'],
-        },
-      });
+      try {
+        await prisma.messageTemplate.create({
+          data: {
+            businessId,
+            name: template.name,
+            content: template.content,
+            category: 'lead_followup',
+            isActive: true,
+            components: [],
+            variables: ['name', 'product', 'company'],
+          },
+        });
+      } catch (error: any) {
+        // Skip if a default template with the same name already exists for this business
+        if (error?.code !== 'P2002') {
+          console.error('[HotLead] Failed to create default template:', error.message);
+        }
+      }
     }
   }
 
