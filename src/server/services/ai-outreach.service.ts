@@ -223,7 +223,7 @@ ${business?.name || 'Team'}`;
         message,
         status: 'sent',
         sentAt: new Date(),
-        whatsappMsgId: result?.messages?.[0]?.id || result?.messageId || null,
+        whatsappMsgId: result?.messages?.[0]?.id || result?.key?.id || result?.messageId || null,
       },
     });
 

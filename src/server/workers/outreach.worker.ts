@@ -103,7 +103,7 @@ const outreachWorker = redisConnection ? new Worker(
         data: {
           status: 'sent',
           sentAt: new Date(),
-          whatsappMsgId: result?.messages?.[0]?.id || result?.messageId || null,
+          whatsappMsgId: result?.messages?.[0]?.id || result?.key?.id || result?.messageId || null,
         },
       });
 
@@ -165,7 +165,7 @@ const outreachWorker = redisConnection ? new Worker(
                 }
                 await prisma.outreachLog.update({
                   where: { id: log.id },
-                  data: { status: 'sent', sentAt: new Date(), whatsappMsgId: result?.messages?.[0]?.id || result?.messageId || null },
+                  data: { status: 'sent', sentAt: new Date(), whatsappMsgId: result?.messages?.[0]?.id || result?.key?.id || result?.messageId || null },
                 });
                 return true;
               })

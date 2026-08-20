@@ -78,18 +78,24 @@ const scheduledMessageWorker = redisConnection ? new Worker(
       const result = await smartSendText(businessId, phone, content);
       WhatsAppRateLimiter.recordSend(businessId, phone);
 
+      // Extract the provider message id across channel shapes:
+      //   Meta Cloud API  → { messages: [{ id }] }
+      //   Evolution API   → { key: { id } } (from response.data)
+      const waMessageId =
+        result?.messages?.[0]?.id ?? result?.key?.id ?? null;
+
       // Update message status
       await prisma.scheduledMessage.update({
         where: { id: messageId },
         data: {
           status: 'sent',
           sentAt: new Date(),
-          waMessageId: result.messages?.[0]?.id,
+          waMessageId,
         },
       });
 
       console.log(`[Scheduled Worker] Message ${messageId} sent successfully`);
-      return { success: true, waMessageId: result.messages?.[0]?.id };
+      return { success: true, waMessageId };
     } catch (error: any) {
       console.error(`[Scheduled Worker] Failed to send message ${messageId}:`, error.message);
       

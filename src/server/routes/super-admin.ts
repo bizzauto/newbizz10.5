@@ -77,6 +77,7 @@ router.get('/stats', async (req: any, res: any) => {
     res.status(500).json({
       success: false,
       error: 'Failed to fetch stats',
+      details: error?.message,
     });
   }
 });

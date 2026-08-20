@@ -2,12 +2,15 @@ import IORedis from 'ioredis';
 import logger from './logger.js';
 
 let redisDisabled = false;
-let connectionAttempted = false;
 /** Global — once set, ALL Redis activity stops immediately with no retries */
 let redisUnreachable = false;
 
 export function isRedisDisabled(): boolean {
   return redisDisabled || redisUnreachable;
+}
+
+export function isRedisOperational(): boolean {
+  return !redisDisabled && !redisUnreachable;
 }
 
 function maskUrl(url: string): string {
@@ -25,10 +28,9 @@ export function createRedisConnection() {
   if (redisUnreachable) {
     return null;
   }
-  if (redisDisabled || connectionAttempted) {
+  if (redisDisabled) {
     return null;
   }
-  connectionAttempted = true;
 
   const redisUrl = process.env.REDIS_URL;
   const redisPassword = process.env.REDIS_PASSWORD;
@@ -129,12 +131,8 @@ function connectToRedis(url: string) {
   const client = new IORedis(url, {
     maxRetriesPerRequest: null,
     retryStrategy(times: number) {
-      // Allow 3 retries with exponential backoff before giving up
-      if (times > 3) {
-        console.log(`[Redis] ⛔ Connection failed after ${times} attempts — marking Redis as unreachable.`);
-        redisUnreachable = true;
-        return null;
-      }
+      // Retry forever (never return null) so a transient Redis drop (container
+      // restart / network blip) cannot permanently kill the BullMQ worker loop.
       const delay = Math.min(times * 1000, 5000);
       console.log(`[Redis] Retry attempt ${times + 1} in ${delay}ms...`);
       return delay;

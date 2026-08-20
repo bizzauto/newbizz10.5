@@ -123,7 +123,7 @@ whatsappWorker = new Worker(
             status: 'sent',
             sentAt: new Date(),
 
-            waMessageId: result?.messages?.[0]?.id || result?.messageId,
+            waMessageId: result?.messages?.[0]?.id || result?.key?.id || result?.messageId,
           },
         });
 
