@@ -13,7 +13,7 @@ RUN apk add --no-cache openssl
 
 WORKDIR /app
 
-# Install ALL deps first (cached layer). Use --prefer-offline to reuse npm cache.
+# Install ALL deps first (cached layer).
 COPY package*.json ./
 RUN npm ci --no-audit --no-fund --loglevel error || npm install --no-audit --no-fund --loglevel error
 
@@ -25,16 +25,8 @@ RUN npx prisma generate 2>&1 | tail -3 || echo "prisma generate warning (non-fat
 COPY . .
 RUN rm -rf dist && npm run build:docker && find dist -name "*.map" -delete
 
-# Drop dev dependencies in-place so we can copy a slim node_modules to runtime.
-# This avoids a SECOND full `npm ci` in the runtime stage (which previously
-# doubled disk usage and spiked memory at image-export, causing exit 255).
-RUN npm prune --omit=dev --no-audit --no-fund --loglevel error || true
-# Re-add the Prisma CLI: it lives in devDependencies but start.sh needs
-# `npx prisma migrate deploy` / `db push` at runtime. Keep it lean (no dev deps).
-RUN npm install --no-save --omit=dev prisma@5.22.0 --no-audit --no-fund --loglevel error || true
-# Ensure the generated client survives the prune.
-RUN npx prisma generate 2>&1 | tail -3 || echo "prisma generate warning (non-fatal)"
-RUN npm cache clean --force 2>/dev/null || true
+# Persist the npm cache so the runtime stage's lean install is fast/offline
+RUN cp -r /root/.npm /tmp/npm-cache 2>/dev/null || true
 
 # ---------- Runtime ----------
 FROM node:22-alpine
@@ -45,19 +37,33 @@ RUN apk add --no-cache openssl wget python3 py3-pip && \
 RUN addgroup -g 1001 -S appgroup && adduser -S appuser -u 1001 -G appgroup
 WORKDIR /app
 
-# Copy the pre-built, pruned node_modules from builder (no second install).
-COPY --from=builder /app/node_modules ./node_modules
-COPY --from=builder /app/package*.json ./
-COPY --from=builder /app/prisma ./prisma
+# Reuse the builder's npm cache for a fast, offline lean install
+COPY --from=builder /tmp/npm-cache /root/.npm
 
-# Re-run prisma generate in case .prisma was affected by prune (fast, uses cache).
-RUN npx prisma generate 2>&1 | tail -3 || echo "prisma generate warning (non-fatal)"
-
+# Copy built artifacts. The server/worker bundles (built by esbuild) contain
+# ALL dependencies EXCEPT the externals list in scripts/build-server.js, so the
+# runtime node_modules is tiny.
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/public ./public
+COPY --from=builder /app/prisma ./prisma
+COPY package*.json ./
 COPY scripts ./scripts
 COPY start.sh ./start.sh
 RUN chmod +x start.sh
+
+# Install ONLY the runtime-external deps (native modules + prisma client).
+# Previously the ENTIRE node_modules was copied from the builder, which made the
+# image huge, caused `chown -R node_modules` to hang for 7+ min, and the export
+# step to time out -> Coolify "exit code 255". Now node_modules is a few hundred MB.
+# Keep this list in sync with `commonExternals` in scripts/build-server.js.
+RUN npm install --omit=dev --no-audit --no-fund --prefer-offline --loglevel error \
+      @prisma/client prisma sharp bcryptjs jsonwebtoken openai googleapis \
+      nodemailer razorpay speakeasy bullmq ioredis \
+      || npm install --omit=dev --no-audit --no-fund --loglevel error \
+      @prisma/client prisma sharp bcryptjs jsonwebtoken openai googleapis \
+      nodemailer razorpay speakeasy bullmq ioredis
+
+RUN npx prisma generate 2>&1 | tail -3 || echo "prisma generate warning (non-fatal)"
 
 RUN mkdir -p uploads logs && chown -R appuser:appgroup node_modules uploads logs
 
