@@ -65,7 +65,11 @@ RUN npm install --omit=dev --no-audit --no-fund --prefer-offline --loglevel erro
 
 RUN npx prisma generate 2>&1 | tail -3 || echo "prisma generate warning (non-fatal)"
 
-RUN mkdir -p uploads logs && chown -R appuser:appgroup node_modules uploads logs
+# Non-recursive ownership: only runtime-writable dirs need it. A recursive
+# chown over node_modules forces BuildKit to duplicate the entire tree into a
+# new layer, which OOM-kills the build on this 7.6GB-RAM host (exit code 255).
+# node_modules stays root-owned; appuser only needs read access to it.
+RUN mkdir -p uploads logs && chown appuser:appgroup uploads logs
 
 ENV NODE_ENV=production
 ENV PORT=3000
