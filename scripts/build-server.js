@@ -49,6 +49,13 @@ const commonExternals = [
   'ioredis',
 ];
 
+// ESM output cannot execute CJS deps' dynamic require() calls natively
+// ("Dynamic require of \"path\" is not supported" crash from express->depd).
+// This banner restores a working require() inside the bundle.
+const esmRequireBanner = {
+  js: "import { createRequire } from 'module';\nconst require = createRequire(import.meta.url);",
+};
+
 // Build main server
 await esbuild.build({
   entryPoints: ['src/server/index.ts'],
@@ -60,6 +67,7 @@ await esbuild.build({
   format: 'esm',
   sourcemap: true,
   minify: false,
+  banner: esmRequireBanner,
   resolveExtensions: ['.ts', '.js', '.json'],
 });
 console.log('✅ Server built successfully');
@@ -75,6 +83,7 @@ await esbuild.build({
   format: 'esm',
   sourcemap: true,
   minify: false,
+  banner: esmRequireBanner,
   resolveExtensions: ['.ts', '.js', '.json'],
 });
 console.log('✅ Worker built successfully');
