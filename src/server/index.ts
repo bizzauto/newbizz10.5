@@ -127,6 +127,7 @@ import { apiVersioning } from './middleware/api-versioning.js';
 import { requestCounting } from './middleware/request-counting.js';
 import { cacheResponse, getCacheStats, invalidateCache } from './middleware/cache.js';
 import adminAnalyticsRoutes from './routes/admin-analytics.js';
+import adminQueuesRoutes from './routes/admin-queues.js';
 import monitoringRoutes from './routes/monitoring.js';
 import dataExportRoutes from './routes/data-export.js';
 import v2Routes from './routes/v2/index.js';
@@ -480,6 +481,8 @@ app.use('/api/ava', avaRoutes);
 
 // Phase 3: Admin Platform Analytics (SUPER_ADMIN only)
 app.use('/api/admin', adminAnalyticsRoutes);
+// DLQ management — mount BEFORE generic /api/admin sub-apps that may shadow
+app.use('/api/admin/queues', adminQueuesRoutes);
 
 // Audit log retention management (SUPER_ADMIN only)
 app.use('/api/admin/audit-retention', auditRetentionRoutes);
