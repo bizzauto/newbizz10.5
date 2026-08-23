@@ -137,7 +137,7 @@ import { startSlowQueryLogger } from './middleware/slow-query-logger.js';
 import { requestTimeout } from './middleware/request-timeout.js';
 import { circuitBreaker } from './services/circuit-breaker.service.js';
 import { shutdownWebhookWorker } from './services/webhook-retry.service.js';
-import { shutdownAllWorkers } from './workers/index.js';
+import { shutdownAllWorkers, startIndiaMARTAutosync, startCampaignDispatcher } from './workers/index.js';
 import { startAuditPruneCron, stopAuditPruneCron } from './services/audit-prune.service.js';
 import { ensureSchema } from './services/schema-drift-guard.js';
 import adminInfrastructureRoutes from './routes/admin-infrastructure.js';
@@ -752,6 +752,16 @@ startAuditPruneCron();
 import { startAutoPostScheduler } from './workers/gbp-auto-post.worker.js';
 startAutoPostScheduler().catch((err: any) =>
   console.error('[GBP Auto-Post] Scheduler failed to start (non-fatal):', err?.message)
+);
+
+// IndiaMART lead auto-pull: polls connected IndiaMART inboxes every 5 min and
+// captures enquiries into the CRM automatically.
+startIndiaMARTAutosync();
+
+// Campaign Dispatcher: repeatable tick that fires DB-scheduled campaigns
+// automatically when their scheduledAt time arrives.
+startCampaignDispatcher().catch((err: any) =>
+  console.error('[CampaignDispatcher] Failed to start (non-fatal):', err?.message)
 );
 
 // Start server

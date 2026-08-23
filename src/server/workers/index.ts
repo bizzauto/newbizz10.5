@@ -57,6 +57,23 @@ export {
   getIndiaMARTAutosyncState,
 } from '../services/indiamart-sync.service.js';
 
+// Campaign Dispatcher: registers a repeatable tick (every minute) on the
+// campaign-scheduler queue so DB-scheduled campaigns fire automatically
+// without any manual trigger. Idempotent via stable jobId.
+let campaignDispatcherStarted = false;
+export async function startCampaignDispatcher(): Promise<void> {
+  if (!redisAvailable || campaignDispatcherStarted) return;
+  const q = queues.campaignScheduler;
+  if (!q) return;
+  campaignDispatcherStarted = true;
+  await q.add(
+    'dispatch-due-campaigns',
+    {},
+    { repeat: { every: 60_000 }, jobId: 'campaign-dispatcher' }
+  );
+  console.log('📅 Campaign Dispatcher started (scans due campaigns every minute)');
+}
+
 // Export shutdown for graceful worker teardown
 export function shutdownAllWorkers(): Promise<void> {
   const workers = [whatsappWorker, emailWorker, socialPublishWorker, googleSheetsSyncWorker, leadProcessingWorker, campaignSchedulerWorker, gbpAutoPostWorker, scheduledMessageWorker];
@@ -462,6 +479,22 @@ function calculateLeadScore(leadData: any): { score: number; factors: Array<{ fa
 campaignSchedulerWorker = new Worker(
   'campaign-scheduler',
   async (job: Job) => {
+    // Dispatcher tick: scan DB for due scheduled campaigns and enqueue each.
+    if (job.name === 'dispatch-due-campaigns') {
+      const due = await prisma.campaign.findMany({
+        where: { status: 'scheduled', scheduledAt: { lte: new Date() } },
+        select: { id: true },
+        take: 50,
+      });
+      for (const c of due) {
+        await queues.campaignScheduler.add('run-campaign', { campaignId: c.id });
+      }
+      if (due.length > 0) {
+        console.log(`[CampaignDispatcher] Dispatched ${due.length} due campaign(s)`);
+      }
+      return { dispatched: due.length };
+    }
+
     const { campaignId } = job.data;
 
     const campaign = await prisma.campaign.findUnique({
