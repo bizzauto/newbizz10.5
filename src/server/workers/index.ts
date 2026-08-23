@@ -74,6 +74,22 @@ export async function startCampaignDispatcher(): Promise<void> {
   console.log('📅 Campaign Dispatcher started (scans due campaigns every minute)');
 }
 
+// Social Post Dispatcher: repeatable tick (every minute) so scheduled posts
+// actually publish without any manual trigger. Idempotent via stable jobId.
+let socialDispatcherStarted = false;
+export async function startSocialDispatcher(): Promise<void> {
+  if (!redisAvailable || socialDispatcherStarted) return;
+  const q = queues.socialPublish;
+  if (!q) return;
+  socialDispatcherStarted = true;
+  await q.add(
+    'dispatch-due-posts',
+    {},
+    { repeat: { every: 60_000 }, jobId: 'social-dispatcher' }
+  );
+  console.log('📅 Social Dispatcher started (scans due posts every minute)');
+}
+
 // Export shutdown for graceful worker teardown
 export function shutdownAllWorkers(): Promise<void> {
   const workers = [whatsappWorker, emailWorker, socialPublishWorker, googleSheetsSyncWorker, leadProcessingWorker, campaignSchedulerWorker, gbpAutoPostWorker, scheduledMessageWorker];
@@ -204,6 +220,22 @@ emailWorker = new Worker(
 socialPublishWorker = new Worker(
   'social-publish',
   async (job: Job) => {
+    // Dispatcher tick: scan DB for due scheduled posts and enqueue each.
+    if (job.name === 'dispatch-due-posts') {
+      const due = await prisma.post.findMany({
+        where: { status: 'scheduled', scheduledAt: { lte: new Date() } },
+        select: { id: true, businessId: true },
+        take: 50,
+      });
+      for (const p of due) {
+        await queues.socialPublish.add('publish', { postId: p.id, businessId: p.businessId });
+      }
+      if (due.length > 0) {
+        console.log(`[SocialDispatcher] Dispatched ${due.length} due post(s)`);
+      }
+      return { dispatched: due.length };
+    }
+
     const { postId, businessId } = job.data;
 
     const post = await prisma.post.findUnique({

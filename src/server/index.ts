@@ -138,7 +138,7 @@ import { startSlowQueryLogger } from './middleware/slow-query-logger.js';
 import { requestTimeout } from './middleware/request-timeout.js';
 import { circuitBreaker } from './services/circuit-breaker.service.js';
 import { shutdownWebhookWorker } from './services/webhook-retry.service.js';
-import { shutdownAllWorkers, startIndiaMARTAutosync, startCampaignDispatcher } from './workers/index.js';
+import { shutdownAllWorkers, startIndiaMARTAutosync, startCampaignDispatcher, startSocialDispatcher } from './workers/index.js';
 import { startAuditPruneCron, stopAuditPruneCron } from './services/audit-prune.service.js';
 import { ensureSchema } from './services/schema-drift-guard.js';
 import adminInfrastructureRoutes from './routes/admin-infrastructure.js';
@@ -770,6 +770,61 @@ startLeadInboxAutosync();
 startCampaignDispatcher().catch((err: any) =>
   console.error('[CampaignDispatcher] Failed to start (non-fatal):', err?.message)
 );
+
+// Social Post Dispatcher: publishes DB-scheduled social posts automatically.
+startSocialDispatcher().catch((err: any) =>
+  console.error('[SocialDispatcher] Failed to start (non-fatal):', err?.message)
+);
+
+// Follow-up engine auto-tick: processes pending follow-ups for every business
+// every 10 minutes (previously required a manual API hit).
+{
+  let followUpTickRunning = false;
+  const runFollowUpTick = async () => {
+    if (followUpTickRunning) return;
+    followUpTickRunning = true;
+    try {
+      const { FollowUpEngineService } = await import('./services/followup-engine.service.js');
+      const businesses = await prisma.business.findMany({ select: { id: true }, take: 200 });
+      let sent = 0;
+      for (const b of businesses) {
+        try {
+          const r = await FollowUpEngineService.processFollowUps(b.id);
+          sent += r.sent || 0;
+        } catch {}
+      }
+      if (sent > 0) console.log(`[FollowUpTick] ${sent} follow-up(s) processed`);
+    } catch (err: any) {
+      console.error('[FollowUpTick] failed:', err?.message);
+    } finally {
+      followUpTickRunning = false;
+    }
+  };
+  setInterval(runFollowUpTick, 10 * 60 * 1000);
+  setTimeout(() => { runFollowUpTick().catch(() => {}); }, 90_000);
+}
+
+// Google review QR auto-reply pass: syncs reviews + posts AI replies for
+// businesses with GBP connected and auto-reply/QR enabled, every 15 minutes.
+{
+  let reviewPassRunning = false;
+  const runReviewPass = async () => {
+    if (reviewPassRunning) return;
+    reviewPassRunning = true;
+    try {
+      const { runReviewQrAutoReplyPass } = await import('./services/review-qr-auto-reply.service.js');
+      const outcomes = await runReviewQrAutoReplyPass(true);
+      const replied = (outcomes || []).filter((o: any) => o?.replied).length;
+      if (replied > 0) console.log(`[ReviewQrPass] ${replied} review reply/replies posted`);
+    } catch (err: any) {
+      console.error('[ReviewQrPass] failed:', err?.message);
+    } finally {
+      reviewPassRunning = false;
+    }
+  };
+  setInterval(runReviewPass, 15 * 60 * 1000);
+  setTimeout(() => { runReviewPass().catch(() => {}); }, 120_000);
+}
 
 // Start server
 console.log(`Starting server on ${HOST}:${PORT} in ${NODE_ENV} mode`);
