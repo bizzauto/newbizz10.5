@@ -78,6 +78,7 @@ model Business {
   igAccessToken               String?
   linkedinPageId              String?
   linkedinAccessToken         String?
+  leadInboxConfig             Json?
   twitterUserId               String?
   twitterAccessToken          String?
   gbpAccessToken              String?

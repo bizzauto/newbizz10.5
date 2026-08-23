@@ -76,6 +76,7 @@ import subscriptionsRoutes from './routes/subscriptions.js';
 import superAdminRoutes from './routes/super-admin.js';
 import teamRoutes from './routes/team.js';
 import webhooksRoutes from './routes/webhooks.js';
+import metaLeadsRoutes from './routes/meta-leads.js';
 import surveysRoutes from './routes/surveys.js';
 import whatsappRoutes from './routes/whatsapp.js';
 import whatsappCatalogRoutes from './routes/whatsapp-catalog.js';
@@ -410,6 +411,7 @@ app.use('/api/subscriptions', authenticatedCsrf, subscriptionsRoutes);
 app.use('/api/super-admin', authenticatedCsrf, superAdminRoutes);
 app.use('/api/team', authenticatedCsrf, teamRoutes);
 // 2FA routes removed — two-step authentication disabled at user request.
+app.use('/api/webhooks/meta-leads', metaLeadsRoutes); // Meta Lead Ads — public; signature-verified
 app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/whatsapp', authenticatedCsrf, whatsappRoutes);
 app.use('/api/whatsapp-media/cleanup', whatsappMediaCleanupRoutes);
@@ -757,6 +759,11 @@ startAutoPostScheduler().catch((err: any) =>
 // IndiaMART lead auto-pull: polls connected IndiaMART inboxes every 5 min and
 // captures enquiries into the CRM automatically.
 startIndiaMARTAutosync();
+
+// JustDial / email-inbox lead auto-pull (per-business opt-in via
+// Business.leadInboxConfig). No-op for businesses without config.
+import { startLeadInboxAutosync } from './services/lead-inbox-autosync.service.js';
+startLeadInboxAutosync();
 
 // Campaign Dispatcher: repeatable tick that fires DB-scheduled campaigns
 // automatically when their scheduledAt time arrives.
