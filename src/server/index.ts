@@ -745,6 +745,15 @@ await ensureSchema();
 // Start audit log auto-prune cron (AuditLog table is now ensured at boot)
 startAuditPruneCron();
 
+// Start GBP Auto-Post recurring scheduler (checks every minute).
+// Previously exported but never invoked, so the repeat job was never
+// registered and GBP auto-posting silently never ran. jobId is stable
+// ('gbp-auto-post-scheduler'), so re-calling at boot is idempotent.
+import { startAutoPostScheduler } from './workers/gbp-auto-post.worker.js';
+startAutoPostScheduler().catch((err: any) =>
+  console.error('[GBP Auto-Post] Scheduler failed to start (non-fatal):', err?.message)
+);
+
 // Start server
 console.log(`Starting server on ${HOST}:${PORT} in ${NODE_ENV} mode`);
 const httpServer = app.listen(Number(PORT), () => {
