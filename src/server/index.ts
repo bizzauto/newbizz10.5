@@ -160,6 +160,7 @@ import razorpayCheckoutRoutes from './routes/razorpay-checkout.js';
 import waveRoutes from './routes/wave.js';
 import posthogAnalyticsRoutes from './routes/posthog-analytics.js';
 import onesignalRoutes from './routes/onesignal.js';
+import fcmRoutes from './routes/fcm.js';
 import brevoEmailRoutes from './routes/brevo-email.js';
 import { authenticate } from './middleware/auth.js';
 
@@ -452,6 +453,7 @@ app.use('/api/razorpay', razorpayCheckoutRoutes);
 app.use('/api/wave', waveRoutes);
 app.use('/api/analytics/posthog', posthogAnalyticsRoutes);
 app.use('/api/push/onesignal', onesignalRoutes);
+app.use('/api/push/fcm', fcmRoutes);
 app.use('/api/push', pushDevicesRoutes);
 app.use('/api/email/brevo', brevoEmailRoutes);
 app.use('/api/wallet', walletRoutes);

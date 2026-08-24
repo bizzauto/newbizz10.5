@@ -8,36 +8,8 @@ import api from './api.js';
  */
 export async function registerPush(): Promise<void> {
   if (typeof window === 'undefined' || !Capacitor.isNativePlatform()) return;
+  // ── FCM path (Option B: free, unlimited, self-managed) ──
   try {
-    // ── OneSignal path ──
-    const appIdRes = await api
-      .get('/push/onesignal/app-id')
-      .catch(() => null);
-    const oneSignalAppId: string | undefined = appIdRes?.data?.data?.appId;
-
-    if (oneSignalAppId) {
-      try {
-        const OS: any = await import('onesignal-cordova-plugin');
-        const OneSignal = OS.default?.OneSignal || OS.OneSignal || OS;
-        OneSignal.setLogLevel(6, 0);
-        OneSignal.initialize(oneSignalAppId);
-        OneSignal.login((await api.get('/auth/me')).data?.user?.id || '');
-        OneSignal.Notifications.addEventListener('foregroundWillDisplay', (e: any) => {
-          e.preventDefault?.();
-          e.getNotification?.().display?.();
-        });
-        OneSignal.Notifications.addEventListener('notificationClicked', (e: any) => {
-          const url = e?.notification?.additionalData?.url;
-          if (url) window.location.hash = url;
-        });
-        console.log('[push] OneSignal initialized');
-        return; // OneSignal handles its own token; no FCM save needed
-      } catch (e) {
-        console.warn('[push] OneSignal SDK missing — falling back to FCM', e);
-      }
-    }
-
-    // ── FCM fallback (Capacitor PushNotifications) ──
     await fcmRegister();
   } catch (e) {
     console.warn('[push] unavailable', e);

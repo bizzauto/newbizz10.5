@@ -1,31 +1,29 @@
-# Push Notifications — OneSignal Setup (Option A)
+# Push Notifications — FCM Direct (Option B, FREE unlimited)
 
-## Aapke steps (10 min)
-1. https://onesignal.com → account → **New App/Website** → name: `BizzAuto`
-2. Platform: **Google Android** → apna Firebase Server Key + Sender ID daalo
-   (Firebase console → Project settings → Cloud Messaging)
-3. App Settings → **Keys & IDs** → copy:
-   - **OneSignal App ID** (UUID)
-   - **REST API Key**
-4. BizzAuto app → Settings → OneSignal Settings → dono paste + Connect
-   (Integration table mein `onesignal` active ho jayega)
+Zero cost, no subscriber cap, no third-party. Google Firebase Cloud
+Messaging (FCM) HTTP v1 — server seedhe Google ko bhejta hai.
 
-## Mobile app side (ek baar)
+## Aapke steps (5 min)
+1. Firebase console → project → **Project settings → Service accounts**
+2. **Generate new private key** → JSON download karo
+3. Us JSON se 3 fields copy karo:
+   - `project_id`
+   - `client_email`
+   - `private_key` (pura, including `-----BEGIN...`)
+4. BizzAuto app → Settings → Push (FCM) → teeno paste + Save
+   (Ya API: `POST /api/push/fcm/config` with {projectId, clientEmail, privateKey})
+
+## Mobile app
+Kuch nahi — FCM path **pehle se live hai** (`src/lib/push.ts` →
+Capacitor PushNotifications → auto `/push/register-device`).
+Bas APK rebuild karo (pehle bana hua) aur install karo.
+
+## Test
 ```bash
-cd mobile-app
-npm i onesignal-cordova-plugin
-npx cap sync android
+curl -X POST $BASE/api/push/fcm/test -H "Authorization: Bearer <token>"
 ```
-Phir APK rebuild (`build-apk.bat`). App khulte hi OneSignal initialize +
-login(userId) ho jayega — `src/lib/push.ts` khud handle karta hai.
-
-## Test send (server se)
-```bash
-curl -X POST $BASE/api/push/onesignal/test -H "Authorization: Bearer <token>"
-```
-Ya admin panel se segment `Subscribed Users` ko bhejo.
+App mein logged-in user ke device pe test notification aayega.
 
 ## Flow
-App open → GET /api/push/onesignal/app-id → OneSignal.initialize(appId)
-→ OneSignal.login(userId) → notifications OneSignal console/API se
-`include_player_ids` ya segments pe jaati hain (OneSignalService ready hai).
+App open → FCM token register → DB (DeviceToken) →
+`FcmService.sendToUser()` → Google FCM → phone 📲
