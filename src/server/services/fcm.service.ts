@@ -1,5 +1,5 @@
 import jwt from 'jsonwebtoken';
-import prisma from '../db.js';
+import { prisma } from '../db.js';
 import { Prisma } from '@prisma/client';
 
 interface ServiceAccount {

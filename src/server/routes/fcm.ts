@@ -1,5 +1,5 @@
 import { Router, Response } from 'express';
-import prisma from '../db.js';
+import { prisma } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { AuthRequest } from '../middleware/auth.js';
 import { FcmService } from '../services/fcm.service.js';
