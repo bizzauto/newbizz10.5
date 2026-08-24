@@ -321,17 +321,11 @@ async function executeNode(
       const operator = data.operator || 'equals';
       const fieldValue = ctx.triggerData[field] || contact[field] || previousOutput?.[field] || '';
 
-      let result = false;
-      switch (operator) {
-        case 'equals': result = String(fieldValue) === String(value); break;
-        case 'not_equals': result = String(fieldValue) !== String(value); break;
-        case 'contains': result = String(fieldValue).toLowerCase().includes(String(value).toLowerCase()); break;
-        case 'gt': result = Number(fieldValue) > Number(value); break;
-        case 'lt': result = Number(fieldValue) < Number(value); break;
-        default: result = String(fieldValue) === String(value);
-      }
+      // §44 slice 1: pure evaluator extracted to workflow/condition.evaluator.ts
+      const { evaluateCondition } = await import('./workflow/condition.evaluator.js');
+      const evaluation = evaluateCondition({ field, value, operator, fieldValue });
 
-      return { evaluated: true, result, path: result ? 'true' : 'false', field, operator, value: fieldValue };
+      return { ...evaluation, value: evaluation.value };
     }
 
     case 'delay':
