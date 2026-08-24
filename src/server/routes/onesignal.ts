@@ -10,6 +10,30 @@ router.use(authenticate);
  * GET /api/push/onesignal/status
  * Check OneSignal configuration and stats
  */
+// Mobile SDK init ke liye public-safe appId (appId secret nahi hota)
+router.get('/app-id', async (req: AuthRequest, res: Response) => {
+  try {
+    const businessId = req.user?.businessId;
+    const integration = businessId
+      ? await prisma.integration.findUnique({
+          where: { businessId_type: { businessId, type: 'onesignal' } },
+        })
+      : null;
+    const fallback = integration?.isActive
+      ? null
+      : await prisma.integration.findFirst({
+          where: { type: 'onesignal', isActive: true },
+        });
+    const chosen = integration?.isActive ? integration : fallback;
+    return res.json({
+      success: true,
+      data: { appId: chosen ? (chosen.config as any)?.appId || null : null },
+    });
+  } catch {
+    return res.json({ success: true, data: { appId: null } });
+  }
+});
+
 router.get('/status', async (req: AuthRequest, res: Response) => {
   try {
     const businessId = req.user?.businessId;
