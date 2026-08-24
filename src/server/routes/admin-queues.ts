@@ -103,4 +103,32 @@ router.post('/:queue/failed/:jobId/retry', authenticate, requireRole('SUPER_ADMI
   }
 });
 
+// ─── System Control Center snapshot (Master Prompt §37) ───
+router.get('/system', authenticate, requireRole('SUPER_ADMIN'), async (_req: AuthRequest, res: Response) => {
+  try {
+    const dayAgo = new Date(Date.now() - 24 * 3600_000);
+    const monthAgo = new Date(Date.now() - 30 * 24 * 3600_000);
+    const [dbOk] = [await prisma.$queryRaw`SELECT 1`];
+    let redisOk = true;
+    try { await (Object.values(QUEUE_MAP)[0]?.() || { client: null })?.client?.ping(); } catch { redisOk = false; }
+    const events24h = await prisma.domainEvent.count({ where: { createdAt: { gte: dayAgo } } }).catch(() => -1);
+    const aiAgg = await prisma.aiUsageLog.groupBy({
+      by: ['provider'], where: { createdAt: { gte: monthAgo } },
+      _count: { _all: true }, _sum: { costUsd: true, tokensOut: true },
+    }).catch(() => []);
+    const { getProviderStatus } = await import('../services/ai-gateway.service.js');
+    res.json({
+      success: true,
+      data: {
+        db: { ok: Array.isArray(dbOk) }, redis: { ok: redisOk },
+        automation: { domainEvents24h: events24h },
+        ai: { providers: getProviderStatus(), usage30d: aiAgg.map((a: any) => ({ provider: a.provider, requests: a._count._all, tokensOut: a._sum.tokensOut || 0, costUsd: Number((a._sum.costUsd || 0).toFixed(4)) })) },
+      },
+    });
+  } catch (err: any) {
+    logger.error(`[AdminQueues] system snapshot failed: ${err?.message}`);
+    res.status(500).json({ success: false, error: { code: 'SYSTEM_SNAPSHOT_FAILED', message: 'Snapshot failed' } });
+  }
+});
+
 export default router;

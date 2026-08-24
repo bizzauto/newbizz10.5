@@ -2965,3 +2965,34 @@ model WlClient {
   @@index([status])
   @@index([email])
 }
+
+model DomainEvent {
+  id           String   @id @default(cuid())
+  eventType    String
+  businessId   String?
+  payload      Json
+  idempotencyKey String? @unique
+  status       String   @default("processed")
+  error        String?
+  createdAt    DateTime @default(now())
+
+  @@index([eventType, createdAt])
+  @@index([businessId, createdAt])
+}
+
+model AiUsageLog {
+  id          String   @id @default(cuid())
+  businessId  String?
+  provider    String
+  model       String
+  task        String
+  tokensIn    Int      @default(0)
+  tokensOut   Int      @default(0)
+  costUsd     Float    @default(0)
+  latencyMs   Int      @default(0)
+  success     Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  @@index([businessId, createdAt])
+  @@index([provider, createdAt])
+}

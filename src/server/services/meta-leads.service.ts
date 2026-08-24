@@ -152,5 +152,12 @@ export async function ingestLeadgenChange(change: any): Promise<'processed' | 's
   );
 
   logger.info(`[MetaLeads] Queued lead ${leadgenId} for business ${business.id}`);
+
+  // Event bus: persisted, tenant-aware lead event (Master Prompt §4)
+  const { emitEvent } = await import('./event-bus.service.js');
+  await emitEvent('lead.created',
+    { source: 'facebook_ads', leadgenId, pageId, formId },
+    { businessId: business.id, idempotencyKey: `lead.created:meta:${leadgenId}` });
+
   return 'processed';
 }
