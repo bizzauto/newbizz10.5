@@ -140,6 +140,7 @@
     "jest-environment-jsdom": "^30.4.1",
     "k6": "^0.0.0",
     "node-fetch": "^3.3.2",
+    "onesignal-cordova-plugin": "^5.5.3",
     "supertest": "^7.2.2",
     "tailwindcss": "4.1.17",
     "ts-jest": "^29.4.11",
