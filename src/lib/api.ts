@@ -8,7 +8,7 @@ import { Capacitor } from '@capacitor/core';
 // Vite dev-server proxy and the production web reverse-proxy.
 const isNative = typeof window !== 'undefined' && Capacitor.isNativePlatform();
 const API_BASE_URL = isNative
-  ? (import.meta.env.VITE_API_URL || 'https://bizzauto.com/api')
+  ? (import.meta.env.VITE_API_URL || 'https://bizzautoai.com/api')
   : '/api';
 
 // Guard against the common mobile-build mistake: shipping without VITE_API_URL

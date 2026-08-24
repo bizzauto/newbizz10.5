@@ -9,6 +9,8 @@ const config: CapacitorConfig = {
   server: {
     cleartext: false,
     androidScheme: 'https',
+    // Keep same-origin navigations inside the app shell (deep links to CRM pages)
+    allowNavigation: ['bizzautoai.com', '*.bizzautoai.com'],
   },
 
   android: {
