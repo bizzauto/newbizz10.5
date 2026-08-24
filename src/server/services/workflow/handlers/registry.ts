@@ -1,5 +1,6 @@
 import { prisma } from '../../../db.js';
 import { isSafeWebhookUrl } from '../../webhook-retry.service.js';
+import { interpolateTemplate } from '../interpolate.js';
 
 /**
  * Node-handler registry — Master Prompt §44 refactor.
@@ -13,9 +14,13 @@ export interface WorkflowNodeContext {
   contactId?: string;
   businessId?: string;
   phone?: string;
+  email?: string;
   workflowId?: string;
+  executionId?: string;
+  nodeType?: string;
   triggerData?: Record<string, any>;
   contact?: any;
+  previousOutput?: Record<string, any>;
   data: Record<string, any>;
 }
 
@@ -109,7 +114,113 @@ export const nodeHandlers: Record<string, NodeHandler> = {
   },
 
   trigger: async () => ({ triggered: true, timestamp: new Date().toISOString() }),
+
+  send_whatsapp: async (ctx) => whatsappHandler(ctx),
+  send_message: async (ctx) => whatsappHandler(ctx),
+
+  send_email: async ({ businessId, contactId, workflowId, email, data, contact, triggerData }) => {
+    const { default: nodemailer } = await import('nodemailer');
+    const subject = interpolateTemplate(data.subject || 'Message from BizzAuto', { contact, trigger: triggerData });
+    const body = interpolateTemplate(data.message || data.body || '', { contact, trigger: triggerData });
+    const toEmail = data.to || email;
+
+    if (!toEmail) return { sent: false, error: 'No email address' };
+
+    try {
+      const transporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: Number(process.env.SMTP_PORT) || 587,
+        secure: false,
+        auth: { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS },
+      });
+
+      await transporter.sendMail({
+        from: process.env.SMTP_FROM || process.env.SMTP_USER,
+        to: toEmail,
+        subject,
+        html: body,
+      });
+
+      await prisma.message.create({
+        data: {
+          businessId: businessId as string,
+          contactId: contactId || undefined,
+          direction: 'outbound',
+          type: 'email',
+          content: body,
+          status: 'sent',
+          metadata: { workflowId, to: toEmail, subject },
+        },
+      });
+
+      return { sent: true, to: toEmail, subject };
+    } catch (err: any) {
+      return { sent: false, error: err.message };
+    }
+  },
 };
+
+async function whatsappHandler({
+  nodeType, businessId, contactId, phone, workflowId, executionId, data, contact, triggerData, previousOutput,
+}: import('./registry').WorkflowNodeContext): Promise<Record<string, any>> {
+  const { default: axios } = await import('axios');
+  const message = interpolateTemplate(data.message || data.template || 'Hello!', { contact, trigger: triggerData, previous: previousOutput });
+  const to = data.to || phone;
+  if (!to) return { sent: false, error: 'No phone number' };
+
+  try {
+    const integration = await prisma.integration.findFirst({
+      where: { businessId: businessId as string, type: 'whatsapp_meta', isActive: true },
+    });
+
+    if (integration) {
+      const config = integration.config as any;
+      await axios.post(
+        `https://graph.facebook.com/v18.0/${config.phoneNumberId}/messages`,
+        { messaging_product: 'whatsapp', to: to.replace(/\D/g, ''), type: 'text', text: { body: message } },
+        { headers: { Authorization: `Bearer ${config.accessToken}` } }
+      );
+
+      await prisma.message.create({
+        data: {
+          businessId: businessId as string,
+          contactId: contactId || undefined,
+          direction: 'outbound', type: 'text', content: message, status: 'sent',
+          metadata: { workflowId, executionId, nodeType },
+        },
+      });
+      return { sent: true, to, message, channel: 'whatsapp_meta' };
+    }
+
+    const evo = await prisma.integration.findFirst({
+      where: { businessId: businessId as string, type: 'evolution_api', isActive: true },
+    });
+
+    if (evo) {
+      const config = evo.config as any;
+      await axios.post(
+        `${config.baseUrl}/message/sendText/${config.instanceName}`,
+        { number: to.replace(/\D/g, ''), textMessage: { text: message } },
+        { headers: { apikey: config.apiKey } }
+      );
+
+      await prisma.message.create({
+        data: {
+          businessId: businessId as string,
+          contactId: contactId || undefined,
+          direction: 'outbound', type: 'text', content: message, status: 'sent',
+          metadata: { workflowId, executionId, nodeType },
+        },
+      });
+      return { sent: true, to, message, channel: 'evolution' };
+    }
+
+    return { sent: false, error: 'No WhatsApp provider configured' };
+  } catch (err: any) {
+    console.error(`[Workflow] WhatsApp send failed:`, err.message);
+    return { sent: false, error: err.message };
+  }
+}
 
 async function delayHandler(data: Record<string, any>): Promise<Record<string, any>> {
   // Parse duration string (e.g., "30m", "1h", "2d") to milliseconds
