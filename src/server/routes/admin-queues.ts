@@ -131,4 +131,44 @@ router.get('/system', authenticate, requireRole('SUPER_ADMIN'), async (_req: Aut
   }
 });
 
+// ─── Observability dashboard (Master Prompt §15/§37) — self-contained HTML ───
+router.get('/dashboard', authenticate, requireRole('SUPER_ADMIN'), async (_req: AuthRequest, res: Response) => {
+  res.setHeader('Content-Type', 'text/html');
+  res.send(`<!doctype html><html><head><meta charset="utf-8"><title>BIZZ System Center</title>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<style>body{font-family:system-ui;background:#0b1020;color:#e6e9f2;margin:0;padding:24px}
+h1{font-size:20px} .grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fill,minmax(220px,1fr))}
+.card{background:#141a2e;border:1px solid #232b45;border-radius:10px;padding:14px}
+.k{color:#8ea0c8;font-size:11px;text-transform:uppercase;letter-spacing:.08em}
+.v{font-size:22px;font-weight:700;margin-top:4px} table{width:100%;border-collapse:collapse;font-size:13px}
+td,th{padding:6px 8px;border-bottom:1px solid #232b45;text-align:left} .ok{color:#4ade80}.bad{color:#f87171}
+button{background:#2b3a67;color:#fff;border:0;border-radius:6px;padding:4px 10px;cursor:pointer}
+</style></head><body>
+<h1>🛰 BIZZ System Control Center <button onclick=load()>Refresh</button></h1>
+<div class="grid" id="q"></div>
+<h3 style="margin-top:22px">AI Providers & Usage (30d)</h3>
+<div id="ai"></div>
+<h3 style="margin-top:22px">Automation Events (24h)</h3><div class="card" id="ev">-</div>
+<script>
+const Q=["whatsapp","emails","social-publish","google-sheets-sync","lead-processing","campaign-scheduler","gbp-auto-post"];
+async function j(u){const r=await fetch(u,{headers:{Accept:"application/json"}});if(r.status===401){location.reload();throw 0}return r.json()}
+async function load(){
+ try{
+  const o=(await j("/api/admin/queues")).data;
+  document.getElementById("q").innerHTML=Object.entries(o).map(([n,d])=>d.available?
+   \`<div class="card"><div class="k">\${n}</div><div class="v">\${d.failed||0}<span style="font-size:12px;color:#8ea0c8"> failed</span></div>
+    <div style="font-size:12px;color:#8ea0c8">wait \${d.waiting||0} · act \${d.active||0} · done \${d.completed||0}</div>\${d.failed? \`<button onclick=retry("\${n}")>Retry all</button>\`:""}</div>\`
+   :\`<div class="card"><div class="k">\${n}</div><div class="v">—</div></div>\`).join("");
+  const s=(await j("/api/admin/queues/system")).data;
+  document.getElementById("ev").innerHTML=\`DomainEvents 24h: <b>\${s.automation.domainEvents24h}</b> · DB \${s.db.ok?'<span class=ok>OK</span>':'<span class=bad>DOWN</span>'} · Redis \${s.redis.ok?'<span class=ok>OK</span>':'<span class=bad>DOWN</span>'}\`;
+  const prov=s.ai.providers.map(p=>\`<tr><td>\${p.name}</td><td class="\${p.circuitOpen?'bad':'ok'}">\${p.circuitOpen?"OPEN":"healthy"}</td></tr>\`).join("");
+  const use=(s.ai.usage30d||[]).map(u=>\`<tr><td>\${u.provider}</td><td>\${u.requests}</td><td>\${u.tokensOut}</td><td>$\${u.costUsd.toFixed(4)}</td></tr>\`).join("")||"<tr><td colspan=4>no AI usage yet</td></tr>";
+  document.getElementById("ai").innerHTML="<table><tr><th>Provider</th><th>Circuit</th></tr>"+prov+"</table><br><table><tr><th>Provider</th><th>Requests</th><th>TokensOut</th><th>Cost</th></tr>"+use+"</table>";
+ }catch(e){document.body.insertAdjacentHTML("beforeend","<pre>"+e+"</pre>")}
+}
+async function retry(q){await fetch("/api/admin/queues/"+q+"/failed/retry-all",{method:"POST"});load()}
+load();
+</script></body></html>`);
+});
+
 export default router;

@@ -337,7 +337,7 @@ const globalApiLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   validate: false,
-  skip: (req) => req.path.startsWith('/health'), // Skip health checks
+  skip: (req) => req.path.startsWith('/health') || req.path.startsWith('/live') || req.path.startsWith('/ready'), // Skip health checks
 });
 app.use('/api', globalApiLimiter);
 
@@ -548,6 +548,24 @@ app.get('/health', (req, res) => {
     version: '12.0.1',
     buildTime: process.env.BUILD_TIME || new Date().toISOString(),
   });
+});
+
+// §34: liveness = process is up (NO external dependencies — k8s/Coolify restart signal)
+app.get('/live', (_req, res) => {
+  res.status(200).json({ live: true, timestamp: new Date().toISOString() });
+});
+
+// §34: readiness = can serve traffic (DB must answer; Redis optional-degraded OK)
+app.get('/ready', async (_req, res) => {
+  try {
+    await Promise.race([
+      prisma.$queryRaw`SELECT 1`,
+      new Promise((_, rej) => setTimeout(() => rej(new Error('db timeout')), 2000)),
+    ]);
+    res.status(200).json({ ready: true, db: 'up' });
+  } catch {
+    res.status(503).json({ ready: false, db: 'down' });
+  }
 });
 
 // Full detailed health check (includes DB query — use sparingly)
