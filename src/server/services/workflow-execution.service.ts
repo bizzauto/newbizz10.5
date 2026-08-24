@@ -159,37 +159,14 @@ async function executeNode(
       return { sent: false, error: 'SMS provider not configured', to: phone, message: data.message, channel: 'sms' };
     }
 
-    case 'update_contact': {
-      if (!contactId) return { updated: false, error: 'No contact ID' };
-      const updateData: any = {};
-      if (data.name) updateData.name = data.name;
-      if (data.email) updateData.email = data.email;
-      if (data.status) updateData.status = data.status;
-      if (data.dealValue) updateData.dealValue = parseFloat(data.dealValue);
-      if (data.notes) updateData.notes = data.notes;
-
-      await prisma.contact.update({ where: { id: contactId }, data: updateData });
-      return { updated: true, fields: updateData };
-    }
-
-    case 'add_tag': {
-      if (!contactId) return { tagged: false, error: 'No contact ID' };
-      const tags = Array.isArray(data.tags) ? data.tags : (data.tags || '').split(',').map((t: string) => t.trim());
-      const contact = await prisma.contact.findUnique({ where: { id: contactId } });
-      const existingTags = (contact?.tags as string[]) || [];
-      const newTags = [...new Set([...existingTags, ...tags])];
-      await prisma.contact.update({ where: { id: contactId }, data: { tags: newTags } });
-      return { tagged: true, tags: newTags };
-    }
-
+    case 'update_contact':
+    case 'add_tag':
     case 'remove_tag': {
-      if (!contactId) return { untagged: false, error: 'No contact ID' };
-      const removeTags = Array.isArray(data.tags) ? data.tags : (data.tags || '').split(',').map((t: string) => t.trim());
-      const c = await prisma.contact.findUnique({ where: { id: contactId } });
-      const currentTags = (c?.tags as string[]) || [];
-      const filteredTags = currentTags.filter((t) => !removeTags.includes(t));
-      await prisma.contact.update({ where: { id: contactId }, data: { tags: filteredTags } });
-      return { untagged: true, removed: removeTags, remaining: filteredTags };
+      // §44 slice 2: migrated to workflow/handlers/registry.ts
+      const { nodeHandlers } = await import('./workflow/handlers/registry.js');
+      const handler = nodeHandlers[nodeType];
+      if (!handler) return { error: `No handler for ${nodeType}` };
+      return await handler({ contactId, phone, data });
     }
 
     case 'ai_reply':
