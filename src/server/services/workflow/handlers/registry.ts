@@ -158,7 +158,87 @@ export const nodeHandlers: Record<string, NodeHandler> = {
       return { sent: false, error: err.message };
     }
   },
+
+  ai_reply: async (ctx) => aiResponseHandler(ctx),
+  ai_response: async (ctx) => aiResponseHandler(ctx),
+
+  ai_score_lead: async ({ contactId, businessId }) => {
+    // Verbatim port from original inline logic (rules-based scoring)
+    try {
+      const contact = await prisma.contact.findUnique({
+        where: { id: contactId },
+        select: { dealValue: true, tags: true, lastActivity: true, stage: true },
+      }) as any;
+
+      let overallScore = 50, engagementScore = 50, recencyScore = 50, intentScore = 50, fitScore = 50;
+
+      if (contact) {
+        engagementScore = Math.min(100, Math.floor((contact.dealValue || 0) / 10000));
+        const tags = (contact.tags || []).map((t: string) => t.toLowerCase());
+        if (tags.includes('hot') || tags.includes('vip')) intentScore = 85;
+        else if (tags.includes('warm')) intentScore = 70;
+        else if (tags.includes('cold')) intentScore = 30;
+
+        switch (contact.stage) {
+          case 'Won': fitScore = 95; break;
+          case 'Negotiation': fitScore = 85; break;
+          case 'Proposal': fitScore = 75; break;
+          case 'Qualified': fitScore = 65; break;
+          case 'Contacted': fitScore = 55; break;
+          default: fitScore = 45;
+        }
+        overallScore = Math.floor((engagementScore + recencyScore + intentScore + fitScore) / 4);
+      }
+
+      await prisma.leadScore.upsert({
+        where: { businessId_contactId: { businessId: businessId as string, contactId: contactId as string } },
+        update: { score: overallScore, engagementScore, recencyScore, intentScore, fitScore, lastScoredAt: new Date() },
+        create: { businessId: businessId as string, contactId: contactId as string, score: overallScore, engagementScore, recencyScore, intentScore, fitScore, lastScoredAt: new Date() },
+      });
+      return { scored: true, score: overallScore, engagementScore, recencyScore, intentScore, fitScore };
+    } catch (err: any) {
+      console.warn('[Workflow] Lead score calculation failed:', err?.message);
+      return { scored: false, error: err?.message };
+    }
+  },
 };
+
+/** AI reply/response — now routed through the AI Gateway (§9): fallback +
+ *  provider health + usage/cost ledger come for free. Output shape unchanged. */
+async function aiResponseHandler(ctx: WorkflowNodeContext): Promise<Record<string, any>> {
+  try {
+    const business = await prisma.business.findUnique({ where: { id: ctx.businessId } });
+    const autopilot = await prisma.autopilotSettings.findFirst({ where: { businessId: ctx.businessId } });
+
+    const tone = autopilot?.aiTone || 'professional';
+    const language = autopilot?.aiLanguage || 'english';
+    const systemPrompt = ctx.data.systemPrompt ||
+      `You are a helpful ${tone} customer service agent for ${business?.name || 'the business'}. ` +
+      `Reply in ${language}. Be concise and helpful. Do not use markdown. Keep messages under 300 characters for WhatsApp.`;
+
+    const incomingMessage = ctx.triggerData?.message || ctx.data.message || 'Hello';
+    const history = ctx.triggerData?.conversationHistory || [];
+
+    const messages = [
+      { role: 'system' as const, content: systemPrompt },
+      ...history.slice(-5).map((h: any) => ({ role: h.role || 'user' as const, content: h.content })),
+      { role: 'user' as const, content: incomingMessage },
+    ];
+
+    const { aiComplete } = await import('../ai-gateway.service.js');
+    const gw = await aiComplete('short_text', messages, { businessId: ctx.businessId, maxTokens: 500 });
+    const response = gw.text;
+
+    if (ctx.phone && response) {
+      const sendResult = await nodeHandlers.send_whatsapp({ ...ctx, data: { message: response, to: ctx.phone } });
+      return { generated: true, response, sent: (sendResult as any).sent, channel: 'ai_whatsapp', provider: gw.provider };
+    }
+
+    return { generated: true, response, sent: false, reason: 'no_phone', provider: gw.provider };
+  } catch (err: any) {
+    return { generated: false, error: err.message };
+  }
+}
 
 async function whatsappHandler({
   nodeType, businessId, contactId, phone, workflowId, executionId, data, contact, triggerData, previousOutput,

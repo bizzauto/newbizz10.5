@@ -40,7 +40,10 @@ async function executeNode(
     case 'delay':
     case 'wait':
     case 'add_activity':
-    case 'trigger': {
+    case 'trigger':
+    case 'ai_reply':
+    case 'ai_response':
+    case 'ai_score_lead': {
       // §44 slices 3+5/6: all action nodes migrated to workflow/handlers/registry.ts
       const { nodeHandlers } = await import('./workflow/handlers/registry.js');
       const handler = nodeHandlers[nodeType];
