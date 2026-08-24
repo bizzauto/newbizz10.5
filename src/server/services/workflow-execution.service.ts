@@ -153,10 +153,17 @@ async function executeNode(
       }
     }
 
-    case 'send_sms': {
-      // SMS requires a configured provider (Twilio, etc.)
-      console.warn('[Workflow] send_sms node triggered but no SMS provider configured');
-      return { sent: false, error: 'SMS provider not configured', to: phone, message: data.message, channel: 'sms' };
+    case 'send_sms':
+    case 'webhook':
+    case 'delay':
+    case 'wait':
+    case 'add_activity':
+    case 'trigger': {
+      // §44 slice 3: migrated to workflow/handlers/registry.ts
+      const { nodeHandlers } = await import('./workflow/handlers/registry.js');
+      const handler = nodeHandlers[nodeType];
+      if (!handler) return { error: `No handler for ${nodeType}` };
+      return await handler({ contactId, businessId, phone, workflowId: ctx.workflowId, triggerData: ctx.triggerData, contact, data });
     }
 
     case 'update_contact':
@@ -261,36 +268,6 @@ async function executeNode(
         }
         break;
 
-    case 'webhook': {
-      const { default: axios } = await import('axios');
-      const url = data.url;
-      if (!url) return { called: false, error: 'No webhook URL' };
-
-      // SSRF protection: block private/internal/metadata IPs
-      const urlCheck = isSafeWebhookUrl(url);
-      if (!urlCheck.safe) {
-        return { called: false, error: `Blocked webhook URL: ${urlCheck.reason}` };
-      }
-
-      const payload = {
-        businessId: ctx.businessId,
-        triggerData: ctx.triggerData,
-        contact,
-        nodeData: data,
-      };
-
-      try {
-        const response = await axios.post(url, payload, {
-          timeout: 10000,
-          headers: { 'Content-Type': 'application/json' },
-        });
-
-        return { called: true, url, status: response.status };
-      } catch (err: any) {
-        return { called: false, error: err.message };
-      }
-    }
-
     case 'condition':
     case 'if_else': {
       const field = data.field || 'source';
@@ -303,51 +280,6 @@ async function executeNode(
       const evaluation = evaluateCondition({ field, value, operator, fieldValue });
 
       return { ...evaluation, value: evaluation.value };
-    }
-
-    case 'delay':
-    case 'wait': {
-      // Parse duration string (e.g., "30m", "1h", "2d") to milliseconds
-      const durationStr = data.duration || '1h';
-      let delayMs = 60 * 60 * 1000; // default 1h
-      const match = durationStr.match(/^(\d+)(m|h|d)$/);
-      if (match) {
-        const val = parseInt(match[1]);
-        if (match[2] === 'm') delayMs = val * 60 * 1000;
-        else if (match[2] === 'h') delayMs = val * 60 * 60 * 1000;
-        else if (match[2] === 'd') delayMs = val * 24 * 60 * 60 * 1000;
-      }
-
-      // For short delays (≤30s), actually wait in-process
-      if (delayMs <= 30000) {
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-        return { waited: true, duration: durationStr, actualMs: delayMs, scheduled: false };
-      }
-
-      // For longer delays, the workflow should be re-queued via BullMQ
-      // Log warning — proper fix is to schedule remaining steps via queue
-      console.warn(`[Workflow] Delay node "${durationStr}" (${delayMs}ms) — in-process wait too long, continuing immediately. Implement queue-based scheduling for production.`);
-      return { waited: false, duration: durationStr, scheduled: false, warning: 'Long delays require queue-based scheduling' };
-    }
-
-    case 'add_activity': {
-      if (!contactId) return { added: false, error: 'No contact ID' };
-      await prisma.activity.create({
-        data: {
-          businessId: ctx.businessId,
-          contactId,
-          type: data.activityType || 'note',
-          title: data.title || 'Activity added by workflow',
-          content: data.content || '',
-          metadata: { workflowId: ctx.workflowId },
-          createdBy: 'system',
-        },
-      });
-      return { added: true };
-    }
-
-    case 'trigger': {
-      return { triggered: true, timestamp: new Date().toISOString() };
     }
 
     default:
