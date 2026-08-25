@@ -1,0 +1,132 @@
+{
+  "name": "Invoice Reminder & Late Fee",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 8 * * *" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2",
+      "name": "Fetch Due Invoices",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://billing.bizzauto.app/api/invoices/due",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "status", "value": "unpaid" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "3",
+      "name": "Loop Invoices",
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [690, 300],
+      "parameters": {
+        "batchSize": 1
+      }
+    },
+    {
+      "id": "4",
+      "name": "Is Overdue?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [910, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.days_overdue }}",
+              "operator": { "type": "number", "operation": "gt" },
+              "rightValue": 0
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "5",
+      "name": "Send Reminder",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1130, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "https://billing.bizzauto.app/api/invoices/{{ $json.id }}/remind",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"channel\": \"email\", \"message\": \"Friendly reminder: invoice {{ $json.number }} is due.\" }"
+      }
+    },
+    {
+      "id": "6",
+      "name": "Apply Late Fee",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [1350, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "combinator": "and",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.days_overdue }}",
+              "operator": { "type": "number", "operation": "gt" },
+              "rightValue": 7
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Daily Schedule": {
+      "main": [ [ { "node": "Fetch Due Invoices", "type": "main", "index": 0 } ] ]
+    },
+    "Fetch Due Invoices": {
+      "main": [ [ { "node": "Loop Invoices", "type": "main", "index": 0 } ] ]
+    },
+    "Loop Invoices": {
+      "main": [ [ { "node": "Is Overdue?", "type": "main", "index": 0 } ] ]
+    },
+    "Is Overdue?": {
+      "main": [
+        [ { "node": "Send Reminder", "type": "main", "index": 0 } ],
+        [ { "node": "Send Reminder", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Send Reminder": {
+      "main": [ [ { "node": "Apply Late Fee", "type": "main", "index": 0 } ] ]
+    },
+    "Apply Late Fee": {
+      "main": [
+        [],
+        []
+      ]
+    }
+  }
+}

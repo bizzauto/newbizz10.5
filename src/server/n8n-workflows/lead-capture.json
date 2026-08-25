@@ -1,0 +1,128 @@
+{
+  "name": "Lead Capture & Enrich",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Lead Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "lead-capture-webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "lead-capture",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "2",
+      "name": "Enrich Lead",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.clearbit.com/v2/combined",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            { "name": "email", "value": "={{ $json.body.email }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "3",
+      "name": "Map Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [690, 300],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "a", "name": "contact_email", "type": "string", "value": "={{ $json.body.email }}" },
+            { "id": "b", "name": "contact_name", "type": "string", "value": "={{ $json.body.name }}" },
+            { "id": "c", "name": "company", "type": "string", "value": "={{ $json.companyName }}" },
+            { "id": "d", "name": "source", "type": "string", "value": "={{ $json.body.source }}" },
+            { "id": "e", "name": "created_at", "type": "string", "value": "={{ $now.toISO() }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4",
+      "name": "Create in CRM",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [910, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/leads",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"email\": \"{{ $json.contact_email }}\", \"name\": \"{{ $json.contact_name }}\", \"company\": \"{{ $json.company }}\", \"source\": \"{{ $json.source }}\" }",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            { "name": "Content-Type", "value": "application/json" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "5",
+      "name": "Send Welcome WhatsApp",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1130, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.whatsapp.business/v1/messages",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"to\": \"{{ $json.contact_email }}\", \"type\": \"template\", \"template\": { \"name\": \"welcome\", \"language\": { \"code\": \"en\" } } }"
+      }
+    },
+    {
+      "id": "6",
+      "name": "Add to Nurture Sequence",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1130, 400],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/nurture/enroll",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"lead_id\": \"{{ $json.id }}\", \"sequence\": \"new_lead_14d\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Lead Webhook": {
+      "main": [ [ { "node": "Enrich Lead", "type": "main", "index": 0 } ] ]
+    },
+    "Enrich Lead": {
+      "main": [ [ { "node": "Map Fields", "type": "main", "index": 0 } ] ]
+    },
+    "Map Fields": {
+      "main": [ [ { "node": "Create in CRM", "type": "main", "index": 0 } ] ]
+    },
+    "Create in CRM": {
+      "main": [
+        [
+          { "node": "Send Welcome WhatsApp", "type": "main", "index": 0 },
+          { "node": "Add to Nurture Sequence", "type": "main", "index": 0 }
+        ]
+      ]
+    }
+  }
+}

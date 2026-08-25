@@ -1,0 +1,110 @@
+{
+  "name": "Deal Stage Change",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Deal Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "deal-stage-webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "deal-stage-change",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "2",
+      "name": "Check Stage",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [470, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": true },
+          "combinator": "or",
+          "conditions": [
+            {
+              "id": "c1",
+              "leftValue": "={{ $json.body.stage }}",
+              "operator": { "type": "string", "operation": "equals" },
+              "rightValue": "won"
+            },
+            {
+              "id": "c2",
+              "leftValue": "={{ $json.body.stage }}",
+              "operator": { "type": "string", "operation": "equals" },
+              "rightValue": "proposal_sent"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "3",
+      "name": "Notify Owner (Push/FCM)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "https://fcm.googleapis.com/fcm/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"to\": \"{{ $json.body.owner_token }}\", \"notification\": { \"title\": \"Deal update\", \"body\": \"Stage is now {{ $json.body.stage }}\" } }"
+      }
+    },
+    {
+      "id": "4",
+      "name": "Create Activity",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 400],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/activities",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"deal_id\": \"{{ $json.body.deal_id }}\", \"type\": \"stage_change\", \"detail\": \"{{ $json.body.stage }}\" }"
+      }
+    },
+    {
+      "id": "5",
+      "name": "Generate Proposal (AI)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [910, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/ai/generate-proposal",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"deal_id\": \"{{ $json.body.deal_id }}\", \"stage\": \"{{ $json.body.stage }}\", \"prompt\": \"Generate a tailored proposal for this deal.\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Deal Webhook": {
+      "main": [ [ { "node": "Check Stage", "type": "main", "index": 0 } ] ]
+    },
+    "Check Stage": {
+      "main": [
+        [ { "node": "Notify Owner (Push/FCM)", "type": "main", "index": 0 } ],
+        [ { "node": "Create Activity", "type": "main", "index": 0 } ]
+      ]
+    },
+    "Notify Owner (Push/FCM)": {
+      "main": [ [ { "node": "Generate Proposal (AI)", "type": "main", "index": 0 } ] ]
+    },
+    "Create Activity": {
+      "main": [ [ { "node": "Generate Proposal (AI)", "type": "main", "index": 0 } ] ]
+    }
+  }
+}

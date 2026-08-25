@@ -1,0 +1,59 @@
+{
+  "name": "Google Business Profile Auto-Post",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 9 * * *" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2",
+      "name": "Get Post Content",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [470, 300],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "a", "name": "summary", "type": "string", "value": "Weekly business tips from BizzAuto to grow your local presence." },
+            { "id": "b", "name": "actionUrl", "type": "string", "value": "https://bizzauto.app/blog" },
+            { "id": "c", "name": "topic", "type": "string", "value": "local-seo" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "3",
+      "name": "Publish to GBP",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://mybusiness.googleapis.com/v4/{{ $env.GBP_ACCOUNT_ID }}/locations/{{ $env.GBP_LOCATION_ID }}/localPosts",
+        "authentication": "oAuth2",
+        "oauth2": "googleMyBusinessOAuth2Api",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"languageCode\": \"en\", \"summary\": \"{{ $json.summary }}\", \"callToAction\": { \"actionType\": \"LEARN_MORE\", \"url\": \"{{ $json.actionUrl }}\" } }"
+      }
+    }
+  ],
+  "connections": {
+    "Daily Schedule": {
+      "main": [ [ { "node": "Get Post Content", "type": "main", "index": 0 } ] ]
+    },
+    "Get Post Content": {
+      "main": [ [ { "node": "Publish to GBP", "type": "main", "index": 0 } ] ]
+    }
+  }
+}

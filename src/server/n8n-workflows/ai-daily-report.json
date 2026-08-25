@@ -1,0 +1,89 @@
+{
+  "name": "AI Daily KPI Report",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Daily Schedule",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.1,
+      "position": [250, 300],
+      "parameters": {
+        "rule": {
+          "interval": [
+            { "field": "cronExpression", "expression": "0 7 * * *" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "2",
+      "name": "Aggregate KPIs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://crm.bizzauto.app/api/reports/daily",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Build Prompt",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const d = $input.first().json;\nconst prompt = `Summarize today's business performance:\\n- New leads: ${d.new_leads}\\n- Deals won: ${d.deals_won}\\n- Revenue: ${d.revenue}\\n- Open tickets: ${d.open_tickets}\\nProvide 3 actionable insights.`;\nreturn [{ json: { ...d, prompt } }];"
+      }
+    },
+    {
+      "id": "4",
+      "name": "Call AI",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [910, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/ai/summarize",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"model\": \"gpt-4o\", \"messages\": [ { \"role\": \"user\", \"content\": \"{{ $json.prompt }}\" } ] }"
+      }
+    },
+    {
+      "id": "5",
+      "name": "Send Digest",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [1130, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/digest/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"channel\": \"slack\", \"summary\": \"{{ $json.choices[0].message.content }}\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Daily Schedule": {
+      "main": [ [ { "node": "Aggregate KPIs", "type": "main", "index": 0 } ] ]
+    },
+    "Aggregate KPIs": {
+      "main": [ [ { "node": "Build Prompt", "type": "main", "index": 0 } ] ]
+    },
+    "Build Prompt": {
+      "main": [ [ { "node": "Call AI", "type": "main", "index": 0 } ] ]
+    },
+    "Call AI": {
+      "main": [ [ { "node": "Send Digest", "type": "main", "index": 0 } ] ]
+    }
+  }
+}

@@ -225,7 +225,7 @@ async function aiResponseHandler(ctx: WorkflowNodeContext): Promise<Record<strin
       { role: 'user' as const, content: incomingMessage },
     ];
 
-    const { aiComplete } = await import('../ai-gateway.service.js');
+    const { aiComplete } = await import('../../ai-gateway.service.js');
     const gw = await aiComplete('short_text', messages, { businessId: ctx.businessId, maxTokens: 500 });
     const response = gw.text;
 
