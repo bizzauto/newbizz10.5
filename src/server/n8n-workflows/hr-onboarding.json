@@ -1,0 +1,64 @@
+{
+  "name": "HR — Employee Onboarding",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Onboarding Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "hr-onboarding",
+      "parameters": { "httpMethod": "POST", "path": "hr-onboarding", "responseMode": "onReceived" }
+    },
+    {
+      "id": "2",
+      "name": "Send Welcome Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [480, 250],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/email/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={ \"to\": \"{{ $json.email }}\", \"subject\": \"Welcome to the team, {{ $json.employee_name }}!\", \"template\": \"onboarding_day1\" }"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Create Onboarding Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [480, 420],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/tasks",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={ \"title\": \"Complete onboarding for {{ $json.employee_name }}\", \"assignee\": \"hr\", \"due\": \"{{ $json.startDate }}\", \"type\": \"onboarding\" }"
+      }
+    },
+    {
+      "id": "4",
+      "name": "Notify Team (WhatsApp)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [710, 420],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/whatsapp/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={ \"to\": \"{{ $json.hr_phone }}\", \"message\": \"New hire {{ $json.employee_name }} starts {{ $json.startDate }}. Onboarding task created.\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Onboarding Webhook": { "main": [ [ { "node": "Send Welcome Email", "type": "main", "index": 0 } ] ] },
+    "Send Welcome Email": { "main": [ [ { "node": "Create Onboarding Task", "type": "main", "index": 0 } ] ] },
+    "Create Onboarding Task": { "main": [ [ { "node": "Notify Team (WhatsApp)", "type": "main", "index": 0 } ] ] }
+  }
+}

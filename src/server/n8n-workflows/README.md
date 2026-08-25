@@ -13,6 +13,9 @@ or cloud [n8n](https://n8n.io) instance.
 | `support-triage.json` | Support Ticket Triage | Webhook (`POST /support-ticket`) |
 | `invoice-reminder.json` | Invoice Reminder & Late Fee | Schedule (cron `0 8 * * *`) |
 | `ai-daily-report.json` | AI Daily KPI Report | Schedule (cron `0 7 * * *`) |
+| `hr-onboarding.json` | HR — Employee Onboarding | Webhook (`POST /hr-onboarding`) |
+| `finance-reconciliation.json` | Finance — Invoice Reconciliation | Webhook (`POST /finance-reconcile`) |
+| `ops-ticket-dispatch.json` | Ops — Ticket Dispatch | Webhook (`POST /ops-dispatch`) |
 
 ## Workflow Descriptions
 
@@ -55,6 +58,24 @@ or cloud [n8n](https://n8n.io) instance.
 - **Flow:** Aggregates daily KPIs from `GET /api/reports/daily` -> a Code node builds a
   prompt -> calls the AI endpoint `POST /api/ai/summarize` -> sends the digest to Slack.
 - **Credentials needed:** HTTP Header Auth (CRM, Slack).
+
+### 7. HR — Employee Onboarding (`hr-onboarding.json`)
+- **Trigger:** Webhook (POST).
+- **Flow:** Receives a new hire -> sends a Day-1 welcome email -> creates an onboarding task in
+  the CRM -> notifies the HR team via WhatsApp.
+- **Credentials needed:** HTTP Header Auth (CRM, WhatsApp Business).
+
+### 8. Finance — Invoice Reconciliation (`finance-reconciliation.json`)
+- **Trigger:** Webhook (POST).
+- **Flow:** Fetches paid invoices -> tallies a daily count -> posts a reconciliation summary to
+  the finance WhatsApp channel.
+- **Credentials needed:** HTTP Header Auth (CRM, WhatsApp Business).
+
+### 9. Ops — Ticket Dispatch (`ops-ticket-dispatch.json`)
+- **Trigger:** Webhook (POST).
+- **Flow:** Receives an ops issue -> creates a ticket -> assigns the on-call engineer -> notifies
+  on-call via WhatsApp.
+- **Credentials needed:** HTTP Header Auth (CRM, WhatsApp Business).
 
 ## How to Import
 

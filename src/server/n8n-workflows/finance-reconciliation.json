@@ -1,0 +1,62 @@
+{
+  "name": "Finance — Invoice Reconciliation",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Reconcile Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "finance-reconcile",
+      "parameters": { "httpMethod": "POST", "path": "finance-reconcile", "responseMode": "onReceived" }
+    },
+    {
+      "id": "2",
+      "name": "Fetch Invoices",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [480, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://crm.bizzauto.app/api/crm-invoices?status=paid",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Summarize",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [710, 300],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "a", "name": "total_paid", "type": "string", "value": "={{ $items().length }}" },
+            { "id": "b", "name": "generated_at", "type": "string", "value": "={{ $now.toISO() }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4",
+      "name": "Post to Finance Channel",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [940, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/whatsapp/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={ \"to\": \"{{ $json.finance_phone }}\", \"message\": \"Reconciliation {{ $now.toFormat('yyyy-MM-dd') }}: {{ $json.total_paid }} invoices paid.\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Reconcile Webhook": { "main": [ [ { "node": "Fetch Invoices", "type": "main", "index": 0 } ] ] },
+    "Fetch Invoices": { "main": [ [ { "node": "Summarize", "type": "main", "index": 0 } ] ] },
+    "Summarize": { "main": [ [ { "node": "Post to Finance Channel", "type": "main", "index": 0 } ] ] }
+  }
+}

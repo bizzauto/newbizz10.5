@@ -1,0 +1,64 @@
+{
+  "name": "Ops — Ticket Dispatch",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Dispatch Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "ops-dispatch",
+      "parameters": { "httpMethod": "POST", "path": "ops-dispatch", "responseMode": "onReceived" }
+    },
+    {
+      "id": "2",
+      "name": "Create Ticket",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [480, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/tickets",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={ \"title\": \"{{ $json.subject }}\", \"priority\": \"{{ $json.priority || 'normal' }}\", \"source\": \"ops\" }"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Assign On-Call",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [710, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/tickets/assign-oncall",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={ \"ticket_id\": \"{{ $json.id }}\" }"
+      }
+    },
+    {
+      "id": "4",
+      "name": "Notify On-Call (WhatsApp)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [940, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/whatsapp/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true, "specifyBody": "json",
+        "jsonBody": "={ \"to\": \"{{ $json.oncall_phone }}\", \"message\": \"New ticket assigned: {{ $json.subject }}\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Dispatch Webhook": { "main": [ [ { "node": "Create Ticket", "type": "main", "index": 0 } ] ] },
+    "Create Ticket": { "main": [ [ { "node": "Assign On-Call", "type": "main", "index": 0 } ] ] },
+    "Assign On-Call": { "main": [ [ { "node": "Notify On-Call (WhatsApp)", "type": "main", "index": 0 } ] ] }
+  }
+}

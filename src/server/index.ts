@@ -146,6 +146,7 @@ import { shutdownAllWorkers, startIndiaMARTAutosync, startCampaignDispatcher, st
 import { startAuditPruneCron, stopAuditPruneCron } from './services/audit-prune.service.js';
 import { startEventSubscriber } from './events/eventSubscriber.js';
 import voiceRoutes from './routes/voice.js';
+import metricsRoutes from './routes/metrics.js';
 import { ensureSchema } from './services/schema-drift-guard.js';
 import adminInfrastructureRoutes from './routes/admin-infrastructure.js';
 import appointmentRemindersRoutes from './routes/appointment-reminders.js';
@@ -813,6 +814,9 @@ startEventSubscriber();
 
 // Self-hosted voice AI (Whisper STT + Piper TTS)
 app.use('/api/voice', voiceRoutes);
+
+// Monitoring / runtime metrics (admin only)
+app.use('/api/metrics', metricsRoutes);
 
 // Follow-up engine auto-tick: processes pending follow-ups for every business
 // every 10 minutes (previously required a manual API hit).
