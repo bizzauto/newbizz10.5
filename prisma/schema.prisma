@@ -81,6 +81,7 @@ model Business {
   leadInboxConfig             Json?
   twitterUserId               String?
   twitterAccessToken          String?
+  twitterRefreshToken         String?
   gbpAccessToken              String?
   gbpAccountId                String?
   gbpLocationId               String?
@@ -118,6 +119,7 @@ model Business {
   leadWebhookSecret           String?
   telephonyProvider           String                  @default("twilio")
   youtubeAccessToken          String?
+  youtubeRefreshToken         String?
   youtubeChannelId            String?
   aiFollowUps                 AIFollowUp[]
   activities                  Activity[]
@@ -386,6 +388,7 @@ model Message {
   direction        String
   type             String
   content          String
+  to               String?
   mediaUrl         String?
   mediaType        String?
   mediaSize        Int?

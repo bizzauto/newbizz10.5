@@ -1,6 +1,7 @@
 import { Router, Request, Response } from 'express';
 import { authenticate, requireRole, AuthRequest } from '../middleware/auth.js';
 import { queues } from '../workers/index.js';
+import { prisma } from '../db.js';
 import logger from '../utils/logger.js';
 
 /**

@@ -13,7 +13,7 @@ const GRAPH_API_BASE = 'https://graph.facebook.com/v18.0';
 
 // ── Helpers ──
 
-async function getFacebookCredentials(businessId: string) {
+export async function getFacebookCredentials(businessId: string) {
   const business = await prisma.business.findUnique({
     where: { id: businessId },
     select: { fbPageId: true, fbAccessToken: true },

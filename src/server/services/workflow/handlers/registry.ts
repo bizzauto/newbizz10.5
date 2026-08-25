@@ -242,7 +242,7 @@ async function aiResponseHandler(ctx: WorkflowNodeContext): Promise<Record<strin
 
 async function whatsappHandler({
   nodeType, businessId, contactId, phone, workflowId, executionId, data, contact, triggerData, previousOutput,
-}: import('./registry').WorkflowNodeContext): Promise<Record<string, any>> {
+}: import('./registry.js').WorkflowNodeContext): Promise<Record<string, any>> {
   const { default: axios } = await import('axios');
   const message = interpolateTemplate(data.message || data.template || 'Hello!', { contact, trigger: triggerData, previous: previousOutput });
   const to = data.to || phone;

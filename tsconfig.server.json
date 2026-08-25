@@ -14,7 +14,7 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "lib": ["ES2020"],
+    "lib": ["ES2020", "ES2021"],
     "types": ["node"],
     "allowJs": true,
     "checkJs": false

@@ -145,9 +145,10 @@ export class WhatsAppRateLimiter {
     // Store in database for retry
     await prisma.scheduledMessage.create({
       data: {
-        businessId,
+        business: { connect: { id: businessId } },
         phone: cleanPhone,
-        message,
+        content: message,
+        scheduledAt: estimatedSendTime,
         scheduledFor: estimatedSendTime,
         priority: options.priority || 'normal',
         status: 'pending',

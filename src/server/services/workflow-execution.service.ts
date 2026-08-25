@@ -48,7 +48,7 @@ async function executeNode(
       const { nodeHandlers } = await import('./workflow/handlers/registry.js');
       const handler = nodeHandlers[nodeType];
       if (!handler) return { error: `No handler for ${nodeType}` };
-      return await handler({ contactId, businessId, phone, email, workflowId: ctx.workflowId, executionId: ctx.executionId, nodeType, triggerData: ctx.triggerData, contact, previousOutput, data });
+      return await handler({ contactId, businessId: ctx.businessId, phone, email, workflowId: ctx.workflowId, executionId: ctx.executionId, nodeType, triggerData: ctx.triggerData, contact, previousOutput, data });
     }
 
     case 'condition':

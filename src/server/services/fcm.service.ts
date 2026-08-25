@@ -136,8 +136,8 @@ export class FcmService {
   ): Promise<void> {
     await prisma.integration.upsert({
       where: { businessId_type: { businessId, type: 'fcm' } },
-      create: { businessId, type: 'fcm', isActive: true, config: cfg as any },
-      update: { isActive: true, config: cfg as Prisma.InputJsonValue },
+      create: { business: { connect: { id: businessId } }, name: 'fcm', type: 'fcm', isActive: true, config: cfg as any },
+      update: { isActive: true, config: cfg as any },
     });
   }
 }
