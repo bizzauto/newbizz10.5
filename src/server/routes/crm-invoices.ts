@@ -227,6 +227,14 @@ router.put('/:id/pay', authenticate, validate(markInvoicePaidSchema), async (req
       },
     });
 
+    // Emit domain event for n8n / downstream automation
+    await emitEvent('invoice.paid', {
+      invoiceId: updated.id,
+      invoiceNumber: updated.documentNumber,
+      amount: (updated.content as any)?.total ?? null,
+      paymentMethod: req.body.paymentMethod || 'Bank Transfer',
+    }, { businessId, actorId: req.user.id });
+
     res.json({ success: true, data: mapDocToInvoice(updated) });
   } catch (error: any) {
     console.error('Mark invoice paid error:', error);

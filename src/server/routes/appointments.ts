@@ -3,6 +3,7 @@ import { prisma } from '../db.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { createAppointmentSchema, updateAppointmentSchema } from '../validations/crm-schemas.js';
+import { emitEvent } from '../events/eventBus.js';
 
 const router = Router();
 
@@ -214,6 +215,16 @@ router.post('/', authenticate, validate(createAppointmentSchema), async (req: Au
         },
       },
     });
+
+    // Emit domain event for n8n / downstream automation
+    await emitEvent('appointment.created', {
+      appointmentId: appointment.id,
+      title,
+      startTime,
+      endTime,
+      service: service || null,
+      contactId: contactId || null,
+    }, { businessId: req.user.businessId, actorId: req.user.id });
 
     res.status(201).json({
       success: true,
