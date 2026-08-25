@@ -4,6 +4,7 @@ import { authenticate, requireRole, AuthRequest } from '../middleware/auth.js';
 import { cacheResponse } from '../middleware/cache.js';
 import { validate } from '../middleware/validate.js';
 import { updateDealStageSchema, updateDealSchema } from '../validations/crm-schemas.js';
+import { emitEvent } from '../events/eventBus.js';
 
 const router = Router();
 
@@ -309,6 +310,15 @@ router.put('/:id/stage', authenticate, requireRole('OWNER', 'ADMIN'), validate(u
         createdBy: req.user.id,
       },
     });
+
+    // Emit domain event for n8n / downstream automation
+    await emitEvent('deal.stage_changed', {
+      contactId: id,
+      stageFrom: oldStage || null,
+      stageTo: stage || updated.dealStage || updated.stage || null,
+      dealValue: updated.dealValue || null,
+      pipelineId: updated.pipelineId || null,
+    }, { businessId, actorId: req.user.id });
 
     res.json({
       success: true,

@@ -144,6 +144,7 @@ import { circuitBreaker } from './services/circuit-breaker.service.js';
 import { shutdownWebhookWorker } from './services/webhook-retry.service.js';
 import { shutdownAllWorkers, startIndiaMARTAutosync, startCampaignDispatcher, startSocialDispatcher } from './workers/index.js';
 import { startAuditPruneCron, stopAuditPruneCron } from './services/audit-prune.service.js';
+import { startEventSubscriber } from './events/eventSubscriber.js';
 import { ensureSchema } from './services/schema-drift-guard.js';
 import adminInfrastructureRoutes from './routes/admin-infrastructure.js';
 import appointmentRemindersRoutes from './routes/appointment-reminders.js';
@@ -804,6 +805,10 @@ startCampaignDispatcher().catch((err: any) =>
 startSocialDispatcher().catch((err: any) =>
   console.error('[SocialDispatcher] Failed to start (non-fatal):', err?.message)
 );
+
+// Event subscriber: forwards DomainEvents on the bizz:events stream to n8n
+// (per-event chatbotFlow rules + optional catch-all webhook). Non-fatal.
+startEventSubscriber();
 
 // Follow-up engine auto-tick: processes pending follow-ups for every business
 // every 10 minutes (previously required a manual API hit).
