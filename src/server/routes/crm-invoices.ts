@@ -4,6 +4,7 @@ import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { validate } from '../middleware/validate.js';
 import { cacheResponse } from '../middleware/cache.js';
 import { createInvoiceSchema, updateInvoiceSchema, markInvoicePaidSchema } from '../validations/crm-schemas.js';
+import { emitEvent } from '../events/eventBus.js';
 
 const router = Router();
 
@@ -144,6 +145,16 @@ router.post('/', authenticate, validate(createInvoiceSchema), async (req: AuthRe
         createdBy: req.user.id,
       },
     });
+
+    // Emit domain event for n8n / downstream automation
+    await emitEvent('invoice.created', {
+      invoiceId: doc.id,
+      invoiceNumber: doc.documentNumber,
+      customerName: customerName || null,
+      total,
+      dueDate: (doc.content as any)?.dueDate || null,
+      contactId: contactId || null,
+    }, { businessId, actorId: req.user.id });
 
     res.status(201).json({ success: true, data: mapDocToInvoice(doc) });
   } catch (error: any) {
