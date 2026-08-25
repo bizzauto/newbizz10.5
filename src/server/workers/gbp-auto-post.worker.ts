@@ -2,6 +2,7 @@ import { Queue, Worker, Job } from 'bullmq';
 import { prisma } from '../db.js';
 import { GBPAutoPostService } from '../services/gbp-auto-post.service.js';
 import { createRedisConnection } from '../utils/redis-connection.js';
+import { emitEvent } from '../events/eventBus.js';
 
 // Redis connection (bullMQ: no per-command timeout — BullMQ blocks on idle pops)
 const redisConnection = createRedisConnection({ bullMQ: true });
@@ -64,6 +65,18 @@ const gbpAutoPostWorker = redisConnection ? new Worker(
 
             if (result.success) {
               console.log(`✅ Auto-post created for ${business.name}: ${result.postId}`);
+              // Event-driven hand-off: let n8n react to the published post
+              // (notify, analytics, cross-post, etc.) without coupling the worker.
+              await emitEvent(
+                'gbp.post_executed',
+                {
+                  businessId: business.id,
+                  businessName: business.name,
+                  postId: result.postId,
+                  success: true,
+                },
+                { businessId: business.id }
+              );
             } else {
               console.log(`❌ Auto-post failed for ${business.name}: ${result.message}`);
             }

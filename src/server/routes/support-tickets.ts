@@ -5,6 +5,7 @@ import { validate } from '../middleware/validate.js';
 import { createTicketSchema, updateTicketSchema, replyTicketSchema } from '../validations/remaining-schemas.js';
 import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
+import { emitEvent } from '../events/eventBus.js';
 
 const ticketSubmitLimiter = rateLimit({
   windowMs: 60 * 60 * 1000,
@@ -135,6 +136,19 @@ router.post('/', authenticate, validate(createTicketSchema), async (req: any, re
       },
     });
 
+    await emitEvent(
+      'support.ticket_created',
+      {
+        ticketId: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        businessId,
+        subject: ticket.subject,
+        category: ticket.category,
+        priority: ticket.priority,
+      },
+      { businessId, actorId: req.user?.id }
+    );
+
     res.status(201).json({ success: true, data: ticket });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
@@ -246,6 +260,20 @@ router.post('/submit', ticketSubmitLimiter, validate(submitTicketSchema), async 
         tags: ['customer-submitted'],
       },
     });
+
+    await emitEvent(
+      'support.ticket_created',
+      {
+        ticketId: ticket.id,
+        ticketNumber: ticket.ticketNumber,
+        businessId,
+        subject: ticket.subject,
+        category: ticket.category,
+        priority: ticket.priority,
+        channel: 'public-submit',
+      },
+      { businessId }
+    );
 
     res.status(201).json({
       success: true,

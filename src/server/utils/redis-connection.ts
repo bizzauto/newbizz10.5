@@ -23,7 +23,7 @@ function maskUrl(url: string): string {
   }
 }
 
-export function createRedisConnection() {
+export function createRedisConnection(_options?: { bullMQ?: boolean }) {
   // IMMEDIATE FAIL FAST: If already unreachable, don't even check env vars
   if (redisUnreachable) {
     return null;
