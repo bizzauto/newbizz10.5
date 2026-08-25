@@ -1,7 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { Capacitor } from '@capacitor/core';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || '';
+// Google Identity Services popup Android-WebView mein blocked hota hai
+// ("temporarily unavailable") — native app mein redirect flow use karte hain.
+const IS_NATIVE = typeof Capacitor !== 'undefined' && Capacitor.isNativePlatform();
 // Module-level guard: Google GSI SDK should only be initialized ONCE globally.
 // Both LoginPage and RegisterPage mount this component; navigating between them
 // would re-invoke initialize() without this guard. React StrictMode's double-mount
@@ -93,6 +97,8 @@ const GoogleLoginButton: React.FC<Props> = ({
       console.warn('[WARN] VITE_GOOGLE_CLIENT_ID is not set — Google sign-in will not work.');
       return;
     }
+    // Native WebView: GIS iframe render skip karo (overlap + blocked popup)
+    if (IS_NATIVE) return;
 
     let mounted = true;
     let retryTimer: ReturnType<typeof setTimeout> | null = null;
@@ -144,6 +150,13 @@ const GoogleLoginButton: React.FC<Props> = ({
   const handleClick = () => {
     if (loading) return;
 
+    // Native (Capacitor) WebView: GIS popup blocked → full redirect flow
+    if (IS_NATIVE) {
+      setLoading(true);
+      window.location.href = `${API_URL}/api/auth/google/url`;
+      return;
+    }
+
     if (sdkReady && window.google?.accounts?.id) {
       window.google.accounts.id.prompt((notification) => {
         if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
@@ -165,7 +178,7 @@ const GoogleLoginButton: React.FC<Props> = ({
   }
 
   return (
-    <div className={`flex justify-center w-full ${className}`}>
+    <div className={`flex flex-col items-center gap-2 w-full ${className}`}>
       {/* Rendered Google button (takes priority) */}
       <div ref={buttonRef} className="w-full max-w-[320px]" />
 
