@@ -1,0 +1,72 @@
+# n8n — self-hosted automation engine for BizzAuto Automation
+#
+# Run alongside the main app. n8n reaches the same Postgres (separate DB user/schema
+# is optional) and the same Redis for its queue mode.
+#
+# Quick start:
+#   docker compose -f docker-compose.n8n.yml up -d
+#
+# Then open http://localhost:5678  ->  Settings -> API keys -> create N8N_API_KEY
+# and set N8N_BASE_URL=http://localhost:5678  (and N8N_URL for the legacy trigger path).
+
+services:
+  n8n:
+    image: n8nio/n8n:latest
+    container_name: bizzauto-n8n
+    restart: unless-stopped
+    ports:
+      - "5678:5678"
+    environment:
+      - N8N_PORT=5678
+      - N8N_PROTOCOL=http
+      - N8N_HOST=0.0.0.0
+      - N8N_BASIC_AUTH_ACTIVE=false
+      - N8N_SECURE_COOKIE=false
+      - WEBHOOK_URL=${N8N_WEBHOOK_URL:-http://localhost:5678/}
+      # Persist data + executions on the host volume below
+      - N8N_ENCRYPTION_KEY=${N8N_ENCRYPTION_KEY:-change-me-to-a-long-random-string}
+      - DB_TYPE=postgresdb
+      - DB_POSTGRESDB_HOST=${DB_HOST:-postgres}
+      - DB_POSTGRESDB_PORT=${DB_PORT:-5432}
+      - DB_POSTGRESDB_DATABASE=${DB_NAME:-bizzauto}
+      - DB_POSTGRESDB_USER=${DB_USER:-bizzauto}
+      - DB_POSTGRESDB_PASSWORD=${DB_PASSWORD:-bizzauto}
+      - QUEUE_BULL_REDIS_HOST=${REDIS_HOST:-redis}
+      - QUEUE_BULL_REDIS_PORT=${REDIS_PORT:-6379}
+      - EXECUTIONS_MODE=queue
+      - N8N_METRICS=true
+    volumes:
+      - n8n_data:/home/node/.n8n
+    depends_on:
+      - postgres
+      - redis
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: bizzauto-n8n-pg
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${DB_NAME:-bizzauto}
+      - POSTGRES_USER=${DB_USER:-bizzauto}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-bizzauto}
+    volumes:
+      - n8n_pg:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"   # host 5433 to avoid clashing with an existing local Postgres
+
+  redis:
+    image: redis:7-alpine
+    container_name: bizzauto-n8n-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - n8n_redis:/data
+    ports:
+      - "6380:6379"   # host 6380 to avoid clashing with an existing local Redis
+
+volumes:
+  n8n_data:
+  n8n_pg:
+  n8n_redis:

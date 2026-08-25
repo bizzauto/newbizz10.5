@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const DEFAULT_BASE = process.env.N8N_BASE_URL || '';
+const DEFAULT_BASE = process.env.N8N_BASE_URL || process.env.N8N_URL || '';
 const DEFAULT_KEY = process.env.N8N_API_KEY || '';
 
 export interface N8nWorkflowSummary {

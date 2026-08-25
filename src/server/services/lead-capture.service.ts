@@ -4,6 +4,7 @@ import { WhatsAppRateLimiter } from './whatsapp-rate-limiter.service.js';
 import { HotLeadProcessor } from './hot-lead-processor.service.js';
 import { EmailService } from './email.service.js';
 import { handleLeadCapture as triggerLeadWorkflows } from './ai-auto-reply.service.js';
+import { emitEvent } from '../events/eventBus.js';
 
 /**
  * Lead Capture Service
@@ -493,6 +494,13 @@ export class LeadCaptureService {
    */
   static async triggerN8nWorkflow(businessId: string, leadData: any): Promise<void> {
     try {
+      // Emit a domain event for the captured lead (audit + event bus for n8n/workers)
+      await emitEvent('lead.captured', {
+        source: leadData?.source,
+        contactId: leadData?.contactId,
+        lead: leadData,
+      }, { businessId });
+
       const n8nUrl = process.env.N8N_URL;
       if (!n8nUrl) return; // n8n not configured
 
