@@ -1,0 +1,13 @@
+{
+  "initialized": false,
+  "topology": "hierarchical-mesh",
+  "workers": [],
+  "consensus": {
+    "pending": [],
+    "history": []
+  },
+  "sharedMemory": {},
+  "createdAt": "2026-08-18T15:54:23.946Z",
+  "updatedAt": "2026-08-18T16:07:22.312Z",
+  "consensusStrategy": "byzantine"
+}

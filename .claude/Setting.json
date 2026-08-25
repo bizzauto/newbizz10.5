@@ -1,0 +1,18 @@
+{
+  "env": {
+    "ANTHROPIC_API_KEY": "sk-09210eae3e243f53-75a31e-d63179f2",
+    "ANTHROPIC_BASE_URL": "http://localhost:20128/v1",
+    "CLAUDE_CODE_DISABLE_NONESSENTIAL_TRAFFIC": "1",
+    "ANTHROPIC_DEFAULT_OPUS_MODEL": "oc/deepseek-v4-flash-free",
+    "ANTHROPIC_DEFAULT_SONNET_MODEL": "oc/big-pickle",
+    "ANTHROPIC_DEFAULT_HAIKU_MODEL": "cl/moonshotai/kimi-k2.6"
+  },
+  "model": "opus",
+  "statusLine": {
+    "type": "command",
+    "command": "node \"C:\\Users\\afzal\\.claude\\statusline.js\""
+  },
+  "effortLevel": "low",
+  "theme": "dark",
+  "switchModelsOnFlag": false
+}

@@ -1,0 +1,76 @@
+{
+  "tasks": {
+    "task-1787069214685-k5xuk9": {
+      "taskId": "task-1787069214685-k5xuk9",
+      "type": "hive-mind",
+      "description": "You are implementing Phase E (MVP wiring) of the BizzAuto production-perfect plan: make the remaining SaaS features genuinely functional and wired so the product is sellable.\n\nREPO: C:/Users/HP/Desktop/FIXED BEST/my-project-12.0.1-fixed BEST-V10.1 (path has SPACES; always `cd` into it before rg/commands).\nBRANCH: production-perfect. NEVER commit .claude/ or node_modules or any file from Phase A/C (src/lib/api.ts, src/components/ModernWhatsApp.tsx, src/components/WhatsAppConnectModal.tsx, tests/whatsapp-*.test.tsx, src/server/workers/index.ts, src/server/routes/leads.ts, src/server/services/*whatsapp*, src/server/services/lead-capture.service.ts). Those are owned by other agents.\n\nIMPORTANT COLLISION RULE: Do NOT touch any file containing 'WhatsAppSendRouter' or that is part of the WhatsApp/Evolution modules. Focus ONLY on these independent features:\n\nTASK E.1 — Onboarding completion tracking\n- Add to prisma Business model (prisma/schema.prisma): `onboardingCompleted Boolean @default(false)` and `onboardingStep Int @default(0)`.\n- After editing schema: run `npx prisma format && npx prisma validate && npx prisma generate`.\n- Create manual migration: new folder `prisma/migrations/<YYYYMMDD>_onboarding_completion/migration.sql` with the ALTER TABLE adding these two columns (additive, IF NOT EXISTS style safe for Postgres).\n- Wire src/components/OnboardingWizard.tsx / src/components/AutoSetupWizard.tsx to save progress (onboardingStep + onboardingCompleted) to the business via the existing business/settings API. Add a dashboard/onboarding status read.\n- Do NOT break existing onboarding UI flow.\n\nTASK E.2 — Billing/Subscriptions transparency\n- Verify src/components/BillingPage.tsx + src/components/SubscriptionsTab.tsx display plan, limits, next renewal, and usage. Use subscriptionsAPI / billingAPI (src/lib/api.ts exports them). If the page shows static/placeholder values, wire it to real API data.\n- If GET /api/subscriptions/current lacks fields (plan, limits, renewalDate, usage), add them in the subscriptions route (src/server/routes/subscriptions.ts) from the business/stripe/razorpay data.\n- Add a usage-warning UI when usage/limit > 0.8.\n\nTASK E.3 — Support tickets create + status\n- Confirm src/components/SupportTicketsPage.tsx is functional. Confirm a backend route exists (src/server/routes/support*.ts or similar) for POST create + GET list + status update. If missing, add minimal routes + a SupportTicket prisma model (check schema first; if model exists, use it; if not, add it + migration).\n- Wire the page to the API (create on submit, list on load, show status).\n\nTASK E.4 — Audit log + roles gating\n- Confirm src/components/AuditLogPage.tsx uses auditLogAPI (GET /team/audit-logs) and export works. If it shows fake/static data, wire to real API.\n- Confirm role-gated views: requireRole('SUPER_ADMIN') middleware exists in src/server/middleware/auth.ts. If MEMBER can access super-admin routes, add the guard. Do not over-engineer.\n\nTASK E.5 — Status page health\n- Confirm src/components/StatusPage.tsx shows real n8n/AI/WhatsApp/DB connectivity. Add GET /api/status/health (in a new or existing health route) returning {whatsapp, n8n, ai, db} booleans (whatsapp via EvolutionApiService.getConnectionStatus or WhatsApp send-router; n8n via env N8N_URL ping; ai via AIService health; db via prisma.$queryRawUnsafe('SELECT 1')).\n- Wire StatusPage to poll /api/status/health.\n\nVERIFICATION (scope tightly; repo has 116 PRE-EXISTING failing tests — do NOT fix them; do NOT run full npm test):\n- For each touched frontend file: `npx tsc --noEmit 2>&1 | rg \"<filename>\"` must be EMPTY.\n- `npx prisma validate` must pass.\n- Write sensible tests only where a clear unit test exists (e.g. a route handler); do not force tests.\n- NEVER run the full test suite.\n\nCOMMIT DISCIPLINE: After finishing, commit ONLY the files you created/changed for Phase E. Never `git add .` / `git add -A`. Never commit .claude/ or node_modules or Phase A/C files. Use a single commit: `git add <your files> && git commit -m \"feat(mvp): wire onboarding, billing, support, audit, status for sellable SaaS\"`.\n\nRETURN: concise summary of each task (done/blocked), files changed, tsc result (empty), prisma validate result, commit hash.",
+      "priority": "normal",
+      "status": "pending",
+      "progress": 0,
+      "assignedTo": [],
+      "tags": [
+        "hive-mind",
+        "consensus:none",
+        "timeout:300s"
+      ],
+      "createdAt": "2026-08-18T16:06:54.685Z",
+      "startedAt": null,
+      "completedAt": null
+    },
+    "task-1787071298025-6fmdom": {
+      "taskId": "task-1787071298025-6fmdom",
+      "type": "implementation",
+      "description": "Phase E.5 part 2: Mount the health route. In src/server/index.ts add import 'healthRoutes from ./routes/health.js' near other route imports AND add 'app.use(/api/status, healthRoutes);' near the other app.use route mounts (after /api/google-business). Do NOT touch any WhatsApp/Evolution/onboarding files already done. Verify with 'npx tsc --noEmit -p tsconfig.server.json' that health.ts produces no errors.",
+      "priority": "normal",
+      "status": "in_progress",
+      "progress": 0,
+      "assignedTo": [
+        "coder-msyw5lyz"
+      ],
+      "tags": [],
+      "createdAt": "2026-08-18T16:41:38.025Z",
+      "startedAt": "2026-08-18T16:43:20.868Z",
+      "completedAt": null
+    },
+    "task-1787071312879-wefbls": {
+      "taskId": "task-1787071312879-wefbls",
+      "type": "testing",
+      "description": "Phase E.5 part 3: Create tests/status-health.test.ts (jest-environment node, supertest) that mounts the health router directly with authenticate + prisma + WhatsAppSendRouter + AIService mocked, and asserts GET /api/status/health returns JSON with data booleans {whatsapp, n8n, ai, db}. Run 'npx jest tests/status-health.test.ts --no-coverage --ci --watchAll=false' and make it PASS. Do NOT run full npm test.",
+      "priority": "normal",
+      "status": "pending",
+      "progress": 0,
+      "assignedTo": [],
+      "tags": [],
+      "createdAt": "2026-08-18T16:41:52.879Z",
+      "startedAt": null,
+      "completedAt": null
+    },
+    "task-1787071316328-o4j11q": {
+      "taskId": "task-1787071316328-o4j11q",
+      "type": "implementation",
+      "description": "Phase E.2: Billing usage warning. In src/components/SubscriptionsTab.tsx and/or BillingPage.tsx compute usage ratio from GET /api/subscriptions/current data (business.aiCreditsUsed / (aiCreditsLimit+aiCreditsPurchased), plus contacts/messages usage if present). If usage/limit > 0.8 show a visible warning banner (red/yellow). If the API response lacks usage/limits, add them server-side in src/server/routes/subscriptions.ts from the Business model. Keep minimal, do NOT rewrite whole files. Verify with 'npx tsc --noEmit' (grep for SubscriptionsTab/BillingPage errors = empty).",
+      "priority": "normal",
+      "status": "pending",
+      "progress": 0,
+      "assignedTo": [],
+      "tags": [],
+      "createdAt": "2026-08-18T16:41:56.328Z",
+      "startedAt": null,
+      "completedAt": null
+    },
+    "task-1787071327701-3fplpq": {
+      "taskId": "task-1787071327701-3fplpq",
+      "type": "implementation",
+      "description": "Phase E FINAL COMMIT: On branch 'production-perfect', commit ONLY these Phase E files (never git add . / -A): prisma/schema.prisma, prisma/migrations/20260818_onboarding_completion/migration.sql, src/server/routes/business.ts (onboarding route already added), src/server/routes/health.ts (new), src/server/index.ts (route mount), src/server/routes/subscriptions.ts (usage), src/components/BillingPage.tsx, src/components/SubscriptionsTab.tsx, src/components/StatusPage.tsx (wire to /api/status/health), tests/status-health.test.ts (new). DO NOT commit .claude/ .claude-flow/ node_modules or Phase A/C WhatsApp files. Commit message: 'feat(mvp): persist onboarding, billing usage warning, status health endpoint'. Verify with 'git status' that only intended files are staged.",
+      "priority": "normal",
+      "status": "pending",
+      "progress": 0,
+      "assignedTo": [],
+      "tags": [],
+      "createdAt": "2026-08-18T16:42:07.701Z",
+      "startedAt": null,
+      "completedAt": null
+    }
+  },
+  "version": "3.0.0"
+}

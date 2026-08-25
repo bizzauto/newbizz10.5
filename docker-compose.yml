@@ -1,0 +1,64 @@
+version: '3.8'
+
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: bizzauto-app
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - PORT=3000
+      - DATABASE_URL=${DATABASE_URL}
+      - REDIS_ENABLED=true
+      - REDIS_URL=${REDIS_URL:-redis://:${REDIS_PASSWORD:-bizzauto-redis-dev}@redis:6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-bizzauto-redis-dev}
+      - JWT_SECRET=${JWT_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - RAZORPAY_KEY_ID=${RAZORPAY_KEY_ID}
+      - RAZORPAY_KEY_SECRET=${RAZORPAY_KEY_SECRET}
+      - RAZORPAY_WEBHOOK_SECRET=${RAZORPAY_WEBHOOK_SECRET}
+      - N8N_URL=${N8N_URL}
+      - N8N_APP_API_KEY=${N8N_APP_API_KEY}
+      - N8N_API_KEY=${N8N_API_KEY}
+      - EVOLUTION_API_URL=${EVOLUTION_API_URL}
+      - EVOLUTION_API_KEY=${EVOLUTION_API_KEY}
+      - EVOLUTION_INSTANCE_NAME=${EVOLUTION_INSTANCE_NAME:-bizzauto}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID}
+      - GOOGLE_CLIENT_SECRET=${GOOGLE_CLIENT_SECRET}
+      - GOOGLE_AUTH_REDIRECT_URL=${GOOGLE_AUTH_REDIRECT_URL:-https://bizzautoai.com/api/auth/google/callback}
+      - GOOGLE_BUSINESS_REDIRECT_URL=${GOOGLE_BUSINESS_REDIRECT_URL:-https://bizzautoai.com/api/google-business/auth/callback}
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:3000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    depends_on:
+      - redis
+
+  # ==================== REDIS ====================
+  redis:
+    image: redis:7-alpine
+    container_name: bizzauto-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --save 60 1000 --save 300 10 --requirepass ${REDIS_PASSWORD:-bizzauto-redis-dev} --maxmemory 256mb --maxmemory-policy allkeys-lru
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-bizzauto-redis-dev}
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$$REDIS_PASSWORD\" ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+
+volumes:
+  postgres_data:
+  redis_data:
+  n8n_data:
+  evolution_data:
+  backups:

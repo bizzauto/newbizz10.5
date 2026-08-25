@@ -1,0 +1,37 @@
+{
+  "agents": {
+    "agent-1787068381859-21o1vq": {
+      "agentId": "agent-1787068381859-21o1vq",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "provider": "anthropic",
+        "task": "List the files in the current directory and report how many .ts files exist. Do not modify anything.",
+        "timeout": 300,
+        "autoTools": true
+      },
+      "createdAt": "2026-08-18T15:53:02.003Z",
+      "model": "sonnet",
+      "modelRoutedBy": "router",
+      "provider": "anthropic"
+    },
+    "agent-1787071375245-vxhopt": {
+      "agentId": "agent-1787071375245-vxhopt",
+      "agentType": "coder",
+      "status": "idle",
+      "health": 1,
+      "taskCount": 0,
+      "config": {
+        "provider": "anthropic",
+        "timeout": 300,
+        "autoTools": true
+      },
+      "createdAt": "2026-08-18T16:42:55.245Z",
+      "model": "sonnet",
+      "modelRoutedBy": "default"
+    }
+  },
+  "version": "3.0.0"
+}

@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+*.log
+# Native platforms are committed so source fixes (e.g. AndroidManifest.xml)
+# are tracked. Build artifacts are excluded via the nested gitignores.
+# android/
+# ios/
