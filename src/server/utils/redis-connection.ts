@@ -139,7 +139,6 @@ function connectToRedis(url: string) {
     },
     enableOfflineQueue: true,
     connectTimeout,
-    commandTimeout,
     lazyConnect: true,
   });
 

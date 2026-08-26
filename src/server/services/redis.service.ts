@@ -120,7 +120,6 @@ export async function initRedis(): Promise<IORedis | null> {
       },
       enableOfflineQueue: false,
       connectTimeout: connTimeout,
-      commandTimeout: cmdTimeout,
       lazyConnect: true,
     });
 
