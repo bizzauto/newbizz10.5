@@ -1,0 +1,77 @@
+{
+  "name": "AI Cost Controller",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Cost Check Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {
+        "triggerTimes": [
+          { "mode": "everyDay", "hour": 6, "minute": 0 }
+        ]
+      }
+    },
+    {
+      "id": "2",
+      "name": "Fetch AI Usage",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://crm.bizzauto.app/api/ai/usage",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Over Budget?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            { "id": "a", "leftValue": "={{ $json.cost_usd }}", "operator": { "type": "number", "operation": "gt" }, "rightValue": 500 }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4",
+      "name": "Send Budget Alert",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [910, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/notify",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"channel\": \"slack\", \"message\": \"AI spend over budget: ${{ $json.cost_usd }}\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Cost Check Trigger": {
+      "main": [ [ { "node": "Fetch AI Usage", "type": "main", "index": 0 } ] ]
+    },
+    "Fetch AI Usage": {
+      "main": [ [ { "node": "Over Budget?", "type": "main", "index": 0 } ] ]
+    },
+    "Over Budget?": {
+      "main": [
+        [ { "node": "Send Budget Alert", "type": "main", "index": 0 } ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "meta": {}
+}

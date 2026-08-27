@@ -1,0 +1,71 @@
+{
+  "name": "Churn Detection",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Weekly Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {
+        "triggerTimes": [
+          { "mode": "everyWeek", "weekday": 1, "hour": 7, "minute": 0 }
+        ]
+      }
+    },
+    {
+      "id": "2",
+      "name": "Fetch Inactivity",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://crm.bizzauto.app/api/customers/inactive",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Flag At-Risk",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [690, 300],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const rows = $input.all().map(i => i.json);\nconst atRisk = rows.filter(c => c.days_inactive >= 30);\nreturn atRisk.map(c => ({ json: { ...c, risk: 'high' } }));"
+      }
+    },
+    {
+      "id": "4",
+      "name": "Notify Success Team",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [910, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/notify/at-risk",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"customer\": \"{{ $json.customer_id }}\", \"days_inactive\": \"{{ $json.days_inactive }}\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Weekly Trigger": {
+      "main": [ [ { "node": "Fetch Inactivity", "type": "main", "index": 0 } ] ]
+    },
+    "Fetch Inactivity": {
+      "main": [ [ { "node": "Flag At-Risk", "type": "main", "index": 0 } ] ]
+    },
+    "Flag At-Risk": {
+      "main": [ [ { "node": "Notify Success Team", "type": "main", "index": 0 } ] ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "meta": {}
+}

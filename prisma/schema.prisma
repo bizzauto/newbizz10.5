@@ -3014,3 +3014,40 @@ model DeviceToken {
   @@index([userId])
   @@index([businessId])
 }
+
+model FeatureFlagOverride {
+  id         String   @id @default(cuid())
+  key        String
+  // GLOBAL | PLAN | TENANT | USER
+  scope      String   @default("GLOBAL")
+  plan       String?
+  tenantId   String?
+  userId     String?
+  enabled    Boolean  @default(true)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([key, scope, plan, tenantId, userId])
+  @@index([key])
+}
+
+model ApprovalQueue {
+  id          String    @id @default(cuid())
+  businessId  String
+  level       String    @default("APPROVAL") // AUTO | APPROVAL | HUMAN
+  action      String // e.g. PUBLISH_SOCIAL_POST, SEND_BULK_WHATSAPP, REFUND
+  resourceType String?
+  resourceId  String?
+  requestedBy String? // user id
+  status      String    @default("pending") // pending | approved | rejected | expired
+  payload     Json
+  reason      String?
+  reviewedBy  String?
+  reviewedAt  DateTime?
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@index([businessId, status])
+  @@index([status])
+}

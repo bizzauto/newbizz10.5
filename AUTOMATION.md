@@ -1,45 +1,47 @@
-# Automation
+# Automation — BIZZ CRM
 
-BizzAuto's automation layer has two parts today: **BullMQ background workers** (code) and a **DB-driven trigger/condition/action engine** (data). The roadmap surfaces both as editable **n8n workflows** (see `N8N_ARCHITECTURE.md`, `WORKFLOW_TEMPLATES.md`).
+Event-driven automation core. Combines a domain-event bus, BullMQ workers, n8n workflows, and a human-approval boundary.
 
-## BullMQ Workers (code)
+## Event-driven architecture
+`src/server/events/eventBus.ts` — `emitEvent(type, payload, { businessId, actorId, idempotencyKey })`:
+1. Publishes to Redis stream `bizz:events` (`XADD`) for n8n / real-time consumers.
+2. Persists an immutable `DomainEvent` row (`status:'processed'`) for audit/replay.
+3. Best-effort: never throws to caller; logs on failure.
 
-Entry point: `src/server/workers/index.ts` (run via `npm run worker`). Queues are created only if Redis is reachable (`redisAvailable` gate). Defaults: 3 attempts, exponential backoff 5s, keep completed 1d/1000, keep failed 7d/5000.
+> Note: this is **not** a transactional outbox. If the DB commit and stream publish must be atomic (exactly-once), wrap in a DB transaction + poll `DomainEvent` for un-emitted rows. Today it's at-least-once with idempotency keys.
 
-| Queue (BullMQ name) | Worker file | What it does |
-|---------------------|-------------|--------------|
-| `whatsapp-messages` | `workers/index.ts` | Sends WhatsApp text/template/media via `WhatsAppSendRouter`; also processes `scheduled-message` jobs. Concurrency 10. |
-| `emails` | `workers/index.ts` | `EmailService.sendEmail`. Concurrency 5. |
-| `social-publish` | `workers/index.ts` | Publishes `Post` rows to FB/IG/LinkedIn/Twitter/GBP; a `dispatch-due-posts` repeatable tick (every 60s) enqueues due posts. Concurrency 5. |
-| `google-sheets-sync` | `workers/index.ts` | `GoogleSheetsService.syncContacts` / `importContacts`. |
-| `lead-processing` | `workers/index.ts` | Runs `LeadCaptureService` per source (indiamart, justdial, facebook_ads, instagram_ads, generic), auto-assigns rep (round-robin), creates notifications, computes `LeadScore`. |
-| `campaign-scheduler` | `workers/index.ts` | `dispatch-due-campaigns` repeatable tick (60s) enqueues due `Campaign`s → fans out template messages to target contacts. |
-| `gbp-auto-post` | `workers/index.ts` **and** `workers/gbp-auto-post.worker.ts` | Checks businesses with `gbpAutoPostEnabled` and posts to Google Business Profile via `GBPAutoPostService`. Repeatable every 60s. |
-| `scheduled-messages` | `workers/scheduled-message.worker.ts` | Sends `ScheduledMessage` rows; respects `WhatsAppRateLimiter`, re-queues on rate limit; concurrency 1. |
-| `outreach` | `workers/outreach.worker.ts` | Outreach/sequenced messaging worker. |
-| `webhook-retry` | `services/webhook-retry.service.ts` | Retries failed outbound webhook deliveries (with SSRF-safe URL checks). |
+## Outbox consideration
+- `idempotencyKey` = `${type}:${hash(payload)}:${Date.now()}` (or caller-supplied). Consumers should dedupe on this key.
+- For true outbox: add an `emittedToStream Boolean` column + a relay worker that `XADD`s rows where `emitted=false`, then marks them. Roadmap item.
 
-> Note: `gbp-auto-post` is registered by both `workers/index.ts` and `workers/gbp-auto-post.worker.ts` (two definitions of the same queue — consolidate during the n8n migration).
+## Follow-up / nurture engine
+- `scheduledMessage` (DB) + BullMQ `whatsapp-messages` job `scheduled-message` (`workers/index.ts`, `scheduled-message.worker.ts`).
+- `campaigns.ts` + `campaign-scheduler` worker (repeat 60s) dispatches due campaigns to `whatsapp-messages`.
+- n8n `lead-capture.json` enrolls leads into `new_lead_14d` nurture sequence.
+- Condition evaluator unit-tested (`tests/unit/condition.evaluator.test.ts`).
 
-Campaign + social dispatchers are started by `startCampaignDispatcher()` / `startSocialDispatcher()` (idempotent via stable `jobId`). `shutdownAllWorkers()` closes everything on SIGTERM/SIGINT.
+## Human approval boundary
+AI/automation may draft, but sending/bulk/mutating actions require approval (`AI_GUARDRAILS.md`):
+| Action | Tier | Gate |
+|--------|------|------|
+| Draft/summarize | 1 (auto) | `aiComplete` |
+| Send to a contact | 2 | approval flag on `/api/whatsapp`, `/api/campaigns` |
+| Bulk campaign / create records | 3 | `requireRole('OWNER','ADMIN')` |
+| Billing/financial | 4 | forbidden |
 
-## DB-Driven Trigger/Condition/Action Engine (data)
+Approvals logged to `AuditLog`/`Activity` (`services/audit.service.ts`).
 
-`routes/automation.ts` (mounted `/api/automation`) is the API for the engine. Two Prisma models back it:
+## Worker resilience
+- All queues created lazily; **disabled if Redis unreachable** (`workers/index.ts` gates on `redisAvailable`). App stays up without async work.
+- Default job opts: 3 attempts, exponential backoff 5s, completed retained 1d, failed 7d.
+- `startCampaignDispatcher` / `startSocialDispatcher`: idempotent repeatable ticks (60s) scanning DB.
+- Graceful shutdown: `shutdownWorkers()` closes all workers + Redis (`worker.ts` SIGTERM/SIGINT).
 
-- **`AutomationRule`** (`businessId`, `name`, `description`, `isActive`, `trigger Json`, `actions Json[]`, `runCount`, `lastRunAt`). CRUD: `GET/POST /api/automation/automations`, `PUT/DELETE /api/automation/automations/:id`, `POST /api/automation/automations/:id/toggle`.
-- **`ChatbotFlow`** (`businessId`, `name`, `trigger`, `keywords`, `response`, `aiEnabled`, `isActive`) — legacy "auto-reply rule" model, also managed here (`/api/automation/rules`, `/templates`).
-- **`Workflow`** (`businessId`, `name`, `triggerType`, `triggerConfig`, `nodes Json`, `edges Json`, `isActive`, `createdBy`) — the visual node/edge graph model. Created from templates via `POST /api/automation/deploy-template` (persists a `Workflow` + logs a `workflow_deployed` activity).
+## Scheduling
+- DB-driven: `scheduledAt` on `ScheduledMessage`/`Post`/`Campaign` scanned by dispatchers.
+- n8n cron for GBP/invoice/report workflows.
+- IndiaMART autosync poller every 5 min (`indiamart-sync.service.ts`).
 
-Engine semantics:
-- A trigger (`lead_created`, `message_received`, `stage_changed`, `payment_due`, `cart_abandoned`, `birthday_today`, …) fires the `actions` array (send WhatsApp/email, add tag, notify team, wait, create activity).
-- `nodes`/`edges` use a React-Flow shape (`@xyflow/react`); `services/workflow/condition.evaluator.ts` + `services/workflow/handlers/registry.ts` + `services/workflow/interpolate.ts` evaluate conditions and interpolate `{{variables}}`.
-- `DEPLOYABLE_TEMPLATES` (in `routes/automation.ts`) are the built-in catalog: `leadgen-whatsapp-reply`, `leadgen-ai-reply`, `incoming-msg-autoreply`, `leadgen-full-funnel`. `GET /api/automation/deploy-templates` lists them.
-
-## Plan: Surface as Editable n8n Workflows
-
-1. Port each `DEPLOYABLE_TEMPLATES` entry to n8n JSON in `src/server/n8n-workflows/` (see `WORKFLOW_TEMPLATES.md`).
-2. On deploy, push the template to n8n (`POST {N8N_URL}/api/v1/workflows`) and store the n8n `workflowId` on the `Workflow` row.
-3. Triggering flows through the `DomainEvent` → `bizz:events` Redis stream (planned) so n8n owns execution; BullMQ workers are retired per-domain.
-
-See `N8N_ARCHITECTURE.md`, `WORKFLOW_TEMPLATES.md`.
+## Observability
+- Queue depth via BullMQ stats; event volume via `DomainEvent` count in `/api/metrics`.
+- Failures surface in worker logs + `failed` job counts.

@@ -1,0 +1,56 @@
+{
+  "name": "Error Handler",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Error Event Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "wf024-error-webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "error-event",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "2",
+      "name": "Classify Error",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const e = $input.first().json;\nconst sev = (e.body && e.body.severity) || 'low';\nconst category = /db|timeout|connection/.test((e.body && e.body.message || '').toLowerCase()) ? 'infrastructure' : 'application';\nreturn [{ json: { ...e, category, severity: sev } }];"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Notify Admin",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/admin/alert",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"severity\": \"{{ $json.severity }}\", \"category\": \"{{ $json.category }}\", \"message\": \"{{ $json.body.message }}\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Error Event Webhook": {
+      "main": [ [ { "node": "Classify Error", "type": "main", "index": 0 } ] ]
+    },
+    "Classify Error": {
+      "main": [ [ { "node": "Notify Admin", "type": "main", "index": 0 } ] ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "meta": {}
+}

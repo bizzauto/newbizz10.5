@@ -1,0 +1,57 @@
+{
+  "name": "Campaign Automation",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Daily Campaign Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {
+        "triggerTimes": [
+          { "mode": "everyDay", "hour": 10, "minute": 0 }
+        ]
+      }
+    },
+    {
+      "id": "2",
+      "name": "Fetch Audience",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://crm.bizzauto.app/api/audience/campaign",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Send Campaign",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/campaign/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"audience\": \"{{ $json.audience_id }}\", \"template\": \"promo_2025\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Daily Campaign Trigger": {
+      "main": [ [ { "node": "Fetch Audience", "type": "main", "index": 0 } ] ]
+    },
+    "Fetch Audience": {
+      "main": [ [ { "node": "Send Campaign", "type": "main", "index": 0 } ] ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "meta": {}
+}

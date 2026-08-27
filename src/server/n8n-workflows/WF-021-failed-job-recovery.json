@@ -1,0 +1,57 @@
+{
+  "name": "Failed Job Recovery",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Recovery Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {
+        "triggerTimes": [
+          { "mode": "everyHour", "minute": 15 }
+        ]
+      }
+    },
+    {
+      "id": "2",
+      "name": "List Failed Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://crm.bizzauto.app/api/jobs/failed",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Retry Jobs",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/jobs/retry",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"job_id\": \"{{ $json.job_id }}\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Recovery Trigger": {
+      "main": [ [ { "node": "List Failed Jobs", "type": "main", "index": 0 } ] ]
+    },
+    "List Failed Jobs": {
+      "main": [ [ { "node": "Retry Jobs", "type": "main", "index": 0 } ] ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "meta": {}
+}

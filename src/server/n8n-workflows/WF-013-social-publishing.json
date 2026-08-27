@@ -1,0 +1,60 @@
+{
+  "name": "Social Publishing",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Publish Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "wf013-social-webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "social-publish",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "2",
+      "name": "Format Post",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [470, 300],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "a", "name": "platform", "type": "string", "value": "={{ $json.body.platform }}" },
+            { "id": "b", "name": "message", "type": "string", "value": "={{ $json.body.message }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "3",
+      "name": "Post to Social API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/social/post",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"platform\": \"{{ $json.platform }}\", \"message\": \"{{ $json.message }}\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Publish Webhook": {
+      "main": [ [ { "node": "Format Post", "type": "main", "index": 0 } ] ]
+    },
+    "Format Post": {
+      "main": [ [ { "node": "Post to Social API", "type": "main", "index": 0 } ] ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "meta": {}
+}

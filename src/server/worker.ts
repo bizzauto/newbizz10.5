@@ -8,6 +8,7 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 import { workers, shutdownWorkers, startIndiaMARTAutosync } from './workers/index.js';
+import './workers/import.worker.js';
 
 console.log('🚀 Starting background job workers...');
 

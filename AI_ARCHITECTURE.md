@@ -1,44 +1,57 @@
-# AI Architecture
+# AI Architecture — BIZZ CRM
 
-BizzAuto uses AI for sales copilots, lead scoring, auto-replies, content generation, and the "AVA" assistant. Three layers exist today, plus a planned unified gateway.
+The AI layer is a **provider-agnostic gateway** that routes tasks to the cheapest viable model, falls back on failure, controls cost, and enforces guardrails. It never performs mutating actions directly.
 
-## 1. `AIService` — `src/server/services/ai.service.ts`
+## Components
+- **Gateway:** `src/server/services/ai-gateway.service.ts` — `aiComplete(task, messages, ctx)`.
+- **Routes:** `routes/ai.ts`, `routes/ai-sales-agent.ts`, `routes/ava.ts`, `routes/intelligence.ts`.
+- **Legacy clients:** `ai.service.ts`, `ava-intelligence.service.ts` (kept for AVA/agent features).
+- **Ledger:** `AiUsageLog` (Prisma) — every call logged (`businessId, provider, model, task, tokensIn/Out, costUsd, latencyMs, success`).
 
-Provider-agnostic OpenAI-compatible client used across the app:
-- Lazy-initialized clients keyed by env: **NVIDIA NIM** (`NVIDIA_NIM_API_KEY`, first priority — free), **Groq** (`GROQ_API_KEY`), **OpenRouter** (`OPENROUTER_API_KEY`), plus OpenAI/Google/Gemini.
-- `providers` map exposes `text` / `code` model aliases; callers pick a provider + model.
-- Used by lead scoring (`ai-lead-scoring.service.ts`), auto-reply (`ai-auto-reply.service.ts`), chatbot, content moderation (`content-moderation.service.ts`), course AI, etc.
-- ~449 lines; exposes `generateText`, embeddings, etc. (read file for exact exports).
+## Router
+Task types (`AiTask`): `classification` (cheapest), `short_text` (fast), `reasoning` (strongest), `embedding`.
+Provider config (`ProviderCfg`): `baseUrl`, `apiKey` ('' for Ollama), `models` per task, `costPer1kOut`.
 
-## 2. `AvaIntelligenceService` — `src/server/services/ava-intelligence.service.ts`
+```
+aiComplete(task, messages)
+   │
+   ├─ CHAIN = [OpenRouter, OpenAI, Ollama]   (filtered by env keys present)
+   │
+   └─ for provider in CHAIN:
+        if circuitOpen(provider): skip
+        call /chat/completions
+        on success → log AiUsageLog → return {text, provider, model, latencyMs}
+        on fail    → markFailure (3 fails → open 5 min) → next provider
+   └─ all fail → log failure → throw AI_GATEWAY_ALL_PROVIDERS_FAILED
+```
 
-"AVA" is the conversational/business-intelligence assistant, exposed via `routes/ava.ts` and `routes/intelligence.ts`.
-- `ava-intelligence.service.ts` builds a **DailyBriefing** (revenue, sales, leads, pipeline, appointments, support, team, alerts, recommendations) by querying Prisma directly — **100% free, no paid APIs**.
-- `routes/ava.ts` also triggers and health-checks n8n (`/api/ava/n8n/status`, `/api/ava/n8n/trigger`) and can call OpenRouter/Gemma models for chat.
-- `ai-analytics.service.ts` aggregates AI usage for dashboards.
+## Providers (configured by env)
+| Provider | Env | Models | $/1k out |
+|----------|-----|--------|----------|
+| OpenRouter | `OPENROUTER_API_KEY` | gpt-4o-mini (class/short), claude-sonnet-4.5 (reasoning) | 0.002 |
+| OpenAI | `OPENAI_API_KEY` | gpt-4o-mini (class/short), gpt-4o (reasoning) | 0.006 |
+| Ollama | `OLLAMA_BASE_URL` + `OLLAMA_MODEL` (default llama3.1:8b) | same model all tasks | 0 (local) |
 
-## 3. Planned `AiGateway` — `src/server/services/ai-gateway.service.ts` (EXISTS)
+## Fallback & resilience
+- Ordered chain: cloud-cheap → premium → local. Local Ollama keeps platform functional if both clouds trip the breaker (privacy bonus — no egress).
+- Circuit breaker: 3 consecutive failures → provider skipped 5 min (`breaker` Map in `ai-gateway.service.ts`).
+- `getProviderStatus()` exposes health for dashboards.
 
-`ai-gateway.service.ts` is already implemented and is the intended unified entry point:
-- **Multi-provider chain:** `OPENROUTER` → `OPENAI` → `OLLAMA` (filtered by which env keys are set). Task-based model routing via `AiTask` = `classification | short_text | reasoning | embedding` (cheap model for cheap tasks).
-- **Fallback:** iterates the chain; on failure logs + marks a circuit breaker (`markFailure`). After 3 consecutive failures a provider is skipped for 5 min (`breaker` map).
-- **Usage + cost tracking:** every call writes an `AiUsageLog` row (`businessId`, `provider`, `model`, `task`, `tokensIn`, `tokensOut`, `costUsd`, `latencyMs`, `success`). This powers billing/cost dashboards (see `MONITORING.md`).
-- **Self-hosted option:** `OLLAMA_BASE_URL` + `OLLAMA_MODEL` (e.g. `llama3.1:8b`) add a local, zero-cost provider (cost `0`). Compatible with LocalAI (OpenAI-compatible `/v1`).
-- **Planned additions:** Redis response caching (keyed by `businessId`+prompt hash) and **per-business rate limiting** (token-bucket in Redis) to cap spend per tenant.
+## Cost control
+- Per-call `costUsd` logged; aggregate via `AiUsageLog` (`AI_COST_REPORT.md`).
+- Budget tiers 70/85/95% documented in `COST_OPTIMIZATION.md` — **logging only today; enforcement not yet in code** (`checkBudget` planned).
+- No response cache yet (planned: Redis, 24h TTL for class/short_text).
 
-### Recommended call pattern
-New AI features should call `aiGateway.aiComplete(task, messages, { businessId })` instead of touching `ai.service.ts` directly, so cost + circuit-breaking are centralized.
+## Guardrails
+- Gateway returns **text only** — no tool execution. Mutating actions go through authenticated, human-gated API routes (`AI_GUARDRAILS.md`).
+- Tenant lock: `businessId` from JWT; AI never crosses tenants.
+- Prompt-injection defense: untrusted content wrapped as data; no secrets in prompts; output sanitized before send.
+- Rate limited: `aiApiRateLimiter` (50/15m business).
 
-## Provider / env reference
+## Agents
+- **AVA intelligence** (`ava-intelligence.service.ts`): assistant/insights over CRM data (read-scoped).
+- **AI sales agent** (`ai-sales-agent.ts`): drafts replies/proposals; send requires human approval tier (campaigns/whatsapp routes).
+- **Intelligence** (`intelligence.ts`): scoring/summaries.
 
-| Env | Provider | Notes |
-|-----|----------|-------|
-| `NVIDIA_NIM_API_KEY` | NVIDIA NIM | Free, first priority in `ai.service.ts`. |
-| `GROQ_API_KEY` | Groq | Free/fast. |
-| `OPENROUTER_API_KEY` | OpenRouter | Fallback + gateway. |
-| `OPENAI_API_KEY` | OpenAI | Gateway. |
-| `ANTHROPIC_API_KEY` / `CLAUDE_API_KEY` | Anthropic | Health-checked in `status-health.ts`. |
-| `GOOGLE_API_KEY` / `GEMINI_API_KEY` | Google/Gemini | Gateway + chat. |
-| `OLLAMA_BASE_URL` / `OLLAMA_MODEL` | Ollama/LocalAI | Self-hosted, free. |
-
-See `N8N_ARCHITECTURE.md`, `MONITORING.md`.
+## Roadmap
+Enforce budget hard-stop, add response cache, route more traffic to Ollama, add AI cost dashboard panel in `/api/metrics`.

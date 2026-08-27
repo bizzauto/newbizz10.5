@@ -1,48 +1,44 @@
-# Deployment
+# Deployment — BIZZ CRM
 
-BizzAuto runs as a Node/Express server (+ separate BullMQ worker process) and a React SPA, deployed to a VPS via **Docker + Coolify**. A Prometheus/Grafana/nginx monitoring stack is included.
+Production deploy via **Coolify** to a VPS. Repo: `bizzauto/newbizz10.5` (prod). Build = Docker (`Dockerfile`, `docker-compose.prod.yml`).
 
-## Build & run commands (`package.json`)
-| Script | What it does |
-|--------|--------------|
-| `npm run build` | Build client (Vite) + copy `mobile-app` if present. |
-| `npm run build:server` | Compile `src/server/**` → `dist/server/**` via `scripts/build-server.js` (esbuild, ESM). |
-| `npm start` | `prisma generate && prisma migrate deploy && node dist/server/index.js`. |
-| `npm run worker` | `node dist/server/workers/index.js` (BullMQ workers). |
-| `npm run prisma:migrate:prod` | `prisma migrate deploy`. |
-| `npm run docker:build` / `docker:run` | Build/run the image. |
+## Topology
+- **API process**: `npm run start` → `src/server/index.ts` (Express + Socket.IO).
+- **Worker process**: `npm run worker` → `src/server/worker.ts` (BullMQ). Run as a second service/container.
+- **Postgres** (managed or container), **Redis** (BullMQ), **n8n** (self-hosted, separate).
+- **nginx** + **Prometheus/Grafana** in `nginx/`, `monitoring/`, `prometheus/`.
 
-> Run the **server and worker as two separate processes/containers** (or `npm start` + `npm run worker` in the same container). The worker needs Redis; if Redis is absent it logs a warning and skips queue processing (`workers/index.ts`).
+## Zero-downtime
+1. Coolify builds new image from `bizzauto/newbizz10.5`.
+2. Run migrations as a pre-traffic step (see below) — migrations must be backward-compatible (additive) so old + new API versions coexist during cutover.
+3. Coolify swaps the container behind the load balancer / nginx (rolling update, healthcheck on `GET /ready`).
+4. Old container drains in-flight requests; graceful shutdown on `SIGTERM` (`index.ts:761 gracefulShutdown`, `worker.ts` SIGTERM → `shutdownWorkers`).
 
-## Docker
-- `Dockerfile`: multi-stage — installs deps, runs `build` + `build:server`, produces a slim runtime image (Node 18/20).
-- `docker-compose.prod.yml`: wires `server`, `worker`, `postgres`, `redis`, `nginx`, and the monitoring stack. Healthchecks on `/api/status/ready`.
-- `monitoring/` (Prometheus + Grafana) and `nginx/` reverse proxy configs included.
+## Migrate on deploy
+`start` script runs `prisma migrate deploy` (or `prisma db push` for parity). Ensure:
+- Migration folder committed & tagged with the DB dump used in `DISASTER_RECOVERY.md`.
+- `DATABASE_URL` from Coolify secret (TLS `sslmode=require`).
+- Idempotent: `migrate deploy` applies only pending. Never run `migrate dev` in prod.
 
-## Environment variables (`.env.example`)
-| Category | Vars |
-|----------|------|
-| DB | `DATABASE_URL` (postgres) |
-| Redis | `REDIS_URL` or `REDIS_HOST`/`REDIS_PORT`/`REDIS_PASSWORD`; `USE_REDIS_CACHE=true` |
-| Auth | `JWT_SECRET`, `JWT_REFRESH_SECRET`, `SESSION_SECRET` |
-| Secrets | `ENCRYPTION_KEY` (32-byte, base64) |
-| n8n | `N8N_URL`, `N8N_APP_API_KEY` (fallback `N8N_API_KEY`), `N8N_PASSWORD`, `N8N_ENCRYPTION_KEY`, `N8N_HOST`, `N8N_PROTOCOL` |
-| AI | `NVIDIA_NIM_API_KEY`, `GROQ_API_KEY`, `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GOOGLE_API_KEY`/`GEMINI_API_KEY`, `OLLAMA_BASE_URL`/`OLLAMA_MODEL` |
-| Google | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, `GOOGLE_MAPS_API_KEY` |
-| WhatsApp/GBP | per-business tokens stored in `Business`/`Integration` (encrypted at rest) |
-| Push | FCM server key / VAPID keys — currently sourced per-business from the `Integration`/`Business` config (`DeviceToken` model), not a global `.env` var. |
-| Misc | `NODE_ENV=production`, `PORT`, `CORS_ORIGINS`, `MONITOR_KEY`, `LOG_LEVEL`, `CLIENT_URL` |
-| Host | `HOST_DOMAIN`, `WSS_*` (Socket.IO) |
+## Env (Coolify secret store — never commit)
+`DATABASE_URL`, `REDIS_URL`, `JWT_SECRET`, `ENCRYPTION_KEY` (32-byte), `N8N_BASE_URL`, `N8N_API_KEY`, `OPENROUTER_API_KEY`, `OPENAI_API_KEY`, `OLLAMA_BASE_URL`, `OLLAMA_MODEL`, `LEAD_WEBHOOK_SECRET`, `BREVO_API_KEY`, `RAZORPAY_*`, `GBP_*`, `CORS_ORIGINS`, `DB_POOL_SIZE`, `SLOW_QUERY_LOG_ENABLED`, `USE_REDIS_CACHE`.
 
-> SSL verification to n8n is skipped only when `N8N_URL` is internal/private (`getN8nHttpsAgent`).
+## Smoke test (post-deploy)
+```bash
+curl -f https://<host>/ready            # expect true
+curl -f https://<host>/health           # status healthy/degraded
+curl -H "Authorization: Bearer $TOKEN" https://<host>/api/metrics
+# worker: docker logs worker | grep "All workers are running"
+# n8n: curl $N8N_BASE_URL/healthz (or /api/v1/workflows with key)
+```
+- Create a test Contact via `POST /api/leads` (business token) → confirm `DomainEvent` row + notification.
+- Confirm one BullMQ worker processing (enqueue a `whatsapp-messages` test job).
 
-## Coolify notes
-- Set the same env vars in the Coolify app. Run `prisma migrate deploy` once on first deploy (the `start` script does it automatically).
-- Expose the server behind `nginx/` (terminates TLS, proxies `/api`, `/metrics`, serves the SPA).
-- Use the `monitoring/` stack for Prometheus scrape (`/api/monitoring/metrics?key=MONITOR_KEY`) + Grafana.
+## Rollback
+- Coolify keeps previous image; redeploy prior tag.
+- If migration broke compat: restore from latest `pg_dump` (`DISASTER_RECOVERY.md`), redeploy matching app tag.
+- Keep migrations additive to allow fast forward/back at app layer.
 
-## Rollback / migration safety
-- Migrations are applied with `migrate deploy` (no destructive dev commands in prod).
-- Back up Postgres before major schema changes.
-
-See `ARCHITECTURE.md`, `MONITORING.md`, `TROUBLESHOOTING.md`, `SECURITY.md`.
+## Notes
+- `scripts/build-server.js` (esbuild) compiles TS; `vite build` builds the PWA frontend.
+- Single API instance today (no HA autoscale). Scale horizontally behind nginx once stateless (sessions are JWT, queues in Redis).

@@ -1,0 +1,61 @@
+{
+  "name": "Payment Handler",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Payment Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "wf020-payment-webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "payment-event",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "2",
+      "name": "Verify Server-Side",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/payments/verify",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"event_id\": \"{{ $json.body.event_id }}\", \"signature\": \"{{ $json.body.signature }}\" }"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Update Subscription",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/subscriptions/update",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"subscription_id\": \"{{ $json.subscription_id }}\", \"status\": \"{{ $json.status }}\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Payment Webhook": {
+      "main": [ [ { "node": "Verify Server-Side", "type": "main", "index": 0 } ] ]
+    },
+    "Verify Server-Side": {
+      "main": [ [ { "node": "Update Subscription", "type": "main", "index": 0 } ] ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "meta": {}
+}

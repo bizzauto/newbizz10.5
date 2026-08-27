@@ -1,35 +1,48 @@
-# Database
+# Database — BIZZ CRM
 
-PostgreSQL via **Prisma 5** (`prisma/schema.prisma`, ~150 models). Migrations applied automatically at startup (`package.json` `start` → `prisma migrate deploy` / `prisma db push`). Connection via `DATABASE_URL`.
+PostgreSQL + **Prisma 5** (`prisma/schema.prisma`). ~146 models. Migrations applied via `prisma migrate deploy` at startup.
 
-## Key Models (relevant to automation/AI/n8n)
+## Connection
+`src/server/db.ts`:
+- `PrismaClient` with `log: ['error','warn']` (+ `query` when `SLOW_QUERY_LOG_ENABLED=true` & `production`).
+- Pool: appends `connection_limit` (from `DB_POOL_SIZE`) and `pool_timeout=10` to `DATABASE_URL`.
+- Use `DB_POOL_SIZE` to right-size per container (default pgbouncer-style; avoid exceeding DB max_connections across replicas).
 
-| Model | Fields (subset) | Purpose |
-|-------|-----------------|---------|
-| `Business` | `id`, `name`, `slug`, `plan`, WhatsApp/GBP tokens, `gbpAutoPostEnabled`, `timezone`, `allowedOrigins Json?` | Tenant root. |
-| `User` | `id`, `businessId?`, `email`, `role`, `googleId?`, `phone?` | Staff; `SUPER_ADMIN` is platform-wide. |
-| `Lead` | `businessId`, `name`, `phone`, `email`, `score?`, `stage?`, `source?` | Captured leads. |
-| `AutomationRule` | `businessId`, `name`, `description?`, `isActive`, `trigger Json`, `actions Json[]`, `runCount`, `lastRunAt` | DB-driven automation (legacy). |
-| `Workflow` | `businessId`, `name`, `triggerType`, `triggerConfig`, `nodes Json`, `edges Json`, `isActive`, `createdBy` | Visual node/edge automation graph. |
-| `WorkflowRun` | `workflowId`, `businessId`, `triggeredBy`, `status`, `startedAt`, `completedAt` | Execution log for `Workflow`. |
-| `WorkflowExecution` | (execution detail rows) | Step-level workflow execution trace. |
-| `ChatbotFlow` | `businessId`, `name`, `trigger`, `keywords Json`, `response`, `aiEnabled`, `isActive` | Legacy auto-reply rules. |
-| `DomainEvent` | `id`, `eventType`, `businessId?`, `payload Json`, `idempotencyKey? @unique`, `status`, `error?`, `createdAt` | **Event bus store** (see `N8N_ARCHITECTURE.md`). Idempotent on `idempotencyKey`. |
-| `AiUsageLog` | `id`, `businessId?`, `provider`, `model`, `task`, `tokensIn`, `tokensOut`, `costUsd`, `latencyMs`, `success`, `createdAt` | AI cost/usage tracking (gateway + services). |
-| `DeviceToken` | `id`, `userId`, `businessId?`, `token @unique`, `platform`, `appVersion`, `isActive`, `createdAt`, `updatedAt` | Push device registration (FCM/Capacitor). |
-| `Integration` | `businessId`, `type`, `name`, `config Json`, `isActive`, `lastSyncAt?`, `lastError?`, `webhookUrl?` | Third-party integration config. `@@unique([businessId, type])`. |
-| `LeadScore` | `leadId`, `businessId`, `score`, `factors Json`, `createdAt` | Lead scoring output. |
-| `ScheduledMessage` | `businessId`, `contactId?`, `scheduledAt`, `status`, `payload Json` | Queue for `scheduled-message` worker. |
-| `OutboundWebhook` | `businessId`, `url`, `events Json`, `secret`, `isActive` | Outbound webhook subscriptions. |
+## Multi-tenancy via `businessId`
+- Every tenant is a `Business` row.
+- Almost all models carry `businessId String` with `@@index([businessId])` for tenant-scoped queries.
+- Enforcement: service/route code always filters `where: { businessId: req.user.businessId }`; `businessId` comes from JWT (`middleware/auth.ts#requireBusinessAccess`), never request body.
+- `User.businessId` links staff; `SUPER_ADMIN` bypasses scoping.
+- `DomainEvent.businessId` records event ownership (`events/eventBus.ts`).
 
-## Connection / pooling
-- `src/server/db.ts` exports a singleton `PrismaClient` with `log: ['error', 'warn']` and `maxWait`/`connectionLimit` tuned for serverless/container (guard against multiple instances in dev via `globalThis`).
-- Migrations: never `prisma migrate dev` in prod; use `migrate deploy`. The `start` script runs `prisma generate` then deploy.
+## Key models (representative)
+| Area | Models |
+|------|--------|
+| Tenant | `Business`, `User`, `BusinessMember`, `CustomRole` |
+| CRM | `Contact`, `Lead`, `Deal`, `Pipeline`, `Stage`, `Activity`, `LeadScore` |
+| Comms | `Conversation`, `Message`, `ScheduledMessage`, `Notification`, `DeviceToken` |
+| Campaigns | `Campaign`, `Post` (social), `TriggerLink` |
+| Billing | `Subscription`, `Invoice`/`Document`, `Wallet`, `Transaction`, `PaymentLink` |
+| AI | `AiUsageLog`, `Ava*`, `Intelligence*` |
+| Automation | `Workflow`, `Automation`, `DomainEvent`, `Webhook` |
+| Social | `SocialAccount`, `Post`, platform tokens on `Business` (`fbAccessToken`, `igAccessToken`, …) |
+| Reviews | `Review`, `ReviewRequest` |
+| Audit | `AuditLog`, `Activity`, `SecurityIncident` |
 
-## Tenant isolation
-- Every business-scoped query adds `where: { businessId: req.user.businessId }`; `SUPER_ADMIN` bypasses. Prisma schema uses `@@index([businessId])` on most tables.
+## Indexes
+- `businessId` indexed on tenant entities (standard).
+- Hot query paths (verify in schema): `contact(businessId, source)`, `domainEvent(businessId, eventType, createdAt)`, `scheduledMessage(status, scheduledAt)`, `post(status, scheduledAt)`, `campaign(status, scheduledAt)` — the dispatchers in `workers/index.ts` scan these every 60s, so index them.
+- Add composite indexes for any report `groupBy` in `routes/metrics.ts` if slow.
 
-## Migrating the event store (planned)
-- `DomainEvent` is the source of truth today. The roadmap adds a **Redis Stream `bizz:events`** (`XADD` from `emitEvent`) so n8n can consume `DomainEvent`s as a durable replayable feed — `DomainEvent` stays the audit/backup copy.
+## Encryption at rest (app layer)
+- Sensitive tokens (WhatsApp/GBP/social) stored encrypted (AES-256-GCM) via `utils/encryption.ts`; decrypted at use (`workers/index.ts#publishTo*`).
+- DB-level encryption (TLS in transit, disk encryption) provided by managed Postgres.
 
-See `ARCHITECTURE.md`, `N8N_ARCHITECTURE.md`, `SECURITY.md`.
+## Connection pool / scaling
+- Stateless API + Redis queues allow horizontal API replicas.
+- Watch `pool_timeout=10`: if saturated, raise `DB_POOL_SIZE` or add pgbouncer; monitor `db` latency in `/health` (>1000ms → `degraded`).
+- `db-pool.ts` route exposes pool stats for debugging.
+
+## Maintenance
+- `prisma migrate deploy` on deploy; `audit-retention.ts` prunes old audit rows (confirm job runs).
+- Backups: `DISASTER_RECOVERY.md`. Never `prisma db push` in prod without a dump.

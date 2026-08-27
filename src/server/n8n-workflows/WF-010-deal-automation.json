@@ -1,0 +1,61 @@
+{
+  "name": "Deal Stage Automation",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Deal Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "wf010-deal-webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "deal-stage-changed",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "2",
+      "name": "Map Deal Fields",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [470, 300],
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "a", "name": "deal_id", "type": "string", "value": "={{ $json.body.deal_id }}" },
+            { "id": "b", "name": "stage", "type": "string", "value": "={{ $json.body.stage }}" },
+            { "id": "c", "name": "owner", "type": "string", "value": "={{ $json.body.owner_email }}" }
+          ]
+        }
+      }
+    },
+    {
+      "id": "3",
+      "name": "Notify BIZZ API",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/notifications/deal",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"deal_id\": \"{{ $json.deal_id }}\", \"stage\": \"{{ $json.stage }}\", \"owner\": \"{{ $json.owner }}\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Deal Webhook": {
+      "main": [ [ { "node": "Map Deal Fields", "type": "main", "index": 0 } ] ]
+    },
+    "Map Deal Fields": {
+      "main": [ [ { "node": "Notify BIZZ API", "type": "main", "index": 0 } ] ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "meta": {}
+}

@@ -1,0 +1,76 @@
+{
+  "name": "Review Management",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Review Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "wf012-review-webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "review-received",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "2",
+      "name": "Analyze Sentiment",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const r = $input.first().json;\nconst text = (r.body && r.body.text || '').toLowerCase();\nconst negatives = ['bad','terrible','worst','hate','poor','awful','slow','broken'];\nconst isNegative = negatives.some(w => text.includes(w));\nreturn [{ json: { ...r, sentiment: isNegative ? 'negative' : 'positive', isNegative } }];"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Is Negative?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2,
+      "position": [690, 300],
+      "parameters": {
+        "conditions": {
+          "options": { "caseSensitive": false },
+          "conditions": [
+            { "id": "a", "leftValue": "={{ $json.isNegative }}", "operator": { "type": "boolean", "operation": "equals" }, "rightValue": true }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4",
+      "name": "Create Recovery Task",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [910, 200],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/tasks",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"type\": \"review_recovery\", \"review_id\": \"{{ $json.body.review_id }}\", \"priority\": \"high\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Review Webhook": {
+      "main": [ [ { "node": "Analyze Sentiment", "type": "main", "index": 0 } ] ]
+    },
+    "Analyze Sentiment": {
+      "main": [ [ { "node": "Is Negative?", "type": "main", "index": 0 } ] ]
+    },
+    "Is Negative?": {
+      "main": [
+        [ { "node": "Create Recovery Task", "type": "main", "index": 0 } ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "meta": {}
+}

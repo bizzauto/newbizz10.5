@@ -1,0 +1,42 @@
+{
+  "name": "Admin Alert",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Critical Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "wf025-admin-webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "admin-critical",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "2",
+      "name": "Send Admin Notification",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/admin/notify",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"level\": \"critical\", \"title\": \"{{ $json.body.title }}\", \"detail\": \"{{ $json.body.detail }}\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Critical Webhook": {
+      "main": [ [ { "node": "Send Admin Notification", "type": "main", "index": 0 } ] ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "meta": {}
+}

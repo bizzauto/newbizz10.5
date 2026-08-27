@@ -1,0 +1,76 @@
+{
+  "name": "Daily Business Report",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Daily 09:00 Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {
+        "triggerTimes": [
+          { "mode": "everyDay", "hour": 9, "minute": 0 }
+        ]
+      }
+    },
+    {
+      "id": "2",
+      "name": "Aggregate Metrics",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://crm.bizzauto.app/api/reports/business",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      }
+    },
+    {
+      "id": "3",
+      "name": "AI Summarize",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/ai/summarize",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"text\": \"{{ JSON.stringify($json) }}\" }"
+      }
+    },
+    {
+      "id": "4",
+      "name": "Send Report",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [910, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/notify",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"channel\": \"whatsapp\", \"message\": \"{{ $json.summary }}\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Daily 09:00 Trigger": {
+      "main": [ [ { "node": "Aggregate Metrics", "type": "main", "index": 0 } ] ]
+    },
+    "Aggregate Metrics": {
+      "main": [ [ { "node": "AI Summarize", "type": "main", "index": 0 } ] ]
+    },
+    "AI Summarize": {
+      "main": [ [ { "node": "Send Report", "type": "main", "index": 0 } ] ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "meta": {}
+}

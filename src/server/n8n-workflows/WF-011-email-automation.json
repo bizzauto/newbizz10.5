@@ -1,0 +1,57 @@
+{
+  "name": "Email Automation",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Daily Trigger",
+      "type": "n8n-nodes-base.cron",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "parameters": {
+        "triggerTimes": [
+          { "mode": "everyDay", "hour": 8, "minute": 0 }
+        ]
+      }
+    },
+    {
+      "id": "2",
+      "name": "Fetch Leads",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://crm.bizzauto.app/api/leads?segment=email",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Send Email",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/email/send",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"to\": \"{{ $json.email }}\", \"subject\": \"Your weekly update\", \"campaign\": \"weekly_digest\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Daily Trigger": {
+      "main": [ [ { "node": "Fetch Leads", "type": "main", "index": 0 } ] ]
+    },
+    "Fetch Leads": {
+      "main": [ [ { "node": "Send Email", "type": "main", "index": 0 } ] ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "meta": {}
+}

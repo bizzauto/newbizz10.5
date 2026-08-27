@@ -1,0 +1,80 @@
+{
+  "name": "AI Sales Assistant",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Sales Question Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "wf018-sales-webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-sales",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "2",
+      "name": "Fetch CRM Data",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [470, 300],
+      "parameters": {
+        "method": "GET",
+        "url": "https://crm.bizzauto.app/api/crm/context",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Answer with AI",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.7,
+      "position": [690, 300],
+      "parameters": {
+        "resource": "chat",
+        "operation": "message",
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "system",
+              "content": "You are a sales assistant. Use the CRM data to answer the question."
+            },
+            {
+              "role": "user",
+              "content": "={{ $json.body.question }} | CRM context: {{ JSON.stringify($items()[0].json) }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "4",
+      "name": "Return Answer",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [910, 300],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"answer\": \"{{ $json.text }}\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Sales Question Webhook": {
+      "main": [ [ { "node": "Fetch CRM Data", "type": "main", "index": 0 } ] ]
+    },
+    "Fetch CRM Data": {
+      "main": [ [ { "node": "Answer with AI", "type": "main", "index": 0 } ] ]
+    },
+    "Answer with AI": {
+      "main": [ [ { "node": "Return Answer", "type": "main", "index": 0 } ] ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "meta": {}
+}

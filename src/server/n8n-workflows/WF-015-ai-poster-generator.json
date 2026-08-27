@@ -1,0 +1,53 @@
+{
+  "name": "AI Poster Generator",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Poster Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "wf015-poster-webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-poster",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "2",
+      "name": "Generate Image",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.7,
+      "position": [470, 300],
+      "parameters": {
+        "resource": "image",
+        "operation": "generate",
+        "model": "dall-e-3",
+        "prompt": "={{ $json.body.prompt }}"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Return Image URL",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [690, 300],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"image_url\": \"{{ $json.data[0].url }}\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Poster Webhook": {
+      "main": [ [ { "node": "Generate Image", "type": "main", "index": 0 } ] ]
+    },
+    "Generate Image": {
+      "main": [ [ { "node": "Return Image URL", "type": "main", "index": 0 } ] ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "meta": {}
+}

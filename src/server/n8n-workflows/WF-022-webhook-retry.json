@@ -1,0 +1,56 @@
+{
+  "name": "Webhook Retry",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Inbound Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "wf022-retry-webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "webhook-retry",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "2",
+      "name": "Retry Wrapper",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [470, 300],
+      "parameters": {
+        "language": "javaScript",
+        "jsCode": "const item = $input.first().json;\nlet attempt = item.attempt || 0;\nconst max = 3;\nif (attempt < max) {\n  return [{ json: { ...item, attempt: attempt + 1, retry: true } }];\n}\nreturn [{ json: { ...item, retry: false, failed: true } }];"
+      }
+    },
+    {
+      "id": "3",
+      "name": "Forward Request",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.1,
+      "position": [690, 300],
+      "parameters": {
+        "method": "POST",
+        "url": "https://crm.bizzauto.app/api/ingest",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={ \"payload\": \"{{ JSON.stringify($json) }}\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Inbound Webhook": {
+      "main": [ [ { "node": "Retry Wrapper", "type": "main", "index": 0 } ] ]
+    },
+    "Retry Wrapper": {
+      "main": [ [ { "node": "Forward Request", "type": "main", "index": 0 } ] ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "meta": {}
+}

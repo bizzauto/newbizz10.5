@@ -1,12 +1,12 @@
-# Security
+# Security — BIZZ CRM
 
-Security controls live in `src/server/middleware/*` and `services/security/*`. Lint rule `no-superuser-bypass` blocks disabling RBAC.
+Controls live in `src/server/middleware/*` and `services/security/*`. Lint rule `no-superuser-bypass` blocks disabling RBAC.
 
 ## Auth & RBAC
 - JWT (`utils/jwtConfig.ts`, `middleware/auth.ts`): `Authorization: Bearer <jwt>`. Roles: `SUPER_ADMIN`, `OWNER`, `ADMIN`, `MANAGER`, `SALES_REP`, `STAFF`. `requireRole(...)` enforces.
 - **Google OAuth**: `routes/auth.ts` (`/api/auth/google`, `/google/url`, `/google/callback`, `/google/link-url`, `/google/unlink`) via `services/google-oauth.service.ts` + `google-auth-library`. Apple Sign-In also supported.
 - **n8n service auth**: `middleware/auth.ts#authenticateViaN8nApiKey` validates `x-n8n-api-key`, verifies HMAC `x-business-signature` over the body, and injects a system user scoped to `x-business-id` → prevents **tenant breakout**.
-- **Multi-tenant scoping**: `req.user.businessId` from JWT, never from request body; enforced in every business query.
+- **Multi-tenant scoping**: `req.user.businessId` from JWT, never from request body; enforced in every business query (`requireBusinessAccess`).
 
 ## Input / Output hardening (`middleware/`)
 - `sanitizeInput` / `sanitizeRequestBody`: strips `<script>`, `javascript:`, `on*=` event handlers, control chars, dangerous protocols. `inputBlacklist` + `xssPatterns` deny-listed.
@@ -48,5 +48,11 @@ Falls back to in-memory limiter if Redis is down (`USE_REDIS_CACHE=false` or no 
 ## Hardening notes
 - `services/security/*.service.ts`: `security-alert.service.ts`, `security-monitor.service.ts`, `security-incident.service.ts`, `threat-detection.service.ts` monitor anomalies.
 - `middleware/env-hardening.ts` validates required env at boot and warns on insecure defaults.
+
+## Known gaps (see SECURITY_FINAL_REPORT.md)
+- Global `LEAD_WEBHOOK_SECRET` fallback (H1) — remove.
+- External alert routing not verified (H2).
+- Social token refresh scheduler missing (M1).
+- CSRF column presence not boot-enforced (M2).
 
 See `ARCHITECTURE.md`, `API.md`, `DEPLOYMENT.md`.

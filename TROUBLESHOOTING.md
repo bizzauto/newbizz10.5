@@ -1,42 +1,53 @@
-# Troubleshooting
+# Troubleshooting — BIZZ CRM
 
-Quick fixes for common BizzAuto runtime issues.
+Common failure modes + fixes. All paths real. Check logs first: `docker logs <svc>` or Coolify log view.
 
-## Workers don't process jobs
-- **Symptom:** WhatsApp messages, emails, social posts, scheduled messages never send.
-- **Cause:** Redis down or worker not running. `workers/index.ts` disables queues if `redisAvailable` is false.
-- **Fix:** Confirm `REDIS_URL`/`REDIS_HOST` reachable; start `npm run worker` as a separate process; check `GET /api/admin/queues` shows queues. Look for `[workers] Redis unavailable, skipping queue init` in logs.
+## Redis unreachable
+**Symptoms:** BullMQ workers don't process; `/health` shows `redis: error` → `unhealthy`; console `[Workers] Redis not configured`.
+**Cause:** `REDIS_URL` wrong, Redis down, or `USE_REDIS_CACHE=false`.
+**Fix:**
+- Verify `REDIS_URL` in Coolify env; `redis-cli ping`.
+- App stays up; queues are **disabled** when Redis is down (`workers/index.ts` gates on `redisAvailable`). Async work (WhatsApp/campaigns/social) pauses but API serves.
+- Restart worker after Redis recovers: `npm run worker`. Jobs created while down are lost (not enqueued) — re-trigger via admin.
+**Prevent:** add Redis health alert; ensure BullMQ connection (`bullMQ:true`, no commandTimeout).
 
-## n8n triggers fail / "n8n unreachable"
-- **Symptom:** `GET /api/automation/n8n/status` returns error; automations that call n8n hang.
-- **Fix:** Verify `N8N_URL` is correct and reachable from the server. Confirm `N8N_APP_API_KEY` (or `N8N_API_KEY`) matches n8n's API key. If `N8N_URL` is `https` on a self-signed host, `getN8nHttpsAgent()` disables cert checks only for internal hosts.
+## n8n down / not configured
+**Symptoms:** automation webhooks 401/timeout; `/api/metrics` `n8nConfigured:false`; `isN8nConfigured()` false.
+**Cause:** `N8N_BASE_URL`/`N8N_API_KEY` unset, n8n instance stopped, or workflow inactive.
+**Fix:**
+- Confirm `N8N_BASE_URL` + `N8N_API_KEY` in env; `curl $N8N_BASE_URL/healthz`.
+- Reactivate workflows in n8n UI (`n8n-workflows/README.md`).
+- n8n→CRM calls rejected if HMAC `x-business-signature` mismatches (`middleware/auth.ts`) — regenerate key in both n8n and Coolify so they match.
 
-## Automation rules not firing
-- **Symptom:** No WhatsApp/email on new lead.
-- **Fix:** Check the `AutomationRule.isActive` flag and that the trigger matches (e.g. `lead.created`). Events are emitted via `emitEvent` → `DomainEvent`. If a handler throws, the event is marked `partial_error` but other handlers still run. Inspect `DomainEvent.status`/`error`.
+## AI timeout / all providers failed
+**Symptoms:** `AI_GATEWAY_ALL_PROVIDERS_FAILED` in logs; AI features error.
+**Cause:** provider API key missing, rate limit, or network egress (IPv6 issue).
+**Fix:**
+- Check `OPENROUTER_API_KEY` / `OPENAI_API_KEY`; circuit breaker auto-skips a provider after 3 fails for 5 min (`ai-gateway.service.ts#getProviderStatus`).
+- Set `OLLAMA_BASE_URL` for local fallback (no egress needed).
+- DNS: `src/server/dns-config.js` forces IPv4-first — ensure it's imported first in worker (it is).
+- Lower `max_tokens` default if latency high; verify `SLOW_QUERY_LOG` not the cause.
 
-## AI calls fail / high cost
-- **Symptom:** 500s on `/api/ai`, or surprise spend.
-- **Fix:** Confirm at least one provider key is set (`NVIDIA_NIM_API_KEY` first). Check `AiUsageLog` for `success=false`/spikes. Gateway circuit-breaker skips a provider for 5 min after 3 failures — verify via `GET /api/status/health` → `ai`. For local/free inference set `OLLAMA_BASE_URL` + `OLLAMA_MODEL`. (Per-business rate limit is planned.)
+## Deploy fail
+**Symptoms:** Coolify build red; container crash-loop; `/ready` false.
+**Fix:**
+- Read build log: `scripts/build-server.js` (esbuild) + `vite build`.
+- Migration error: run `npx prisma migrate deploy` manually against `DATABASE_URL`; ensure schema committed. Never `migrate dev` in prod.
+- Missing env: `middleware/env-hardening.ts` warns at boot — set required vars in Coolify.
+- Port/env mismatch: confirm `PORT` and nginx upstream.
+- Rollback: redeploy previous Coolify tag; if migration broke compat, restore `pg_dump` (`DISASTER_RECOVERY.md`).
 
-## WhatsApp messages not sending
-- **Fix:** Verify the business has valid WhatsApp tokens in `Business`/`Integration` (encrypted). `checkWhatsApp` in `/api/status/health` shows status. Rate limits apply (`WhatsAppRateLimiter` in `scheduled-message.worker.ts`).
+## Tenant breakout / 403 on n8n calls
+**Symptom:** n8n→CRM returns 403 "Invalid business signature".
+**Fix:** `x-business-signature` must equal HMAC-SHA256(`N8N_API_KEY`, businessId). Regenerate/align `N8N_API_KEY` across n8n + app.
 
-## DB migration errors on deploy
-- **Symptom:** `npm start` fails at `prisma migrate deploy`.
-- **Fix:** Ensure `DATABASE_URL` is correct and the DB is reachable. Use `migrate deploy` (never `migrate dev` in prod). If schema drift, back up then reconcile manually.
+## WhatsApp send failing
+**Fix:** check `whatsapp-rate-limit.ts`; verify Evolution/Cloud API token; template name/language; media URL reachable + SSRF-safe. Worker concurrency 10.
 
-## Build errors (`build:server`)
-- **Symptom:** esbuild/TS errors compiling the server.
-- **Fix:** Run `npm run build:server` locally to see errors; ensure no syntax issues. The script uses `scripts/build-server.js` (esbuild, ESM) — check `package.json` engines.
+## DB slow / degraded
+**Symptom:** `/health` `database: degraded` (>1000ms); `pool_timeout=10` errors.
+**Fix:** raise `DB_POOL_SIZE`; add pgbouncer; index hot paths (`DATABASE.md`); enable `SLOW_QUERY_LOG_ENABLED=true`.
 
-## Push notifications not delivered
-- **Fix:** Confirm the device registered a `DeviceToken` (via `/api/fcm` or `/api/push-devices`). FCM keys are per-business (in `Integration`/`Business` config). Check `fcm.service.ts` / `push-notification.service.ts` logs.
-
-## Redis Stream `bizz:events` missing
-- **Expected:** this is **planned**, not yet implemented. The event bus currently writes to `DomainEvent` only (no Redis stream). n8n consumes events via direct REST triggers (`routes/automation.ts`), not by subscribing to `bizz:events` yet.
-
-## CORS / tenant errors
-- **Fix:** Add the client origin to `Business.allowedOrigins` or `CORS_ORIGINS`. n8n callbacks must include `x-n8n-api-key`, `x-business-id`, and a valid `x-business-signature` (HMAC) or they are rejected (`middleware/auth.ts`).
-
-See `ARCHITECTURE.md`, `N8N_ARCHITECTURE.md`, `MONITORING.md`, `DEPLOYMENT.md`.
+## Memory pressure
+**Symptom:** `/health` `memory: error` (heap >90%).
+**Fix:** profile leaks; lower worker concurrency; scale API horizontally (stateless).

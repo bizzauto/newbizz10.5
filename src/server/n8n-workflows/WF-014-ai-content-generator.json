@@ -1,0 +1,60 @@
+{
+  "name": "AI Content Generator",
+  "nodes": [
+    {
+      "id": "1",
+      "name": "Content Webhook",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [250, 300],
+      "webhookId": "wf014-content-webhook",
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "ai-content",
+        "responseMode": "onReceived"
+      }
+    },
+    {
+      "id": "2",
+      "name": "Generate Caption & Hashtags",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 1.7,
+      "position": [470, 300],
+      "parameters": {
+        "resource": "chat",
+        "operation": "message",
+        "model": "gpt-4o",
+        "messages": {
+          "values": [
+            {
+              "role": "user",
+              "content": "=Write a catchy social caption and 5 hashtags for this product: {{ $json.body.product }}"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "id": "3",
+      "name": "Return Result",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.1,
+      "position": [690, 300],
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={ \"content\": \"{{ $json.text }}\" }"
+      }
+    }
+  ],
+  "connections": {
+    "Content Webhook": {
+      "main": [ [ { "node": "Generate Caption & Hashtags", "type": "main", "index": 0 } ] ]
+    },
+    "Generate Caption & Hashtags": {
+      "main": [ [ { "node": "Return Result", "type": "main", "index": 0 } ] ]
+    }
+  },
+  "active": false,
+  "settings": {},
+  "meta": {}
+}

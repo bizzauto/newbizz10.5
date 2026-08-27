@@ -167,6 +167,15 @@ import posthogAnalyticsRoutes from './routes/posthog-analytics.js';
 import onesignalRoutes from './routes/onesignal.js';
 import fcmRoutes from './routes/fcm.js';
 import brevoEmailRoutes from './routes/brevo-email.js';
+import { approvalRouter } from './routes/approval.js';
+import { featureFlagsRouter } from './routes/featureFlags.js';
+import { eventsRouter } from './routes/events.js';
+import { unifiedInboxRouter } from './routes/unifiedInbox.js';
+import { automationBuilderRouter } from './routes/automationBuilder.js';
+import { marketingAutomationRouter } from './routes/marketingAutomation.js';
+import { businessIntelligenceRouter } from './routes/businessIntelligence.js';
+import { importRouter } from './routes/import.js';
+import { adminControlCenterRouter } from './routes/adminControlCenter.js';
 import { authenticate } from './middleware/auth.js';
 
 dotenv.config();
@@ -817,6 +826,17 @@ app.use('/api/voice', voiceRoutes);
 
 // Monitoring / runtime metrics (admin only)
 app.use('/api/metrics', metricsRoutes);
+
+// Automation & Integration layer (new)
+app.use('/api/approvals', authenticatedCsrf, approvalRouter);
+app.use('/api/admin/feature-flags', authenticatedCsrf, featureFlagsRouter);
+app.use('/api/automation/events', authenticatedCsrf, eventsRouter);
+app.use('/api/inbox', authenticatedCsrf, unifiedInboxRouter);
+app.use('/api/automation', authenticatedCsrf, automationBuilderRouter);
+app.use('/api/marketing', authenticatedCsrf, marketingAutomationRouter);
+app.use('/api/bi', authenticatedCsrf, businessIntelligenceRouter);
+app.use('/api/import', authenticatedCsrf, importRouter);
+app.use('/api/admin/control-center', authenticatedCsrf, adminControlCenterRouter);
 
 // Follow-up engine auto-tick: processes pending follow-ups for every business
 // every 10 minutes (previously required a manual API hit).

@@ -1,42 +1,44 @@
-# Monitoring
+# Monitoring — BIZZ CRM
 
-Observability for the BizzAuto server: health endpoints, metrics, queue monitoring, and cost tracking.
+Runtime observability surface. (Prometheus/Grafana referenced in `ARCHITECTURE.md`; confirm scrape jobs are deployed — currently app-level endpoints only.)
 
-## Health checks — `routes/status-health.ts` (`/api/status`)
-- `GET /api/status/health` → summarizes connectivity:
-  ```json
-  { "whatsapp": {"status":"ok"|"error"}, "n8n": {...}, "ai": {...}, "db": {"status":"ok"|"error"} }
-  ```
-- `checkDb` (Prisma `$queryRaw SELECT 1`), `checkWhatsApp` (Meta/Evolution API ping), `checkN8n` (`GET {N8N_URL}/healthz`), `checkAi` (keys present + provider pings: OpenRouter/Gemini/Anthropic).
-- `GET /api/status/ready` liveness for Docker/Coolify.
+## Health endpoints (no auth)
+Implemented in `src/server/utils/healthCheck.ts`, mounted in `src/server/index.ts`:
 
-## Graceful shutdown — `utils/gracefulShutdown.ts`
-- On `SIGTERM`/`SIGINT`: stops accepting connections, closes BullMQ workers (`shutdownAllWorkers`), Prisma, Redis.
+| Endpoint | Checks | Returns |
+|----------|--------|---------|
+| `GET /health` | db, redis, memory | `{ status: healthy|degraded|unhealthy, uptime, version, checks }` |
+| `GET /live` | process alive | `true` (liveness probe) |
+| `GET /ready` | db `SELECT 1` | `true/false` (readiness probe) |
 
-## Prometheus metrics — `routes/monitoring.ts` (`/api/monitoring/metrics`)
-- Exposed behind `MONITOR_KEY` (query param / header). Standard node + custom counters (requests, AI calls, queue depth).
-- Scrape config in `monitoring/prometheus/prometheus.yml`; dashboards in `monitoring/grafana/`.
-- nginx routes `/metrics` in `monitoring/nginx/`.
+Status logic: any `error` → `unhealthy`; any `degraded` (db >1000ms, redis >500ms, heap >70%) → `degraded`.
 
-## BullMQ / queue monitoring — `routes/admin-queues.ts` (`/api/admin/queues`, SUPER_ADMIN)
-| Endpoint | Purpose |
-|----------|---------|
-| `GET /api/admin/queues` | List queues + job counts. |
-| `GET /api/admin/queues/:queue/jobs` | Jobs (active/completed/failed/waiting) with optional `status` filter. |
-| `GET /api/admin/queues/:queue/failed` | Failed jobs (dead-letter view). |
-| `POST /api/admin/queues/:queue/:id/retry` | Requeue a failed job. |
-| `POST /api/admin/queues/:queue/:id/remove` | Delete a job. |
-| `POST /api/admin/queues/:queue/clean` | Clean a status. |
-| `GET /api/admin/queues/metrics` | Aggregate counts.
+## Business / runtime metrics
+`GET /api/metrics` (`routes/metrics.ts`) — `OWNER`/`ADMIN`, business-scoped:
+- `uptimeSeconds`, `n8nConfigured`
+- `events.total24h` + `events.byType` (`DomainEvent`)
+- `crm.leads24h`, `dealsOpen`, `invoicesPaid24h`, `appointmentsToday`
 
-## AI cost monitoring — `AiUsageLog` + `ai-analytics.service.ts`
-- Every AI call (gateway + services) writes an `AiUsageLog` (`provider`, `model`, `task`, `tokensIn`, `tokensOut`, `costUsd`, `latencyMs`, `success`).
-- `routes/intelligence.ts` / `ai-analytics.service.ts` aggregate spend per `businessId` → cost dashboards. **Planned:** per-business token-bucket rate limit + budget alerts.
+## BullMQ metrics
+Queues (`workers/index.ts`): `whatsapp-messages`, `emails`, `social-publish`, `google-sheets-sync`, `lead-processing`, `campaign-scheduler`, `gbp-auto-post`, `webhookRetry`.
+- BullMQ exposes queue stats via Redis; visualize with **Bull Board** or `bullmq` `Queue.getJobCounts()` (active/waiting/completed/failed/delayed).
+- Worker concurrency: whatsapp 10, email 5, social 5, sheets 3, lead 10, campaign 5, gbp 5.
+- Failed jobs retained 7d (`removeOnFail: { age: 604800 }`); completed 1d.
+- Alert on `failed` count growth or `waiting` backlog > threshold.
 
-## Logging
-- `morgan` HTTP logs; `utils/logger.ts` (winston-style) with `piiMask`. `LOG_LEVEL` env. `errorHandler` centralizes error responses (`utils/error.ts`).
+## Logs
+- Structured `console` logs via `utils/logger.ts` (winston-style). PII masked (`piiMask`).
+- Slow query log gated by `SLOW_QUERY_LOG_ENABLED=true` + `production` (`db.ts`).
+- Worker heartbeat every 60s (`worker.ts`).
+- Event stream: Redis `bizz:events` (`events/eventBus.ts`).
 
-## Alerts (planned)
-- Wire `security-monitor.service.ts` + `metrics` → Grafana alerts (queue backlog, AI spend spike, WhatsApp/n8n down).
+## Alerting (recommended)
+Not yet verified end-to-end. Wire:
+1. Prometheus scrape `/api/metrics` + `/health` (every 15s).
+2. Grafana dashboards: latency, error rate, queue depth, AI cost (`AiUsageLog`).
+3. Alerts: `/health=unhealthy`, `redis` error, `failed` jobs > N, AI budget 85%/95% (`COST_OPTIMIZATION.md`), auth abuse (`security-incident.service.ts` → Slack/email).
+4. `ops-ticket-dispatch.json` n8n workflow for on-call notify.
 
-See `ARCHITECTURE.md`, `N8N_ARCHITECTURE.md`, `AI_ARCHITECTURE.md`, `DEPLOYMENT.md`.
+## Log locations (Coolify/VPS)
+- Container stdout/stderr → Coolify log view / `docker logs`.
+- Persist to volume if needed; ship to Loki/ELK for search.
