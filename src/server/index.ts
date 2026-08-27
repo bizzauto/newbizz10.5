@@ -660,6 +660,17 @@ app.use('/uploads', (req, res, next) => {
   next();
 }, express.static(path.join(__dirname, '..', '..', 'uploads')));
 
+// Automation & Integration layer (must be before SPA catch-all)
+app.use('/api/approvals', authenticatedCsrf, approvalRouter);
+app.use('/api/admin/feature-flags', authenticatedCsrf, featureFlagsRouter);
+app.use('/api/automation/events', authenticatedCsrf, eventsRouter);
+app.use('/api/inbox', authenticatedCsrf, unifiedInboxRouter);
+app.use('/api/automation', authenticatedCsrf, automationBuilderRouter);
+app.use('/api/marketing', authenticatedCsrf, marketingAutomationRouter);
+app.use('/api/bi', authenticatedCsrf, businessIntelligenceRouter);
+app.use('/api/import', authenticatedCsrf, importRouter);
+app.use('/api/admin/control-center', authenticatedCsrf, adminControlCenterRouter);
+
 // Serve frontend in production
 if (NODE_ENV === 'production') {
   const clientBuildPath = path.join(__dirname, '..', '..', 'dist', 'client');
@@ -826,17 +837,6 @@ app.use('/api/voice', voiceRoutes);
 
 // Monitoring / runtime metrics (admin only)
 app.use('/api/metrics', metricsRoutes);
-
-// Automation & Integration layer (new)
-app.use('/api/approvals', authenticatedCsrf, approvalRouter);
-app.use('/api/admin/feature-flags', authenticatedCsrf, featureFlagsRouter);
-app.use('/api/automation/events', authenticatedCsrf, eventsRouter);
-app.use('/api/inbox', authenticatedCsrf, unifiedInboxRouter);
-app.use('/api/automation', authenticatedCsrf, automationBuilderRouter);
-app.use('/api/marketing', authenticatedCsrf, marketingAutomationRouter);
-app.use('/api/bi', authenticatedCsrf, businessIntelligenceRouter);
-app.use('/api/import', authenticatedCsrf, importRouter);
-app.use('/api/admin/control-center', authenticatedCsrf, adminControlCenterRouter);
 
 // Follow-up engine auto-tick: processes pending follow-ups for every business
 // every 10 minutes (previously required a manual API hit).
