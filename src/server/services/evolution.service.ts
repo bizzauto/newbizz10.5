@@ -196,6 +196,7 @@ export class EvolutionApiService {
     qrCodeBase64?: string;
     status: string;
     pairingCode?: string;
+    pairingUnsupported?: boolean;
   }> {
     const config = await this.getConfig(businessId);
     const resolvedInstanceName = instanceName || config.instanceName;
@@ -299,11 +300,14 @@ export class EvolutionApiService {
     // On mobile, request an 8-digit pairing code instead of a QR — a phone
     // cannot scan a QR shown on its own screen. Evolution API >= 2.1.0
     // returns { pairingCode } when pairingCode:true is passed in the body.
+    // Some hosted Evolution versions ignore pairingCode:true (or reject it);
+    // in that case we fall back to a QR and flag it so the UI can instruct the
+    // user to scan it from a second device.
     const connectCall = mobile
       ? () => axios.post(
           `${config.baseUrl}/instance/connect/${resolvedInstanceName}`,
           { pairingCode: true, phoneNumber: resolvedPhone },
-          { headers: { 'Content-Type': 'application/json', apikey: config.apiKey }, timeout: 30000 }
+          { headers: { 'Content-Type': 'application/json', apikey: config.apiKey }, timeout: 15000 }
         )
       : () => axios.get(
           `${config.baseUrl}/instance/connect/${resolvedInstanceName}`,
@@ -327,9 +331,27 @@ export class EvolutionApiService {
     }
 
     if (!connectResponse) {
-      throw new Error(
-        `Failed to connect after 3 attempts: ${lastError?.response?.data?.message || lastError?.message || 'Unknown error'}`
-      );
+      // Mobile-only safety net: if the pairing-code request failed (e.g. older
+      // Evolution that doesn't support phone-number linking), fall back to a QR
+      // so the modal still renders something the user can act on, instead of a
+      // dead-end error. The UI flags this and tells the user to scan from
+      // another device.
+      if (mobile) {
+        try {
+          console.log('[Evolution] Pairing-code request failed; falling back to QR for mobile.');
+          connectResponse = await axios.get(
+            `${config.baseUrl}/instance/connect/${resolvedInstanceName}`,
+            { headers: { apikey: config.apiKey }, timeout: 30000 }
+          );
+        } catch (fallbackErr: any) {
+          console.error('[Evolution] Mobile QR fallback also failed:', fallbackErr?.response?.data || fallbackErr.message);
+        }
+      }
+      if (!connectResponse) {
+        throw new Error(
+          `Failed to connect after 3 attempts: ${lastError?.response?.data?.message || lastError?.message || 'Unknown error'}`
+        );
+      }
     }
 
     const data = connectResponse?.data;
@@ -352,7 +374,7 @@ export class EvolutionApiService {
             console.log('[Evolution] QR fallback succeeded');
             await this.saveIntegrationConfig(businessId, config, resolvedInstanceName, qrResponse.data?.instance?.id || '');
             const isBase64Image = fallbackQR.startsWith('data:') || fallbackQR.startsWith('iVBOR');
-            return { qrCode: fallbackQR, qrCodeBase64: isBase64Image ? fallbackQR : undefined, pairingCode: undefined, status: 'scanning' };
+            return { qrCode: fallbackQR, qrCodeBase64: isBase64Image ? fallbackQR : undefined, pairingCode: undefined, status: 'scanning', pairingUnsupported: mobile };
           }
         } catch (qrErr: any) {
           console.error('[Evolution] QR fallback also failed:', qrErr?.response?.data || qrErr.message);
@@ -372,7 +394,7 @@ export class EvolutionApiService {
           console.log('[Evolution] Final attempt succeeded!');
           await this.saveIntegrationConfig(businessId, config, resolvedInstanceName, finalRes.data?.instance?.id || '');
           const isBase64Image = finalQR.startsWith('data:') || finalQR.startsWith('iVBOR');
-          return { qrCode: finalQR, qrCodeBase64: isBase64Image ? finalQR : undefined, pairingCode: undefined, status: 'scanning' };
+          return { qrCode: finalQR, qrCodeBase64: isBase64Image ? finalQR : undefined, pairingCode: undefined, status: 'scanning', pairingUnsupported: mobile };
         }
       } catch (finalErr: any) {
         console.error('[Evolution] Final attempt failed:', finalErr?.response?.data || finalErr.message);
@@ -393,6 +415,7 @@ export class EvolutionApiService {
       qrCodeBase64: isBase64Image ? qrCodeRaw : undefined,
       pairingCode: isPairingCode ? qrCodeRaw : undefined,
       status: 'scanning',
+      pairingUnsupported: mobile && !isPairingCode,
     };
   }
 

@@ -50,6 +50,7 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
   const [connecting, setConnecting] = useState<boolean>(false);
   const [connectedPhone, setConnectedPhone] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
+  const [pairingUnsupported, setPairingUnsupported] = useState<boolean>(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef<boolean>(true);
   const autoOpenRef = useRef<boolean>(false);
@@ -108,6 +109,7 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
         return;
       }
       setPairing(pairingCode);
+      setPairingUnsupported(!!data.pairingUnsupported);
       const src = qrSrc(q);
       if (src) {
         setQr(src);
@@ -267,7 +269,15 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
             <div className="bg-white rounded-2xl p-3">
               <img src={qr} alt="WhatsApp QR code" className="w-48 h-48 object-contain" />
             </div>
-            <p className="text-[11px] text-slate-400 mt-3">Waiting for scan…</p>
+            {isMobile && pairingUnsupported ? (
+              <p className="text-[11px] text-amber-300 mt-3 text-center px-4">
+                Your WhatsApp server doesn't support phone-number linking. Scan this QR using
+                <span className="font-semibold"> WhatsApp on another phone/desktop</span> → Linked devices → Link a device.
+                <br />(Or update Evolution API to ≥2.1.0 for one-tap code linking.)
+              </p>
+            ) : (
+              <p className="text-[11px] text-slate-400 mt-3">Waiting for scan…</p>
+            )}
           </div>
         ) : qrText ? (
           <div className="flex flex-col items-center">
