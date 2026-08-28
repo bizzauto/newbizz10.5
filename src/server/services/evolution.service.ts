@@ -297,15 +297,14 @@ export class EvolutionApiService {
     let connectResponse: any = null;
     let lastError: any = null;
 
-    // On mobile, request an 8-char pairing code instead of a QR — a phone
-    // cannot scan a QR shown on its own screen. Evolution returns the code when
-    // `?number=<phone>` is passed on the GET connect endpoint (the pairing code
-    // is tied to the instance's WhatsApp number). The code comes back in
-    // `pairingCode` as e.g. "ABCD-EFGH" (NOT base64, NOT digits-only). If the
-    // server only returns a QR, we fall back to that and flag it for the UI.
-    const connectUrl = mobile
-      ? `${config.baseUrl}/instance/connect/${resolvedInstanceName}?number=${encodeURIComponent(resolvedPhone)}`
-      : `${config.baseUrl}/instance/connect/${resolvedInstanceName}`;
+    // Connect via plain GET /instance/connect/:name (no query params) — this is
+    // the proven flow from the working older build. It returns a base64 QR that
+    // the modal renders. Some Evolution versions also return a `pairingCode`
+    // field; we surface that as a text code if present (bonus), but we never
+    // send `?number=` here because several hosted/older Evolution versions reject
+    // or ignore it and break QR generation. Matching the old repo keeps mobile
+    // and desktop on the same reliable connect path.
+    const connectUrl = `${config.baseUrl}/instance/connect/${resolvedInstanceName}`;
     const connectCall = () =>
       axios.get(connectUrl, { headers: { apikey: config.apiKey }, timeout: 30000 });
 
