@@ -297,14 +297,14 @@ export class EvolutionApiService {
     let connectResponse: any = null;
     let lastError: any = null;
 
-    // On mobile, request an 8-digit pairing code instead of a QR — a phone
-    // cannot scan a QR shown on its own screen. Evolution API >= 2.1.0 returns
-    // the code when `pairingCode=true` is passed as a QUERY PARAM on the GET
-    // connect endpoint (NOT a POST body — many hosted versions reject the POST
-    // body form, which is why the old mobile path failed silently). If the
-    // version ignores the param, it returns a QR and we flag it for the UI.
+    // On mobile, request an 8-char pairing code instead of a QR — a phone
+    // cannot scan a QR shown on its own screen. Evolution returns the code when
+    // `?number=<phone>` is passed on the GET connect endpoint (the pairing code
+    // is tied to the instance's WhatsApp number). The code comes back in
+    // `pairingCode` as e.g. "ABCD-EFGH" (NOT base64, NOT digits-only). If the
+    // server only returns a QR, we fall back to that and flag it for the UI.
     const connectUrl = mobile
-      ? `${config.baseUrl}/instance/connect/${resolvedInstanceName}?pairingCode=true`
+      ? `${config.baseUrl}/instance/connect/${resolvedInstanceName}?number=${encodeURIComponent(resolvedPhone)}`
       : `${config.baseUrl}/instance/connect/${resolvedInstanceName}`;
     const connectCall = () =>
       axios.get(connectUrl, { headers: { apikey: config.apiKey }, timeout: 30000 });
@@ -352,10 +352,25 @@ export class EvolutionApiService {
     const data = connectResponse?.data;
     console.log('[Evolution] Connect response:', JSON.stringify({ hasBase64: !!data?.base64, hasCode: !!data?.code, count: data?.count }).substring(0, 200));
 
-    // Step 6: Extract QR code from connect response
-    const qrCodeRaw = this.extractQR(data);
+    // Step 6: Extract QR (base64 image or raw "2@" QR string) and pairing code.
+    // Evolution returns the human pairing code in `pairingCode` (e.g. "ABCD-EFGH")
+    // when `?number=<phone>` is passed on the GET connect call; the QR lives in
+    // `base64` or raw `code` (starts with "2@"). The pairing code is NOT base64,
+    // so never treat it as a QR.
+    const qrBase64 = data?.base64 || data?.qrcode?.base64Image || '';
+    const rawQR =
+      typeof data?.code === 'string' &&
+      (data.code.startsWith('2@') || data.code.startsWith('iVBOR') || data.code.startsWith('data:'))
+        ? data.code
+        : '';
+    const pairingCodeVal =
+      typeof data?.pairingCode === 'string' &&
+      /^[A-Z0-9]{4,8}-?[A-Z0-9]{4,8}$/i.test(data.pairingCode.trim())
+        ? data.pairingCode.trim()
+        : '';
+    const qrCodeRaw = qrBase64 || rawQR;
 
-    if (!qrCodeRaw) {
+    if (!qrCodeRaw && !pairingCodeVal) {
       // If connect returned { count: 0 }, try /instance/qrcode/:name as fallback
       if (data?.count === 0 || data?.count === undefined) {
         console.log('[Evolution] No QR from connect, trying qrcode fallback endpoint...');
@@ -402,13 +417,14 @@ export class EvolutionApiService {
     const instanceId = data?.instance?.id || createResult?.data?.instance?.id || '';
     await this.saveIntegrationConfig(businessId, config, resolvedInstanceName, instanceId, resolvedPhone);
 
-    const isBase64Image = qrCodeRaw.startsWith('data:') || qrCodeRaw.startsWith('iVBOR');
-    const isPairingCode = /^\d{6,8}$/.test(qrCodeRaw);
+    const isBase64Image =
+      qrCodeRaw.startsWith('data:') || qrCodeRaw.startsWith('iVBOR') || qrCodeRaw.startsWith('2@');
+    const isPairingCode = !!pairingCodeVal;
     console.log(`[Evolution] === Connect complete for: ${resolvedInstanceName} ===`);
     return {
       qrCode: qrCodeRaw,
       qrCodeBase64: isBase64Image ? qrCodeRaw : undefined,
-      pairingCode: isPairingCode ? qrCodeRaw : undefined,
+      pairingCode: isPairingCode ? pairingCodeVal : undefined,
       status: 'scanning',
       pairingUnsupported: mobile && !isPairingCode,
     };
