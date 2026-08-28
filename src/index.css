@@ -1563,6 +1563,18 @@ body {
   [class*="gradient-animate"] { animation: none !important; }
 }
 
+/* Mobile font-size floor: bump sub-12px meta text to a readable 12px (a11y) */
+@media (max-width: 1023px) {
+  [class*="text-[7px]"],
+  [class*="text-[8px]"],
+  [class*="text-[9px]"],
+  [class*="text-[10px]"],
+  [class*="text-[11px]"] {
+    font-size: 12px !important;
+    line-height: 1.3 !important;
+  }
+}
+
 /* Smoother in-app scrolling, unless the user prefers reduced motion */
 @media (prefers-reduced-motion: no-preference) {
   html { scroll-behavior: smooth; }
