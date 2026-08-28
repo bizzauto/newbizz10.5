@@ -51,6 +51,8 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
   const [connectedPhone, setConnectedPhone] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
   const [pairingUnsupported, setPairingUnsupported] = useState<boolean>(false);
+  const [phoneInput, setPhoneInput] = useState<string>(phone || '');
+  const [phoneError, setPhoneError] = useState<string>('');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef<boolean>(true);
   const autoOpenRef = useRef<boolean>(false);
@@ -95,11 +97,14 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
     }, POLL_INTERVAL);
   }, [clearPoll, pollStatus]);
 
-  const doConnect = useCallback(async () => {
+  const doConnect = useCallback(async (connectPhone?: string) => {
     setConnecting(true);
     setError('');
     try {
-      const resp: any = await evolutionAPI.connect({ mobile: isMobile });
+      const resp: any = await evolutionAPI.connect({
+        mobile: isMobile,
+        phone: connectPhone || phoneInput || phone || '',
+      });
       const data = resp?.data?.data || resp?.data || {};
       const pairingCode: string = data.pairingCode || '';
       const q: string = data.qrCode || data.qrCodeBase64 || '';
@@ -131,20 +136,32 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
     } finally {
       setConnecting(false);
     }
-  }, [startPolling, isMobile]);
+  }, [startPolling, isMobile, phoneInput, phone]);
+
+  const startConnect = useCallback(async () => {
+    const raw = (phoneInput || phone || '').replace(/\D/g, '');
+    if (!/^\d{10,15}$/.test(raw)) {
+      setPhoneError('Enter a valid WhatsApp number with country code (10-15 digits, e.g. 919999999999).');
+      return;
+    }
+    setPhoneError('');
+    doConnect(raw);
+  }, [phoneInput, phone, doConnect]);
 
   // Open effect: kick off connect + polling
   useEffect(() => {
     mountedRef.current = true;
     if (open) {
-      doConnect();
+      // On mobile, don't auto-connect — the user must enter their WhatsApp
+      // number first so the pairing code is bound to the right number.
+      if (!isMobile) doConnect();
     }
     return () => {
       mountedRef.current = false;
       autoOpenRef.current = false;
       clearPoll();
     };
-  }, [open, doConnect, clearPoll]);
+  }, [open, doConnect, clearPoll, isMobile]);
 
   // Best-effort: on mobile, launch the WhatsApp app once the pairing code is
   // ready so the user can type it in. WhatsApp requires an in-app action, so
@@ -252,6 +269,31 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
               className="text-[11px] text-indigo-300 underline hover:text-indigo-200"
             >
               Set instance config
+            </button>
+          </div>
+        ) : (isMobile && !pairing && !qr && !connecting && status !== 'connected') ? (
+          <div className="flex flex-col items-center w-full">
+            <p className="text-[11px] text-slate-400 mb-3 text-center px-2">
+              Enter the WhatsApp number you want to link (with country code). We'll generate an
+              8-character pairing code to type into WhatsApp → Linked devices → Link with phone number.
+            </p>
+            <input
+              type="tel"
+              inputMode="numeric"
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
+              placeholder="919999999999"
+              className="w-full ai-glass rounded-xl px-4 py-3 text-center text-lg tracking-wider text-white placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-orange-400/60"
+              aria-label="WhatsApp number to link"
+            />
+            {phoneError && (
+              <p className="text-[11px] text-amber-300 mt-2 text-center px-2">{phoneError}</p>
+            )}
+            <button
+              onClick={startConnect}
+              className="ai-btn-primary text-sm px-5 py-2.5 mt-3 flex items-center gap-1.5"
+            >
+              <Smartphone size={14} /> Generate pairing code
             </button>
           </div>
         ) : pairing ? (
