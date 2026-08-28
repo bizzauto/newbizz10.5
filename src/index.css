@@ -1554,6 +1554,13 @@ body {
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
   overscroll-behavior-y: none;
+  overflow-x: clip;
+}
+
+/* Disable heavy decorative float/blur animations on mobile (paint jank) */
+@media (max-width: 768px) {
+  [class*="animate-float"] { animation: none !important; }
+  [class*="gradient-animate"] { animation: none !important; }
 }
 
 /* Smoother in-app scrolling, unless the user prefers reduced motion */
