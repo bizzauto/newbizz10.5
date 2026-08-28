@@ -298,21 +298,16 @@ export class EvolutionApiService {
     let lastError: any = null;
 
     // On mobile, request an 8-digit pairing code instead of a QR — a phone
-    // cannot scan a QR shown on its own screen. Evolution API >= 2.1.0
-    // returns { pairingCode } when pairingCode:true is passed in the body.
-    // Some hosted Evolution versions ignore pairingCode:true (or reject it);
-    // in that case we fall back to a QR and flag it so the UI can instruct the
-    // user to scan it from a second device.
-    const connectCall = mobile
-      ? () => axios.post(
-          `${config.baseUrl}/instance/connect/${resolvedInstanceName}`,
-          { pairingCode: true, phoneNumber: resolvedPhone },
-          { headers: { 'Content-Type': 'application/json', apikey: config.apiKey }, timeout: 15000 }
-        )
-      : () => axios.get(
-          `${config.baseUrl}/instance/connect/${resolvedInstanceName}`,
-          { headers: { apikey: config.apiKey }, timeout: 30000 }
-        );
+    // cannot scan a QR shown on its own screen. Evolution API >= 2.1.0 returns
+    // the code when `pairingCode=true` is passed as a QUERY PARAM on the GET
+    // connect endpoint (NOT a POST body — many hosted versions reject the POST
+    // body form, which is why the old mobile path failed silently). If the
+    // version ignores the param, it returns a QR and we flag it for the UI.
+    const connectUrl = mobile
+      ? `${config.baseUrl}/instance/connect/${resolvedInstanceName}?pairingCode=true`
+      : `${config.baseUrl}/instance/connect/${resolvedInstanceName}`;
+    const connectCall = () =>
+      axios.get(connectUrl, { headers: { apikey: config.apiKey }, timeout: 30000 });
 
     for (let attempt = 1; attempt <= 3; attempt++) {
       try {
