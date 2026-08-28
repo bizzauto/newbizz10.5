@@ -1520,3 +1520,44 @@ body {
   .shell-nav-indicator { animation: none; }
 }
 
+/* ==================== MOBILE PERFORMANCE & SMOOTHNESS ==================== */
+/* Dynamic viewport height: kills address-bar jump + scroll jank on iOS/Android.
+   Scoped to <=1023px so desktop `lg:min-h-0` layouts are unaffected. */
+@media (max-width: 1023px) {
+  @supports (height: 100dvh) {
+    .min-h-screen { min-height: 100dvh; }
+    .h-screen { height: 100dvh; }
+    .h-\[calc\(100vh-64px\)\] { height: calc(100dvh - 64px); }
+    .h-\[calc\(100vh-80px\)\] { height: calc(100dvh - 80px); }
+    .h-\[calc\(100vh-4rem\)\] { height: calc(100dvh - 4rem); }
+    .h-\[calc\(100vh-280px\)\] { height: calc(100dvh - 280px); }
+    .max-h-\[90vh\] { max-height: 90dvh; }
+    .max-h-\[95vh\] { max-height: 95dvh; }
+  }
+}
+
+/* Momentum scrolling + contain overscroll to inner lists (no whole-page rubber-band).
+   Applies to every Tailwind overflow utility used across the app. */
+.overflow-y-auto,
+.overflow-x-auto,
+.overflow-auto {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Snappier taps, no grey flash, kill pull-to-refresh at root (app feel). */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+body {
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  overscroll-behavior-y: none;
+}
+
+/* Smoother in-app scrolling, unless the user prefers reduced motion */
+@media (prefers-reduced-motion: no-preference) {
+  html { scroll-behavior: smooth; }
+}
+
