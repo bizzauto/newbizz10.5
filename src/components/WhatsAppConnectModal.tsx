@@ -121,10 +121,12 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
       setStatus(data.status || 'scanning');
       startPolling();
     } catch (e: any) {
+      const status = e?.response?.status;
+      const raw = e?.response?.data?.message || e?.response?.data?.error || e?.message || '';
       const msg =
-        e?.response?.data?.message ||
-        e?.message ||
-        'Failed to start WhatsApp connection. Evolution may not be configured.';
+        `Evolution connect failed${status ? ` (HTTP ${status})` : ''}: ` +
+        (raw || 'No response from server. Evolution API may be unreachable or not configured.');
+      console.error('[WhatsAppConnectModal] connect error:', status, raw);
       setError(msg);
     } finally {
       setConnecting(false);
@@ -181,6 +183,19 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
+
+  // Watchdog: if connect hangs (no QR/error after 90s), surface a message
+  // so the user isn't stuck on the spinner.
+  useEffect(() => {
+    if (!connecting) return;
+    const t = setTimeout(() => {
+      setError((prev) =>
+        prev ||
+        'Connection is taking too long (>90s). Evolution API may be slow, unreachable, or not configured for this business.'
+      );
+    }, 90000);
+    return () => clearTimeout(t);
+  }, [connecting]);
 
   if (!open) return null;
 
