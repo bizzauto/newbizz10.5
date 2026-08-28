@@ -677,11 +677,11 @@ const AdmissionForm: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-purple-50 dark:from-gray-900 dark:to-gray-800">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-orange-50 dark:from-gray-900 dark:to-gray-800">
       <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent">
+          <h1 className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-orange-500 bg-clip-text text-transparent">
             Admission Form
           </h1>
           <p className="text-gray-600 dark:text-gray-400 mt-2">
@@ -704,7 +704,7 @@ const AdmissionForm: React.FC = () => {
                         isCompleted
                           ? 'bg-green-600 text-white'
                           : isActive
-                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white ring-4 ring-blue-100 dark:ring-blue-900/40'
+                          ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white ring-4 ring-blue-100 dark:ring-blue-900/40'
                           : 'bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400'
                       }`}
                     >
@@ -754,7 +754,7 @@ const AdmissionForm: React.FC = () => {
             
             {step < totalSteps ? (
               <button type="button" onClick={handleNext}
-                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:opacity-90 flex items-center gap-2 transition-colors">
+                className="px-6 py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-lg hover:opacity-90 flex items-center gap-2 transition-colors">
                 Continue <ArrowRight size={18} />
               </button>
             ) : (

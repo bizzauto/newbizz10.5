@@ -191,10 +191,11 @@ export class EvolutionApiService {
    * 
    * Accepts optional instanceName from frontend; falls back to configured name.
    */
-  static async connectInstance(businessId: string, instanceName?: string, phone?: string): Promise<{
+  static async connectInstance(businessId: string, instanceName?: string, phone?: string, mobile = false): Promise<{
     qrCode: string;
     qrCodeBase64?: string;
     status: string;
+    pairingCode?: string;
   }> {
     const config = await this.getConfig(businessId);
     const resolvedInstanceName = instanceName || config.instanceName;
@@ -295,12 +296,23 @@ export class EvolutionApiService {
     let connectResponse: any = null;
     let lastError: any = null;
 
-    for (let attempt = 1; attempt <= 3; attempt++) {
-      try {
-        connectResponse = await axios.get(
+    // On mobile, request an 8-digit pairing code instead of a QR — a phone
+    // cannot scan a QR shown on its own screen. Evolution API >= 2.1.0
+    // returns { pairingCode } when pairingCode:true is passed in the body.
+    const connectCall = mobile
+      ? () => axios.post(
+          `${config.baseUrl}/instance/connect/${resolvedInstanceName}`,
+          { pairingCode: true, phoneNumber: resolvedPhone },
+          { headers: { 'Content-Type': 'application/json', apikey: config.apiKey }, timeout: 30000 }
+        )
+      : () => axios.get(
           `${config.baseUrl}/instance/connect/${resolvedInstanceName}`,
           { headers: { apikey: config.apiKey }, timeout: 30000 }
         );
+
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      try {
+        connectResponse = await connectCall();
         console.log(`[Evolution] Connect attempt ${attempt} succeeded`);
         break;
       } catch (err: any) {
@@ -340,7 +352,7 @@ export class EvolutionApiService {
             console.log('[Evolution] QR fallback succeeded');
             await this.saveIntegrationConfig(businessId, config, resolvedInstanceName, qrResponse.data?.instance?.id || '');
             const isBase64Image = fallbackQR.startsWith('data:') || fallbackQR.startsWith('iVBOR');
-            return { qrCode: fallbackQR, qrCodeBase64: isBase64Image ? fallbackQR : undefined, status: 'scanning' };
+            return { qrCode: fallbackQR, qrCodeBase64: isBase64Image ? fallbackQR : undefined, pairingCode: undefined, status: 'scanning' };
           }
         } catch (qrErr: any) {
           console.error('[Evolution] QR fallback also failed:', qrErr?.response?.data || qrErr.message);
@@ -360,7 +372,7 @@ export class EvolutionApiService {
           console.log('[Evolution] Final attempt succeeded!');
           await this.saveIntegrationConfig(businessId, config, resolvedInstanceName, finalRes.data?.instance?.id || '');
           const isBase64Image = finalQR.startsWith('data:') || finalQR.startsWith('iVBOR');
-          return { qrCode: finalQR, qrCodeBase64: isBase64Image ? finalQR : undefined, status: 'scanning' };
+          return { qrCode: finalQR, qrCodeBase64: isBase64Image ? finalQR : undefined, pairingCode: undefined, status: 'scanning' };
         }
       } catch (finalErr: any) {
         console.error('[Evolution] Final attempt failed:', finalErr?.response?.data || finalErr.message);
@@ -374,10 +386,12 @@ export class EvolutionApiService {
     await this.saveIntegrationConfig(businessId, config, resolvedInstanceName, instanceId, resolvedPhone);
 
     const isBase64Image = qrCodeRaw.startsWith('data:') || qrCodeRaw.startsWith('iVBOR');
+    const isPairingCode = /^\d{6,8}$/.test(qrCodeRaw);
     console.log(`[Evolution] === Connect complete for: ${resolvedInstanceName} ===`);
     return {
       qrCode: qrCodeRaw,
       qrCodeBase64: isBase64Image ? qrCodeRaw : undefined,
+      pairingCode: isPairingCode ? qrCodeRaw : undefined,
       status: 'scanning',
     };
   }

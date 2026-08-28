@@ -221,8 +221,8 @@
 /* Input focus effects */
 .input-futuristic:focus {
   outline: none;
-  border-color: rgba(139, 92, 246, 0.5);
-  box-shadow: 0 0 20px rgba(139, 92, 246, 0.2);
+  border-color: var(--color-primary-light);
+  box-shadow: var(--shadow-glow);
 }
 
 
@@ -239,7 +239,7 @@
   left: 0;
   width: 100%;
   height: 2px;
-  background: linear-gradient(90deg, #6366f1, #8b5cf6);
+  background: var(--color-primary);
   border-radius: 2px;
   animation: nav-pulse 2s ease-in-out infinite;
 }
@@ -283,7 +283,18 @@ button:focus-visible,
 .btn:focus-visible {
   outline: 2px solid var(--color-primary);
   outline-offset: 2px;
-  box-shadow: 0 0 0 4px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.3);
+}
+
+/* Tactile press feedback (premium feel) */
+button:not(:disabled) {
+  transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.2s ease;
+}
+button:not(:disabled):active {
+  transform: scale(0.98);
+}
+@media (prefers-reduced-motion: reduce) {
+  button:not(:disabled):active { transform: none; }
 }
 
 /* Input focus */
@@ -293,7 +304,7 @@ select:focus-visible,
 .input-futuristic:focus-visible {
   outline: none;
   border-color: var(--color-primary);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), var(--shadow-glow);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2), var(--shadow-glow);
 }
 
 /* Link focus */
@@ -306,7 +317,7 @@ a:focus-visible {
 /* Card focus */
 .card-futuristic:focus-within {
   border-color: var(--color-primary-light);
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2), var(--shadow-glow);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.2), var(--shadow-glow);
 }
 
 /* Modal focus trap */
@@ -450,12 +461,12 @@ body {
 
 /* Gradient cards */
 .gradient-card {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.08) 0%, rgba(139, 92, 246, 0.08) 100%);
-  border: 1px solid rgba(59, 130, 246, 0.12);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.08) 0%, rgba(249, 115, 22, 0.08) 100%);
+  border: 1px solid rgba(37, 99, 235, 0.12);
 }
 .dark .gradient-card {
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.15) 0%, rgba(139, 92, 246, 0.15) 100%);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(249, 115, 22, 0.15) 100%);
+  border: 1px solid rgba(37, 99, 235, 0.2);
 }
 
 /* Fade in animation */

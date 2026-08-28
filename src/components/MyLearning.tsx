@@ -82,7 +82,7 @@ export default function MyLearning() {
             <BookOpen size={48} className="mx-auto text-gray-300 dark:text-gray-600 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No courses yet</h3>
             <p className="text-gray-500 dark:text-gray-400 mb-4">Enroll in a course to start learning</p>
-            <button onClick={() => navigate('/course-store')} className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2.5 rounded-xl font-medium hover:shadow-lg transition-all">
+            <button onClick={() => navigate('/course-store')} className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white px-6 py-2.5 rounded-xl font-medium hover:shadow-lg transition-all">
               Browse Courses <ArrowRight size={18} />
             </button>
           </div>
@@ -99,7 +99,7 @@ export default function MyLearning() {
                   {course.thumbnail ? (
                     <img src={course.thumbnail} alt={course.name} className="w-full sm:w-48 h-32 sm:h-40 object-cover flex-shrink-0" />
                   ) : (
-                    <div className="w-full sm:w-48 h-32 sm:h-40 bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center flex-shrink-0">
+                    <div className="w-full sm:w-48 h-32 sm:h-40 bg-gradient-to-br from-blue-600 to-orange-600 flex items-center justify-center flex-shrink-0">
                       <GraduationCap size={36} className="text-white/60" />
                     </div>
                   )}

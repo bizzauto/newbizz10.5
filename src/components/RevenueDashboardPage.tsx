@@ -248,7 +248,7 @@ export default function RevenueDashboardPage() {
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-2">
                   <div
-                    className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full"
+                    className="bg-gradient-to-r from-blue-500 to-orange-500 h-2 rounded-full"
                     style={{ width: `${(plan.revenue / data.topPlans[0].revenue) * 100}%` }}
                   />
                 </div>

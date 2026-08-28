@@ -20,7 +20,7 @@ const Footer: React.FC = () => {
   return (
     <footer className="bg-gray-900 text-gray-300">
       {/* CTA Banner */}
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600">
+      <div className="bg-gradient-to-r from-blue-600 to-orange-500">
         <div className="max-w-7xl mx-auto px-8 py-12 flex flex-col md:flex-row items-center justify-between">
           <div>
             <h3 className="text-2xl font-bold text-white mb-2">Ready to grow your business?</h3>

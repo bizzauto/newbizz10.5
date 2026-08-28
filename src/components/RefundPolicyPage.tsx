@@ -96,7 +96,7 @@ const RefundPolicyPage: React.FC = () => (
           </p>
         </section>
 
-        <section className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-lg border border-blue-100 p-4 sm:p-6 mb-4 sm:mb-6">
+        <section className="bg-gradient-to-r from-blue-50 to-orange-50 rounded-lg border border-blue-100 p-4 sm:p-6 mb-4 sm:mb-6">
           <h2 className="text-lg sm:text-xl font-semibold text-gray-900 mb-2 sm:mb-3">10. Contact Us</h2>
           <p className="text-sm sm:text-base text-gray-600 mb-2">For refund requests or billing questions:</p>
           <ul className="text-sm sm:text-base text-gray-600 space-y-1.5 sm:space-y-2">

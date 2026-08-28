@@ -65,7 +65,8 @@ router.post('/connect', authenticate, async (req: any, res: any) => {
     // Accept instanceName and phone from frontend if provided
     const instanceName = req.body?.instanceName;
     const phone = req.body?.phone;
-    const result = await EvolutionApiService.connectInstance(businessId, instanceName, phone);
+    const mobile = req.body?.mobile === true;
+    const result = await EvolutionApiService.connectInstance(businessId, instanceName, phone, mobile);
     res.json({ success: true, data: result });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });

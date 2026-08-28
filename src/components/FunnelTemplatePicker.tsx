@@ -167,7 +167,7 @@ export default function FunnelTemplatePicker({ isOpen, onClose }: FunnelTemplate
               />
             </div>
             <div className="bg-gray-50 dark:bg-gray-900 rounded-lg p-3 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center flex-shrink-0">
                 <Layout size={18} className="text-white" />
               </div>
               <div className="text-sm text-gray-600 dark:text-gray-400">
@@ -186,7 +186,7 @@ export default function FunnelTemplatePicker({ isOpen, onClose }: FunnelTemplate
             <button
               onClick={handleNamedClone}
               disabled={cloningId === customNameModal.template.id || !customName.trim()}
-              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-medium rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 hover:shadow-lg transition-all"
+              className="px-4 py-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white text-sm font-medium rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 hover:shadow-lg transition-all"
             >
               {cloningId === customNameModal.template.id ? <Loader2 className="animate-spin" size={16} /> : <Copy size={16} />}
               Clone Funnel
@@ -360,7 +360,7 @@ export default function FunnelTemplatePicker({ isOpen, onClose }: FunnelTemplate
                         <button
                           onClick={() => handleQuickClone(template)}
                           disabled={isCloning}
-                          className="w-full py-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white text-sm font-medium rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 transition-all shadow-sm hover:shadow-md"
+                          className="w-full py-2 bg-gradient-to-r from-blue-600 to-orange-500 hover:from-blue-700 hover:to-orange-600 text-white text-sm font-medium rounded-lg flex items-center justify-center gap-2 disabled:opacity-50 transition-all shadow-sm hover:shadow-md"
                         >
                           {isCloning ? (
                             <Loader2 className="animate-spin" size={16} />

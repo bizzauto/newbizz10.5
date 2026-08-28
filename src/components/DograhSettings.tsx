@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   Bot, Settings, CheckCircle, XCircle, Loader2, Save, RefreshCw,
   Phone, Globe, Key, Link, AlertTriangle, Signal
@@ -143,7 +143,7 @@ const DograhSettings: React.FC = () => {
     <div className="p-4 sm:p-5 md:p-6 lg:p-4 sm:p-6 md:p-8 max-w-4xl mx-auto space-y-6 animate-fade-in-up">
       {/* Header */}
       <div className="flex items-center gap-3 mb-2">
-        <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-500 rounded-2xl">
+        <div className="p-3 bg-gradient-to-br from-blue-500 to-orange-500 rounded-2xl">
           <Bot size={24} className="text-white" />
         </div>
         <div>
@@ -340,7 +340,7 @@ const DograhSettings: React.FC = () => {
               <button
                 onClick={handleSave}
                 disabled={saving}
-                className="flex items-center gap-2 px-4 sm:px-5 md:px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
+                className="flex items-center gap-2 px-4 sm:px-5 md:px-6 py-2.5 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-xl hover:from-blue-700 hover:to-orange-600 transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50"
               >
                 {saving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
                 Save Settings

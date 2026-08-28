@@ -67,7 +67,7 @@ const OnboardingWizard: React.FC<{ onComplete?: () => void }> = ({ onComplete })
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8">
+    <div className="min-h-screen bg-gradient-to-br from-blue-600 to-orange-600 flex items-center justify-center p-3 sm:p-4 md:p-6 lg:p-8">
       <div className="bg-white rounded-xl sm:rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden">
         <div className="px-4 sm:px-6 md:px-8 pt-4 sm:pt-6 md:pt-8">
           <div className="flex items-center gap-1.5 sm:gap-2 mb-2">
@@ -87,7 +87,7 @@ const OnboardingWizard: React.FC<{ onComplete?: () => void }> = ({ onComplete })
         <div className="px-4 sm:px-6 md:px-8 py-5 sm:py-6 md:py-8">
           {step === 1 && setupMode === 'choice' && (
             <div className="text-center">
-              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-xl sm:rounded-2xl flex items-center justify-center text-white mx-auto mb-4 sm:mb-6">
+              <div className="w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-r from-blue-500 to-orange-500 rounded-xl sm:rounded-2xl flex items-center justify-center text-white mx-auto mb-4 sm:mb-6">
                 <Sparkles size={32} className="sm:w-10 sm:h-10" />
               </div>
               <h2 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-3 sm:mb-4 px-2">

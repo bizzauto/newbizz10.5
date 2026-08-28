@@ -67,7 +67,7 @@ const PricingCard: React.FC<PricingCardProps> = ({ plan, onSelect, loading, peri
       {/* Badges */}
       {plan.popular && (
         <div className="absolute -top-3 sm:-top-4 left-1/2 transform -translate-x-1/2 z-20">
-          <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-[10px] sm:text-xs font-bold px-3 py-1 sm:px-4 sm:py-1.5 rounded-full whitespace-nowrap shadow-lg shadow-blue-500/25">
+          <span className="bg-gradient-to-r from-blue-600 to-orange-500 text-white text-[10px] sm:text-xs font-bold px-3 py-1 sm:px-4 sm:py-1.5 rounded-full whitespace-nowrap shadow-lg shadow-blue-500/25">
             ✨ Most Popular
           </span>
         </div>
@@ -197,7 +197,7 @@ const PricingCard: React.FC<PricingCardProps> = ({ plan, onSelect, loading, peri
           disabled={loading || plan.id === 'FREE'}
           className={`w-full py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer mt-auto ${
             plan.popular
-              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0'
+              ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white hover:from-blue-700 hover:to-orange-600 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0'
               : plan.id === 'ENTERPRISE'
               ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white hover:from-purple-700 hover:to-pink-700 shadow-lg shadow-purple-500/25 hover:shadow-xl'
               : plan.id === 'FREE'
@@ -722,7 +722,7 @@ export default function PricingPageV2({ onNavigate }: PricingPageV2Props) {
 
         {/* Bottom CTA */}
         <div className="text-center pb-12 sm:pb-16">
-          <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-8 sm:p-12 max-w-4xl mx-auto">
+          <div className="bg-gradient-to-r from-blue-600 to-orange-500 rounded-2xl p-8 sm:p-12 max-w-4xl mx-auto">
             <h2 className="text-2xl sm:text-3xl font-bold text-white mb-3">
               Ready to transform your business?
             </h2>

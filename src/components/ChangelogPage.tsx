@@ -162,7 +162,7 @@ const ChangelogPage: React.FC = () => (
 
       <div className="relative">
         {/* Timeline line */}
-        <div className="absolute left-4 sm:left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 to-purple-500"></div>
+        <div className="absolute left-4 sm:left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-500 to-orange-500"></div>
 
         <div className="space-y-6 sm:space-y-8">
           {changelog.map((entry, i) => {

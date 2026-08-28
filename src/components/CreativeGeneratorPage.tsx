@@ -91,7 +91,7 @@ const DEFAULT_TEMPLATES: Template[] = [
 ];
 
 const LOGO_STYLES: LogoStyle[] = [
-  { id: 'modern', name: 'Modern', icon: '🔷', gradient: 'from-blue-500 to-purple-500' },
+  { id: 'modern', name: 'Modern', icon: '🔷', gradient: 'from-blue-500 to-orange-500' },
   { id: 'classic', name: 'Classic', icon: '✨', gradient: 'from-amber-500 to-red-500' },
   { id: 'minimal', name: 'Minimal', icon: '⭕', gradient: 'from-gray-500 to-slate-500' },
   { id: 'playful', name: 'Playful', icon: '⭐', gradient: 'from-pink-500 to-yellow-500' },

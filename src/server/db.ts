@@ -3,8 +3,8 @@ import { PrismaClient } from '@prisma/client';
 const NODE_ENV = process.env.NODE_ENV || 'development';
 
 // Initialize Prisma with optimized connection pool
-// connection_limit defaults to num_cpus * 2 + 1; pool_timeout controls wait time
-const POOL_SIZE = parseInt(process.env.DB_POOL_SIZE || '0');
+// connection_limit defaults to 20 (override via DB_POOL_SIZE); pool_timeout controls wait time
+const POOL_SIZE = parseInt(process.env.DB_POOL_SIZE || '20');
 const baseUrl = process.env.DATABASE_URL || '';
 const separator = baseUrl.includes('?') ? '&' : '?';
 const poolUrl = POOL_SIZE > 0

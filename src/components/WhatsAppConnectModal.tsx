@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { X, RefreshCw, Copy, CheckCircle2, AlertCircle, Smartphone } from 'lucide-react';
+import { X, RefreshCw, Copy, CheckCircle2, AlertCircle, Smartphone, MessageCircle } from 'lucide-react';
 import { evolutionAPI } from '../lib/api';
+import { useIsMobile } from '../hooks/useViewport';
 
 export interface EvolutionStatus {
   status: 'disconnected' | 'scanning' | 'connected';
@@ -15,6 +16,8 @@ export interface WhatsAppConnectModalProps {
   onConnected?: (info: EvolutionStatus) => void;
   /** When the business has a prior Evolution integration, auto re-pair on open. */
   everConnected?: boolean;
+  /** Configured business WhatsApp number (for display while pairing). */
+  phone?: string;
 }
 
 const POLL_INTERVAL = 2500;
@@ -37,15 +40,20 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
   onClose,
   onConnected,
   everConnected = false,
+  phone = '',
 }) => {
   const [qr, setQr] = useState<string>('');
   const [qrText, setQrText] = useState<string>('');
+  const [pairing, setPairing] = useState<string>('');
   const [status, setStatus] = useState<EvolutionStatus['status']>('disconnected');
   const [error, setError] = useState<string>('');
   const [connecting, setConnecting] = useState<boolean>(false);
   const [connectedPhone, setConnectedPhone] = useState<string>('');
+  const [copied, setCopied] = useState<boolean>(false);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef<boolean>(true);
+  const autoOpenRef = useRef<boolean>(false);
+  const isMobile = useIsMobile();
 
   const clearPoll = useCallback(() => {
     if (pollRef.current) {
@@ -90,14 +98,16 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
     setConnecting(true);
     setError('');
     try {
-      const resp: any = await evolutionAPI.connect();
+      const resp: any = await evolutionAPI.connect({ mobile: isMobile });
       const data = resp?.data?.data || resp?.data || {};
+      const pairingCode: string = data.pairingCode || '';
       const q: string = data.qrCode || data.qrCodeBase64 || '';
-      if (!q) {
-        setError('No QR code returned. Evolution may not be configured on the server.');
+      if (!pairingCode && !q) {
+        setError('No QR or pairing code returned. Evolution may not be configured on the server.');
         setConnecting(false);
         return;
       }
+      setPairing(pairingCode);
       const src = qrSrc(q);
       if (src) {
         setQr(src);
@@ -117,7 +127,7 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
     } finally {
       setConnecting(false);
     }
-  }, [startPolling]);
+  }, [startPolling, isMobile]);
 
   // Open effect: kick off connect + polling
   useEffect(() => {
@@ -127,12 +137,42 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
     }
     return () => {
       mountedRef.current = false;
+      autoOpenRef.current = false;
       clearPoll();
     };
   }, [open, doConnect, clearPoll]);
 
+  // Best-effort: on mobile, launch the WhatsApp app once the pairing code is
+  // ready so the user can type it in. WhatsApp requires an in-app action, so
+  // we can't fully connect server-side — this removes the manual "open app" step.
+  // Uses an anchor click (not window.open) because Capacitor's WebView routes
+  // anchor navigations to the external app reliably, while window.open is blocked.
+  useEffect(() => {
+    if (open && isMobile && pairing && !autoOpenRef.current) {
+      autoOpenRef.current = true;
+      try {
+        const a = document.createElement('a');
+        a.href = 'https://wa.me/';
+        a.target = '_blank';
+        a.rel = 'noopener';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      } catch {
+        /* blocked — the visible "Open WhatsApp" button is the fallback */
+      }
+    }
+  }, [open, isMobile, pairing]);
+
+  // On mobile, auto-copy the pairing code so the user only pastes it in WhatsApp
+  // (no manual typing). Shows a "Copied" hint next to the code.
+  useEffect(() => {
+    if (open && isMobile && pairing) {
+      navigator.clipboard?.writeText(pairing).then(() => setCopied(true)).catch(() => {});
+    }
+  }, [open, isMobile, pairing]);
+
   // Copy QR text fallback
-  const [copied, setCopied] = useState(false);
   const copyText = () => {
     if (!qrText) return;
     navigator.clipboard?.writeText(qrText).catch(() => {});
@@ -165,7 +205,9 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
           <h2 className="text-base sm:text-lg font-black text-white">Connect WhatsApp</h2>
         </div>
         <p className="text-[11px] sm:text-xs text-slate-400 mb-4">
-          Scan this QR with WhatsApp → Linked devices → Link a device
+          {isMobile
+            ? 'Enter the pairing code below inside WhatsApp → ⋮ Menu → Linked devices → Link a device → Link with phone number'
+            : 'Scan this QR with WhatsApp → Linked devices → Link a device'}
         </p>
 
         {status === 'connected' ? (
@@ -194,6 +236,31 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
             >
               Set instance config
             </button>
+          </div>
+        ) : pairing ? (
+          <div className="flex flex-col items-center">
+            {phone && (
+              <p className="text-[11px] text-indigo-300 mt-1 mb-2">Connecting: {phone}</p>
+            )}
+            <div className="bg-white rounded-2xl px-6 py-4 text-3xl font-black tracking-[0.35em] text-gray-900 select-all">
+              {pairing}
+            </div>
+            <p className="text-[11px] text-slate-400 mt-3 text-center px-4">
+              {isMobile
+                ? copied
+                  ? 'Code copied — paste it in WhatsApp → ⋮ Menu → Linked devices → Link a device → “Link with phone number”'
+                  : 'Open WhatsApp → ⋮ Menu → Linked devices → Link a device → “Link with phone number” → enter this code'
+                : 'Open WhatsApp → ⋮ Menu → Linked devices → Link a device → “Link with phone number” → enter this code'}
+            </p>
+            <a
+              href="https://wa.me/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-3 ai-btn-primary text-sm px-4 py-2 flex items-center gap-1.5"
+            >
+              <MessageCircle size={14} /> Open WhatsApp
+            </a>
+            <p className="text-[10px] text-slate-500 mt-2">Waiting for pairing…</p>
           </div>
         ) : qr ? (
           <div className="flex flex-col items-center">

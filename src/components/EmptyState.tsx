@@ -23,8 +23,8 @@ const emptyStateConfig = {
     description: 'Add your first contact to start building your customer database.',
     actionLabel: 'Add Contact',
     actionPath: '/crm',
-    gradient: 'from-blue-500 to-purple-600',
-    bgGradient: 'from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20',
+    gradient: 'from-blue-500 to-orange-500',
+    bgGradient: 'from-blue-50 to-orange-50 dark:from-blue-900/20 dark:to-orange-900/20',
   },
   messages: {
     icon: MessageSquare,

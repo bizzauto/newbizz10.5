@@ -98,7 +98,7 @@ export default function SmartReplyPage() {
         <button
           onClick={generateReplies}
           disabled={!message.trim() || loading}
-          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 disabled:opacity-50"
+          className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-xl hover:from-purple-700 hover:to-blue-700 disabled:opacity-50"
         >
           {loading ? <Loader2 className="animate-spin" size={18} /> : <Sparkles size={18} />}
           {loading ? 'Generating...' : 'Generate Smart Replies'}

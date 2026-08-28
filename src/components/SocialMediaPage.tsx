@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Calendar, Plus, Image, Zap, Send, Clock, MoreVertical,
   BarChart3, TrendingUp, Eye, Heart, MessageCircle, Share2,
@@ -1232,7 +1232,7 @@ const SocialMediaPage: React.FC = () => {
                   <button
                     onClick={handleSocialConnect}
                     disabled={connecting}
-                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:from-blue-700 hover:to-purple-700 disabled:opacity-50 text-sm"
+                    className="flex-1 flex items-center justify-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-lg hover:from-blue-700 hover:to-orange-600 disabled:opacity-50 text-sm"
                   >
                     {connecting ? <Loader2 size={16} className="animate-spin" /> : <Plug size={16} />}
                     {connecting ? 'Connecting...' : 'Connect'}

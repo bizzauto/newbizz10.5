@@ -100,7 +100,7 @@ export default function VerifyEmailPage() {
               ? 'bg-gradient-to-br from-green-400 to-emerald-500 shadow-green-500/25'
               : status === 'error'
               ? 'bg-gradient-to-br from-red-400 to-rose-500 shadow-red-500/25'
-              : 'bg-gradient-to-br from-blue-500 to-purple-600 shadow-blue-500/25'
+              : 'bg-gradient-to-br from-blue-500 to-orange-500 shadow-blue-500/25'
           }`}>
             {status === 'success' ? (
               <CheckCircle size={36} className="text-white" />

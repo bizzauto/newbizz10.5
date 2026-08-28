@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { CreditCard, Download, CheckCircle, ArrowUpRight, FileText, RefreshCw, Loader2, AlertCircle, Bell } from 'lucide-react';
 import { billingAPI, subscriptionsAPI, analyticsAPI } from '../lib/api';
 import { useAuthStore } from '../lib/authStore';
@@ -205,7 +205,7 @@ const BillingPage: React.FC = () => {
         </button>
       </div>
 
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl p-5 sm:p-6 md:p-8 text-white mb-6 shadow-xl shadow-blue-500/20 relative overflow-hidden">
+      <div className="bg-gradient-to-r from-blue-600 to-orange-500 rounded-2xl p-5 sm:p-6 md:p-8 text-white mb-6 shadow-xl shadow-blue-500/20 relative overflow-hidden">
         <div className="absolute -top-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
         <div className="absolute -bottom-10 -left-10 w-32 h-32 bg-white/5 rounded-full blur-2xl" />
         <div className="relative flex items-center justify-between">

@@ -9,7 +9,7 @@ import { emitEvent } from '../events/eventBus.js';
 const router = Router();
 
 // GET /api/deals - List all deals (contacts with deal info)
-router.get('/', authenticate, async (req: AuthRequest, res: any) => {
+router.get('/', authenticate, cacheResponse(30), async (req: AuthRequest, res: any) => {
   try {
     const { page = 1, limit = 50, stage, pipelineId, search } = req.query;
     const businessId = req.user.businessId;

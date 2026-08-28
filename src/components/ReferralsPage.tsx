@@ -127,7 +127,7 @@ export default function ReferralsPage() {
       </div>
 
       {/* Referral Code Card */}
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-6 sm:p-8 text-white mb-6">
+      <div className="bg-gradient-to-r from-blue-600 to-orange-500 rounded-2xl p-6 sm:p-8 text-white mb-6">
         <h2 className="text-lg font-semibold mb-4">Your Referral Code</h2>
         <div className="flex items-center gap-4 flex-wrap">
           <div className="bg-white/20 backdrop-blur-sm rounded-xl px-6 py-3 font-mono text-2xl font-bold tracking-wider">

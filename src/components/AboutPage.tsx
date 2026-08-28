@@ -10,7 +10,7 @@ const AboutPage: React.FC = () => {
   <div className="min-h-screen bg-white">
     <PublicNavbar />
     {/* Hero */}
-    <div className="bg-gradient-to-br from-blue-600 to-purple-700 text-white py-12 sm:py-16 md:py-20 px-4 sm:px-6 md:px-8">
+    <div className="bg-gradient-to-br from-blue-600 to-orange-600 text-white py-12 sm:py-16 md:py-20 px-4 sm:px-6 md:px-8">
       <div className="max-w-4xl mx-auto text-center">
         <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 sm:mb-6 leading-tight px-2">
           Empowering Indian Businesses with AI & Automation
@@ -102,7 +102,7 @@ const AboutPage: React.FC = () => {
     </div>
 
     {/* CTA */}
-    <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-10 sm:py-12 md:py-16 px-4 sm:px-6 md:px-8">
+    <div className="bg-gradient-to-r from-blue-600 to-orange-500 text-white py-10 sm:py-12 md:py-16 px-4 sm:px-6 md:px-8">
       <div className="max-w-4xl mx-auto text-center">
         <h2 className="text-2xl sm:text-3xl font-bold mb-3 sm:mb-4">Ready to transform your business?</h2>
         <p className="text-sm sm:text-base text-blue-100 mb-6 sm:mb-8">Join 10,000+ businesses already growing with BizzAuto Solutions</p>

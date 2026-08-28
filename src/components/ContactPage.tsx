@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import Footer from './Footer';
 import PublicNavbar from './PublicNavbar';
 import { Mail, Phone, MapPin, MessageSquare, Send, Clock, CheckCircle } from 'lucide-react';
@@ -16,7 +16,7 @@ const ContactPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-50">
       <PublicNavbar />
-      <div className="bg-gradient-to-br from-blue-600 to-purple-700 text-white py-16 px-8">
+      <div className="bg-gradient-to-br from-blue-600 to-orange-600 text-white py-16 px-8">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-4xl font-bold mb-4">Get in Touch</h1>
           <p className="text-xl text-blue-100">Have questions? We'd love to hear from you.</p>

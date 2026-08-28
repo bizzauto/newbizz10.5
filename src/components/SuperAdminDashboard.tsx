@@ -317,7 +317,7 @@ function BusinessesSubTab() {
                   <tr key={biz.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-2">
-                        <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-xs">
+                        <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-orange-500 rounded-full flex items-center justify-center text-white font-semibold text-xs">
                           {biz.name?.charAt(0) || '?'}
                         </div>
                         <span className="text-sm font-medium text-gray-900">{biz.name}</span>

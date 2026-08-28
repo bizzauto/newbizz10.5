@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, lazy, Suspense } from 'react';
 import {
   Phone, PhoneCall, PhoneOff, Mic, MicOff, Volume2,
   PhoneIncoming, PhoneOutgoing, Search, RefreshCw, Loader2,
@@ -345,7 +345,7 @@ const VoiceCallPage: React.FC = () => {
           <button onClick={loadData} className="p-2 text-gray-500 hover:bg-gray-100 rounded-lg" title="Refresh">
             <RefreshCw size={18} />
           </button>
-          <button onClick={() => setShowDialer(true)} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all shadow-lg shadow-blue-500/20">
+          <button onClick={() => setShowDialer(true)} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-xl hover:from-blue-700 hover:to-orange-600 transition-all shadow-lg shadow-blue-500/20">
             <Phone size={18} /> Make a Call
           </button>
         </div>
@@ -421,7 +421,7 @@ const VoiceCallPage: React.FC = () => {
               return (
                 <div key={call.id} className="flex items-center justify-between p-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors cursor-pointer" onClick={() => setSelectedCall(call)}>
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">{call.avatar}</div>
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-orange-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">{call.avatar}</div>
                     <div>
                       <p className="font-medium text-gray-900 dark:text-white">{call.name}</p>
                       <p className="text-xs text-gray-500 dark:text-gray-400">{call.phone} {call.callType === 'browser' && '(Browser)'}</p>

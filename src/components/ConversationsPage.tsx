@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import {
   Search, Filter, MessageSquare, Mail, Star, Phone, Tag, Clock,
   Send, Paperclip, Smile, ArrowLeft, RefreshCw, Archive, MoreVertical,
@@ -366,7 +366,7 @@ export default function ConversationsPage() {
                   {conv.contactAvatar ? (
                     <img src={conv.contactAvatar} alt={conv.contactName || "Contact avatar"} className="w-11 h-11 rounded-xl object-cover shadow-sm" />
                   ) : (
-                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-semibold shadow-md shadow-blue-500/20">
+                    <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center text-white text-sm font-semibold shadow-md shadow-blue-500/20">
                       {getInitials(conv.contactName)}
                     </div>
                   )}
@@ -463,7 +463,7 @@ export default function ConversationsPage() {
             {selectedConversation.contactAvatar ? (
               <img src={selectedConversation.contactAvatar} alt={selectedConversation.contactName || "Contact avatar"} className="w-9 h-9 rounded-full object-cover" />
             ) : (
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xs font-semibold">
+              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center text-white text-xs font-semibold">
                 {getInitials(selectedConversation.contactName)}
               </div>
             )}
@@ -671,7 +671,7 @@ export default function ConversationsPage() {
           {conv.contactAvatar ? (
             <img src={conv.contactAvatar} alt={conv.contactName || "Contact avatar"} className="w-16 h-16 rounded-full mx-auto object-cover" />
           ) : (
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-xl font-bold mx-auto">
+            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center text-white text-xl font-bold mx-auto">
               {getInitials(conv.contactName)}
             </div>
           )}

@@ -245,7 +245,7 @@ export default function QRCodeGeneratorPage() {
 
             <button
               onClick={generateQR}
-              className="w-full py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-medium hover:from-purple-700 hover:to-blue-700"
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-xl font-medium hover:from-purple-700 hover:to-blue-700"
             >
               Generate QR Code
             </button>

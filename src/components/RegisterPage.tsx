@@ -128,7 +128,7 @@ const RegisterPage: React.FC = () => {
                 </div>
 
                 <button type="button" onClick={() => setStep(2)}
-                  className="w-full py-3 sm:py-3.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm sm:text-base font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 transition-all active:translate-y-0">
+                  className="w-full py-3 sm:py-3.5 bg-gradient-to-r from-blue-600 to-orange-500 text-white text-sm sm:text-base font-semibold rounded-xl hover:from-blue-700 hover:to-orange-600 flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 transition-all active:translate-y-0">
                   Continue <ArrowRight size={18} />
                 </button>
               </form>
@@ -198,7 +198,7 @@ const RegisterPage: React.FC = () => {
                 </div>
 
                 <button type="button" onClick={() => setStep(3)}
-                  className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm sm:text-base font-semibold rounded-lg hover:opacity-90 flex items-center justify-center gap-2">
+                  className="w-full py-2.5 sm:py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white text-sm sm:text-base font-semibold rounded-lg hover:opacity-90 flex items-center justify-center gap-2">
                   Continue <ArrowRight size={18} />
                 </button>
               </form>

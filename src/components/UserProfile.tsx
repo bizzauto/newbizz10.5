@@ -102,7 +102,7 @@ const UserProfile: React.FC = () => {
               {profile.avatar ? (
                 <img src={profile.avatar} alt={profile.name} className="w-24 h-24 rounded-full object-cover mx-auto" />
               ) : (
-                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white text-3xl font-bold mx-auto">
+                <div className="w-24 h-24 bg-gradient-to-br from-blue-500 to-orange-500 rounded-full flex items-center justify-center text-white text-3xl font-bold mx-auto">
                   {getInitials(profile.name || 'U')}
                 </div>
               )}

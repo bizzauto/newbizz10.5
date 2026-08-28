@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   TrendingUp, Users, MessageSquare, DollarSign, ArrowUpRight,
   Download, FileText, BarChart3, Clock, Eye, Zap, Target, RefreshCw,
@@ -414,7 +414,7 @@ const ReportsPage: React.FC = () => {
               {topLeads.length > 0 ? topLeads.map((lead, i) => (
                 <div key={i} className="flex items-center justify-between p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex items-center gap-4">
-                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                    <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-orange-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                       {lead.name.split(' ').map(n => n[0]).join('')}
                     </div>
                     <div>

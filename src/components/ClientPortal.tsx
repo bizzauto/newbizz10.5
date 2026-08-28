@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Shield, Users, Key, Clock, CheckCircle, XCircle, Plus, Search, RefreshCw, Copy, Check,
   ExternalLink, Loader2, X, Eye, EyeOff, Calendar, DollarSign, FileText, TrendingUp,
@@ -558,7 +558,7 @@ const ClientPortal: React.FC = () => {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
+          <div className="w-16 h-16 bg-gradient-to-br from-blue-600 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <Shield size={32} className="text-white" />
           </div>
           <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Client Portal</h1>
@@ -583,7 +583,7 @@ const ClientPortal: React.FC = () => {
             <button
               onClick={handleClientLogin}
               disabled={clientLogging || !clientLoginInput.trim()}
-              className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+              className="w-full py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-orange-600 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
             >
               {clientLogging ? <Loader2 size={20} className="animate-spin" /> : <ArrowUpRight size={20} />}
               {clientLogging ? 'Logging in...' : 'Access Portal'}
@@ -610,7 +610,7 @@ const ClientPortal: React.FC = () => {
       <aside className="w-64 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col min-h-screen">
         <div className="p-4 sm:p-5 md:p-6 border-b border-gray-200 dark:border-gray-700">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+            <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-orange-500 rounded-xl flex items-center justify-center">
               <Shield size={20} className="text-white" />
             </div>
             <div>
@@ -1089,7 +1089,7 @@ const ClientPortal: React.FC = () => {
             <button
               onClick={handleCreatePortal}
               disabled={creating || !selectedContactId}
-              className="px-4 sm:px-5 md:px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm font-semibold rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 flex items-center gap-2"
+              className="px-4 sm:px-5 md:px-6 py-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white text-sm font-semibold rounded-xl hover:from-blue-700 hover:to-orange-600 transition-all disabled:opacity-50 flex items-center gap-2"
             >
               {creating ? <Loader2 size={16} className="animate-spin" /> : <Plus size={16} />}
               {creating ? 'Creating...' : 'Create Access'}
@@ -1181,7 +1181,7 @@ const ClientPortal: React.FC = () => {
             </div>
             <button
               onClick={() => { setShowCreateModal(true); fetchContacts(); }}
-              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/25"
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-orange-600 transition-all flex items-center gap-2 shadow-lg shadow-blue-500/25"
             >
               <Plus size={18} />
               Create Portal Access
@@ -1224,7 +1224,7 @@ const ClientPortal: React.FC = () => {
             <p className="text-gray-500 dark:text-gray-400 mb-6">Create portal access for your contacts to let them view invoices, appointments, and deals.</p>
             <button
               onClick={() => { setShowCreateModal(true); fetchContacts(); }}
-              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-purple-700 transition-all inline-flex items-center gap-2"
+              className="px-5 py-2.5 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-xl font-semibold hover:from-blue-700 hover:to-orange-600 transition-all inline-flex items-center gap-2"
             >
               <Plus size={18} />
               Create Portal Access
@@ -1248,7 +1248,7 @@ const ClientPortal: React.FC = () => {
                   <tr key={portal.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 transition-colors">
                     <td className="px-4 sm:px-5 md:px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center text-white text-sm font-bold">
                           {portal.contact?.name?.charAt(0) || '?'}
                         </div>
                         <div>

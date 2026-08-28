@@ -95,7 +95,7 @@ export default function AISalesAssistantPage() {
       </div>
 
       {/* Forecast Card */}
-      <div className="bg-gradient-to-r from-purple-600 to-blue-600 rounded-2xl p-6 text-white mb-6">
+      <div className="bg-gradient-to-r from-blue-600 to-orange-500 rounded-2xl p-6 text-white mb-6">
         <h3 className="text-lg font-semibold mb-4">Sales Forecast</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="bg-white/20 rounded-xl p-4">
@@ -152,7 +152,7 @@ export default function AISalesAssistantPage() {
             {hotLeads.map((lead) => (
               <div key={lead.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-blue-500 rounded-full flex items-center justify-center text-white font-bold">
+                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-orange-500 rounded-full flex items-center justify-center text-white font-bold">
                     {lead.name.charAt(0)}
                   </div>
                   <div>

@@ -1,4 +1,4 @@
-﻿import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles, Trash2, Copy, CheckCircle, Mic, MicOff, Volume2, VolumeX, AlertCircle } from 'lucide-react';
 import { aiAPI } from '../lib/api';
 
@@ -81,7 +81,7 @@ const AIChatbotPage: React.FC = () => {
       {/* Header */}
       <div className="flex items-center justify-between px-4 sm:px-5 md:px-6 py-4 border-b border-gray-200/50 dark:border-gray-700/50 bg-white/50 dark:bg-gray-800/50 backdrop-blur-sm">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-orange-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
             <Bot size={20} className="text-white" />
           </div>
           <div>
@@ -107,7 +107,7 @@ const AIChatbotPage: React.FC = () => {
         {messages.map(msg => (
           <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fade-in-up`}>
             {msg.role === 'assistant' && (
-              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm ${msg.error ? 'bg-gradient-to-br from-red-500 to-orange-500' : 'bg-gradient-to-br from-blue-500 to-purple-600'}`}>
+              <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 shadow-sm ${msg.error ? 'bg-gradient-to-br from-red-500 to-orange-500' : 'bg-gradient-to-br from-blue-500 to-orange-500'}`}>
                 {msg.error ? <AlertCircle size={16} className="text-white" /> : <Bot size={16} className="text-white" />}
               </div>
             )}
@@ -129,7 +129,7 @@ const AIChatbotPage: React.FC = () => {
         ))}
         {isTyping && (
           <div className="flex gap-3 justify-start animate-fade-in-up">
-            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center shrink-0"><Bot size={16} className="text-white" /></div>
+            <div className="w-8 h-8 bg-gradient-to-br from-blue-500 to-orange-500 rounded-lg flex items-center justify-center shrink-0"><Bot size={16} className="text-white" /></div>
             <div className="bg-white dark:bg-gray-800 rounded-2xl rounded-tl-md shadow-sm border border-gray-100 dark:border-gray-700 px-4 py-3">
               <div className="flex items-center gap-1.5">
                 <span className="w-2 h-2 bg-blue-500 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
@@ -148,7 +148,7 @@ const AIChatbotPage: React.FC = () => {
           <div className="flex items-center gap-2 mb-2"><Sparkles size={14} className="text-purple-500" /><span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Suggested prompts</span></div>
           <div className="flex flex-wrap gap-2">
             {SUGGESTIONS.map(s => (
-              <button key={s} onClick={() => sendMessage(s)} disabled={isTyping} className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 text-blue-700 dark:text-blue-300 rounded-full hover:from-blue-100 hover:to-purple-100 dark:hover:from-blue-900/30 dark:hover:to-purple-900/30 transition-all border border-blue-200/50 dark:border-blue-800/30 disabled:opacity-50">
+              <button key={s} onClick={() => sendMessage(s)} disabled={isTyping} className="px-3 py-1.5 text-xs font-medium bg-gradient-to-r from-blue-50 to-orange-50 dark:from-blue-900/20 dark:to-orange-900/20 text-blue-700 dark:text-blue-300 rounded-full hover:from-blue-100 hover:to-purple-100 dark:hover:from-blue-900/30 dark:hover:to-purple-900/30 transition-all border border-blue-200/50 dark:border-blue-800/30 disabled:opacity-50">
                 {s}
               </button>
             ))}
@@ -175,7 +175,7 @@ const AIChatbotPage: React.FC = () => {
           <button
             onClick={() => sendMessage()}
             disabled={!input.trim() || isTyping}
-            className="p-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
+            className="p-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-xl hover:from-blue-700 hover:to-orange-600 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-blue-500/20"
           >
             <Send size={18} />
           </button>

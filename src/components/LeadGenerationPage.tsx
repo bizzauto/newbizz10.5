@@ -1,8 +1,9 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Users, Search, Download, MessageSquare, Mail, Phone, Plus, X, Eye, Send, Trash2, MapPin, Package, Truck, CheckCircle, AlertCircle, RefreshCw, ArrowUpRight, TrendingUp, UserPlus, Settings, Upload, Zap, MailOpen, Shield, ChevronDown, Loader2, Info } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RT, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import LeadFinderPage from './LeadFinderPage';
 import OutreachCampaignPage from './OutreachCampaignPage';
+import { openWhatsAppChat } from '../lib/whatsapp';
 
 const API = import.meta.env.VITE_API_URL || '/api';
 interface Lead { id:string; name:string; phone:string; email?:string; company?:string; source:string; tags:string[]; location?:string; product?:string; supplier?:string; requirement?:string; status:'new'|'contacted'|'qualified'|'won'|'lost'; dealValue?:number; createdAt:string; lastActivity?:string; metadata?:any; }
@@ -207,7 +208,7 @@ export default function LeadGenerationPage(){
 
   const quickReply=(l:Lead,ch:'whatsapp'|'email'|'sms')=>{
     const msg=ch==='whatsapp'?`Hi ${l.name}, thanks for interest in ${l.product||'our products'}!`:ch==='email'?`Dear ${l.name},\n\nThank you for your inquiry.\n\nBest regards`:`Hi ${l.name}, thanks! We'll contact you soon.`;
-    if(ch==='whatsapp'&&l.phone)window.open(`https://wa.me/${l.phone.replace(/\D/g,'')}?text=${encodeURIComponent(msg)}`,'_blank');
+    if(ch==='whatsapp'&&l.phone)openWhatsAppChat(l.phone, msg);
     else if(ch==='email'&&l.email)window.open(`mailto:${l.email}?subject=Inquiry&body=${encodeURIComponent(msg)}`,'_blank');
     else if(ch==='sms'&&l.phone)window.open(`sms:${l.phone}?body=${encodeURIComponent(msg)}`,'_blank');
     toast_(`Opening ${ch}...`,'success');
@@ -335,7 +336,7 @@ export default function LeadGenerationPage(){
           className="w-full flex items-center justify-between px-4 sm:px-5 py-3 sm:py-4 hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors"
         >
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg">
+            <div className="p-2 bg-gradient-to-r from-blue-500 to-orange-500 rounded-lg">
               <Zap size={18} className="text-white" />
             </div>
             <div className="text-left">
@@ -375,7 +376,7 @@ export default function LeadGenerationPage(){
                   blue: 'from-blue-500/20 to-cyan-600/20 text-blue-600 dark:text-blue-400',
                   indigo: 'from-indigo-500/20 to-purple-600/20 text-indigo-600 dark:text-indigo-400',
                 };
-                const gc = gradColors[t.color]||'from-blue-500 to-purple-600';
+                const gc = gradColors[t.color]||'from-blue-500 to-orange-500';
                 const gi = gradIcon[t.color]||'from-blue-500/20 to-purple-600/20 text-blue-600';
                 return(
                 <div key={t.id} className="border border-gray-200 dark:border-gray-600 rounded-xl p-4 hover:border-blue-300 dark:hover:border-blue-700 transition-colors bg-gray-50 dark:bg-gray-700/50">
@@ -460,7 +461,7 @@ export default function LeadGenerationPage(){
           </tr></thead><tbody className="divide-y divide-gray-100 dark:divide-gray-700">
             {fl.map(l=>(<tr key={l.id} className={`hover:bg-gray-50 dark:hover:bg-gray-700/30 transition-colors ${sel.has(l.id)?'bg-blue-50 dark:bg-blue-900/20':''}`}>
               <td className="px-4 py-3"><input type="checkbox" checked={sel.has(l.id)} onChange={()=>tog(l.id)} className="rounded border-gray-300 text-blue-600"/></td>
-              <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-bold">{l.name?.charAt(0)?.toUpperCase()||'?'}</div><div><p className="font-medium text-gray-900 dark:text-white">{l.name||'Unknown'}</p>{l.company&&<p className="text-xs text-gray-500">{l.company}</p>}</div></div></td>
+              <td className="px-4 py-3"><div className="flex items-center gap-2"><div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-orange-500 rounded-full flex items-center justify-center text-white text-xs font-bold">{l.name?.charAt(0)?.toUpperCase()||'?'}</div><div><p className="font-medium text-gray-900 dark:text-white">{l.name||'Unknown'}</p>{l.company&&<p className="text-xs text-gray-500">{l.company}</p>}</div></div></td>
               <td className="px-4 py-3"><p className="text-gray-900 dark:text-white">{l.phone}</p>{l.email&&<p className="text-xs text-gray-500">{l.email}</p>}</td>
               <td className="px-4 py-3">{l.location?<span className="flex items-center gap-1 text-gray-700 dark:text-gray-300"><MapPin size={12} className="text-gray-400"/>{l.location}</span>:<span className="text-gray-400">—</span>}</td>
               <td className="px-4 py-3">{l.product?<span className="flex items-center gap-1 text-gray-700 dark:text-gray-300"><Package size={12} className="text-gray-400"/>{l.product}</span>:<span className="text-gray-400">—</span>}</td>
@@ -525,7 +526,7 @@ export default function LeadGenerationPage(){
       {/* Lead Detail Modal */}
       <Modal open={!!detail} onClose={()=>setDetail(null)} title="Lead Details" size="lg">
         {detail&&(<div className="space-y-6">
-          <div className="flex items-start gap-4"><div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white text-xl sm:text-2xl font-bold">{detail.name?.charAt(0)?.toUpperCase()||'?'}</div><div className="flex-1"><h3 className="text-xl font-semibold text-gray-900 dark:text-white">{detail.name||'Unknown'}</h3>{detail.company&&<p className="text-gray-500 dark:text-gray-400">{detail.company}</p>}<div className="flex gap-2 mt-2"><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{backgroundColor:SC[detail.source]||'#6B7280'}}>{detail.source.replace('_',' ')}</span><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium" style={{backgroundColor:`${STC[detail.status]||'#6B7280'}20`,color:STC[detail.status]||'#6B7280'}}>{detail.status}</span></div></div></div>
+          <div className="flex items-start gap-4"><div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-orange-500 rounded-full flex items-center justify-center text-white text-xl sm:text-2xl font-bold">{detail.name?.charAt(0)?.toUpperCase()||'?'}</div><div className="flex-1"><h3 className="text-xl font-semibold text-gray-900 dark:text-white">{detail.name||'Unknown'}</h3>{detail.company&&<p className="text-gray-500 dark:text-gray-400">{detail.company}</p>}<div className="flex gap-2 mt-2"><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium text-white" style={{backgroundColor:SC[detail.source]||'#6B7280'}}>{detail.source.replace('_',' ')}</span><span className="inline-flex items-center px-2.5 py-1 rounded-full text-xs font-medium" style={{backgroundColor:`${STC[detail.status]||'#6B7280'}20`,color:STC[detail.status]||'#6B7280'}}>{detail.status}</span></div></div></div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 bg-gray-50 dark:bg-gray-700/30 rounded-lg p-4">
             <div><p className="text-sm text-gray-500 dark:text-gray-400">Phone</p><p className="font-medium text-gray-900 dark:text-white flex items-center gap-2"><Phone size={14}/>{detail.phone}</p></div>
             <div><p className="text-sm text-gray-500 dark:text-gray-400">Email</p><p className="font-medium text-gray-900 dark:text-white">{detail.email||'—'}</p></div>

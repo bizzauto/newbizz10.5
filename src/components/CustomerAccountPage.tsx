@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   User, ShoppingBag, Heart, Star, Package, Loader2, ChevronRight,
   Clock, Truck, CheckCircle, XCircle, CreditCard, MapPin,
@@ -245,7 +245,7 @@ const CustomerAccountPage: React.FC = () => {
               <div className="space-y-6">
                 {loyalty ? (
                   <>
-                    <div className="bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl p-4 sm:p-5 md:p-6 text-white">
+                    <div className="bg-gradient-to-r from-blue-600 to-orange-500 rounded-xl p-4 sm:p-5 md:p-6 text-white">
                       <p className="text-sm opacity-80">Available Points</p>
                       <p className="text-3xl sm:text-4xl font-bold mt-1">{loyalty.balance.toLocaleString()}</p>
                       <div className="flex gap-6 mt-4 text-sm">

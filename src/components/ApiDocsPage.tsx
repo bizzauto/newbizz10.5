@@ -112,7 +112,7 @@ const ApiDocsPage: React.FC = () => {
         </div>
 
         {/* Quick Start */}
-        <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-2xl p-6 mb-8 border border-blue-100">
+        <div className="bg-gradient-to-r from-blue-50 to-orange-50 rounded-2xl p-6 mb-8 border border-blue-100">
           <h2 className="text-xl font-bold text-gray-900 mb-3">Quick Start</h2>
           <p className="text-sm text-gray-600 mb-4">
             All API requests require a Bearer token in the Authorization header.

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Mail, Send, Clock, BarChart3, Users, Plus, Play, Pause, Eye, Trash2, Zap,
   MessageSquare, Settings, CheckCircle, XCircle, AlertCircle, RefreshCw,
@@ -375,7 +375,7 @@ const EmailMarketingPage: React.FC = () => {
           <button onClick={() => setShowSmtpConfig(true)} className="flex items-center gap-2 px-3 py-2 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 text-sm">
             <Settings size={16} /> SMTP
           </button>
-          <button onClick={() => setShowComposeModal(true)} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 transition-all text-sm">
+          <button onClick={() => setShowComposeModal(true)} className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 transition-all text-sm">
             <Plus size={18} /> Compose
           </button>
         </div>
@@ -500,7 +500,7 @@ const EmailMarketingPage: React.FC = () => {
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
             {filteredTemplates.map(template => (
               <div key={template.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 overflow-hidden hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-700 transition-all cursor-pointer group">
-                <div className="h-32 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 p-4 flex items-center justify-center">
+                <div className="h-32 bg-gradient-to-br from-blue-50 to-orange-50 dark:from-blue-900/20 dark:to-orange-900/20 p-4 flex items-center justify-center">
                   <div className="w-16 h-16 bg-white dark:bg-gray-700 rounded-2xl shadow-lg flex items-center justify-center">
                     <Mail size={28} className="text-blue-600 dark:text-blue-400" />
                   </div>
@@ -973,7 +973,7 @@ const ComposeModal: React.FC<{
               {step < 3 ? (
                 <button onClick={() => setStep((step + 1) as 1 | 2 | 3)} disabled={step === 1 && (!name || !subject)} className="px-4 sm:px-5 md:px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 text-sm">Continue</button>
               ) : (
-                <button onClick={handleSubmit} disabled={!name || !subject} className="px-4 sm:px-5 md:px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 text-sm">
+                <button onClick={handleSubmit} disabled={!name || !subject} className="px-4 sm:px-5 md:px-6 py-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-lg hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 text-sm">
                   {scheduledAt ? 'Schedule Campaign' : 'Send Campaign'}
                 </button>
               )}

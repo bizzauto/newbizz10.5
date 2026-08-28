@@ -37,8 +37,18 @@ export const validateCSRF = async (
     try {
       isValid = await CSRFService.validateToken(req.user.id, csrfToken);
     } catch (csrfErr: any) {
-      // Gracefully handle missing csrfToken column — auth already logged warning
-      console.warn(`[CSRF] Validation failed (${csrfErr?.message || String(csrfErr)}). Skipping CSRF check.`);
+      // SECURITY (F1): fail CLOSED. Never skip CSRF verification on error.
+      // In production a CSRF service failure must block the write, not open it.
+      // In non-production we fall through so local dev without the csrfToken
+      // column still works (matches the existing graceful-dev behavior).
+      console.error(`[CSRF] Validation error (${csrfErr?.message || String(csrfErr)}).`);
+      if (process.env.NODE_ENV === 'production') {
+        return res.status(403).json({
+          success: false,
+          error: 'CSRF verification unavailable',
+          code: 'CSRF_SERVICE_ERROR',
+        });
+      }
       return next();
     }
 

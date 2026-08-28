@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useAuthStore } from '../lib/authStore';
 import { useToast } from '../components/Toast';
 import { businessAPI } from '../lib/api';
@@ -606,7 +606,7 @@ export default function MissedCallSettings() {
         <button
           onClick={handleSave}
           disabled={loading}
-          className="px-4 sm:px-5 md:px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:from-blue-700 hover:to-purple-700 transition-all disabled:opacity-50 flex items-center gap-2"
+          className="px-4 sm:px-5 md:px-6 py-2.5 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-xl hover:from-blue-700 hover:to-orange-600 transition-all disabled:opacity-50 flex items-center gap-2"
         >
           {loading ? (
             <Loader2 size={18} className="animate-spin" />

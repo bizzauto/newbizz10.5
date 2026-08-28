@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Star, MessageSquare, ThumbsUp, Filter, RefreshCw, ExternalLink, AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuthStore } from '../lib/authStore';
 import { reviewsAPI } from '../lib/api';
@@ -207,7 +207,7 @@ export default function ReviewsPage() {
               <div key={review.id} className="modern-card rounded-xl p-5">
                 <div className="flex items-start justify-between mb-3">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-orange-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">
                       {review.customerName.split(' ').map(w => w[0]).join('').slice(0, 2)}
                     </div>
                     <div>

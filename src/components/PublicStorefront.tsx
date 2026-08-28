@@ -625,7 +625,7 @@ const PublicStorefront: React.FC = () => {
                     </div>
                   </div>
 
-                  <button onClick={handleCheckout} className="w-full mt-3 sm:mt-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white text-sm sm:text-base font-semibold rounded-xl hover:shadow-lg transition-all">
+                  <button onClick={handleCheckout} className="w-full mt-3 sm:mt-4 py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white text-sm sm:text-base font-semibold rounded-xl hover:shadow-lg transition-all">
                     Checkout • ₹{total.toLocaleString()}
                   </button>
                 </>

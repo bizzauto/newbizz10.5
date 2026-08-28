@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback, useRef } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, BookOpen, Users, Clock, BarChart3, Loader2, Search, Edit2, Trash2, Copy, Eye, Sparkles, Upload, Video, Image, Wand2 } from 'lucide-react';
 import { coursesAPI } from '../lib/api';
@@ -150,7 +150,7 @@ export default function CourseBuilder() {
             </button>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Courses</h1>
           </div>
-          <button onClick={() => setIsCreateOpen(true)} className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl font-medium hover:shadow-lg transition-all">
+          <button onClick={() => setIsCreateOpen(true)} className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white px-4 py-2 rounded-xl font-medium hover:shadow-lg transition-all">
             <Plus size={18} />
             New Course
           </button>
@@ -189,7 +189,7 @@ export default function CourseBuilder() {
             <BookOpen size={48} className="mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">No courses yet</h3>
             <p className="text-gray-500 mb-4">Create your first course to get started</p>
-            <button onClick={() => setIsCreateOpen(true)} className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl font-medium">
+            <button onClick={() => setIsCreateOpen(true)} className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white px-4 py-2 rounded-xl font-medium">
               <Plus size={18} /> Create Course
             </button>
           </div>

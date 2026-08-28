@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { MapPin, Star, Phone, Clock, Globe, Camera, Edit3, MessageSquare, Eye, Plus, CheckCircle, XCircle, AlertCircle, BarChart3, Share2, Search, ExternalLink, RefreshCw, Loader2, Zap, Calendar, Trash2, Edit } from 'lucide-react';
 import { googleBusinessAPI } from '../lib/api';
@@ -614,7 +614,7 @@ const GoogleBusinessPage: React.FC = () => {
                   <div key={rv.id} className="p-4">
                     <div className="flex items-start justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">{rv.author.charAt(0)}</div>
+                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-orange-500 rounded-full flex items-center justify-center text-white font-semibold text-sm">{rv.author.charAt(0)}</div>
                         <div><p className="font-medium text-gray-900 dark:text-white">{rv.author}</p><div className="flex items-center gap-2"><Stars r={rv.rating} sz={12} /><span className="text-xs text-gray-400">{rv.date}</span></div></div>
                       </div>
                       {!rv.replied && connected && <button onClick={() => { setReplyOpen(rv.id); setReplyTxt(''); }} className="text-sm text-blue-600 dark:text-blue-400 hover:underline">Reply</button>}

@@ -320,6 +320,7 @@ model Contact {
   @@index([businessId, source])
   @@index([businessId, createdAt])
   @@index([businessId, lastMessageAt])
+  @@index([businessId, name]) // F-perf: supports name equality/startsWith search at 100k scale
   @@index([source])
   @@index([tags])
 }

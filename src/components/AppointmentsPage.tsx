@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   Calendar, Clock, Plus, ChevronLeft, ChevronRight, User, MapPin, Phone, X, Check,
   Settings, Bell, Repeat, Video, Mail, RefreshCw, AlertCircle, CheckCircle, Loader2, Globe
@@ -276,7 +276,7 @@ const AppointmentsPage: React.FC = () => {
           </div>
           {view !== 'services' && (
             <button onClick={() => setShowBookingModal(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all text-sm">
+              className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all text-sm">
               <Plus size={18} /> Book
             </button>
           )}
@@ -738,7 +738,7 @@ const AppointmentsPage: React.FC = () => {
               </div>
 
               <button onClick={saveSettings} disabled={savingSettings}
-                className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg hover:shadow-blue-500/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
+                className="w-full py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-xl font-medium hover:shadow-lg hover:shadow-blue-500/25 transition-all disabled:opacity-50 flex items-center justify-center gap-2">
                 {savingSettings ? <Loader2 size={18} className="animate-spin" /> : <Check size={18} />}
                 {savingSettings ? 'Saving...' : 'Save Settings'}
               </button>
@@ -929,7 +929,7 @@ const BookingModal: React.FC<{
             Cancel
           </button>
           <button onClick={handleSubmit} disabled={!title || !date || !time || !contactName}
-            className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm">
+            className="flex-1 px-4 py-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all disabled:opacity-50 disabled:cursor-not-allowed text-sm">
             Book Appointment
           </button>
         </div>

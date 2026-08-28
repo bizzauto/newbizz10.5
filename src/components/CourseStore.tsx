@@ -213,7 +213,7 @@ export default function CourseStore() {
                     <button
                       onClick={() => handleEnroll(selectedCourse)}
                       disabled={purchasing}
-                      className="mt-3 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl font-medium hover:shadow-lg transition-all disabled:opacity-50"
+                      className="mt-3 px-6 py-2.5 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-xl font-medium hover:shadow-lg transition-all disabled:opacity-50"
                     >
                       {purchasing ? <Loader2 className="animate-spin inline" size={16} /> : selectedCourse.price > 0 ? 'Enroll Now' : 'Enroll Free'}
                     </button>
@@ -299,7 +299,7 @@ export default function CourseStore() {
                 {course.thumbnail ? (
                   <img src={course.thumbnail} alt={course.name} className="w-full h-40 object-cover" />
                 ) : (
-                  <div className="w-full h-40 bg-gradient-to-br from-blue-600 to-purple-700 flex items-center justify-center">
+                  <div className="w-full h-40 bg-gradient-to-br from-blue-600 to-orange-600 flex items-center justify-center">
                     <GraduationCap size={40} className="text-white/60" />
                   </div>
                 )}

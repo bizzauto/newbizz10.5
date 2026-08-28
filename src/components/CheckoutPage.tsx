@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CreditCard, Truck, Check, ArrowLeft, Tag, MapPin, Package, Loader2, Smartphone, Building2, Wallet, Banknote } from 'lucide-react';
 import apiClient from '../lib/api';
@@ -433,7 +433,7 @@ const CheckoutPage: React.FC = () => {
                   <button onClick={() => setStep('payment')} className="flex-1 py-3 border border-gray-300 dark:border-gray-600 text-gray-700 dark:text-gray-300 font-semibold rounded-xl hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors">
                     Back
                   </button>
-                  <button onClick={handlePlaceOrder} disabled={processing} className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
+                  <button onClick={handlePlaceOrder} disabled={processing} className="flex-1 py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-blue-500/25 disabled:opacity-50 transition-all flex items-center justify-center gap-2">
                     {processing ? <><Loader2 className="animate-spin" size={18} /> Processing...</> : `Place Order • ₹${total.toLocaleString()}`}
                   </button>
                 </div>

@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   Plus, Search, Link as LinkIcon, DollarSign, Clock, Eye, Trash2, X,
   Copy, Check, Send, RefreshCw, Loader2, ChevronDown, ChevronUp,
@@ -453,7 +453,7 @@ const PaymentLinks: React.FC = () => {
       {showPreview && (
         <div className="fixed inset-0 z-50 bg-black/60 flex items-center justify-center p-4" onClick={() => setShowPreview(null)}>
           <div className="bg-white rounded-xl max-w-lg w-full shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>
-            <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 sm:p-5 md:p-6 text-white">
+            <div className="bg-gradient-to-r from-blue-600 to-orange-500 p-4 sm:p-5 md:p-6 text-white">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold">Payment Page Preview</h3>
                 <button onClick={() => setShowPreview(null)} className="p-1 hover:bg-white/20 rounded"><X size={18} /></button>
@@ -494,7 +494,7 @@ const PaymentLinks: React.FC = () => {
                 </div>
               )}
 
-              <button className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg font-semibold text-lg hover:from-blue-700 hover:to-purple-700 transition-all">
+              <button className="w-full py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-lg font-semibold text-lg hover:from-blue-700 hover:to-orange-600 transition-all">
                 Pay Now
               </button>
 

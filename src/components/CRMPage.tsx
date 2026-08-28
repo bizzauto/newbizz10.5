@@ -8,6 +8,7 @@ import {
 import { contactsAPI, appointmentsAPI, ledgerAPI, dealsAPI, crmInvoicesAPI, goalsAPI, leadsAPI } from '../lib/api';
 import { useToast } from './Toast';
 import PipelineViewEnhanced from './PipelineViewEnhanced';
+import { openWhatsAppChat } from '../lib/whatsapp';
 
 // ============================================================
 // TYPES
@@ -891,7 +892,7 @@ export default function CRMPage() {
                       <tr key={contact.id} className="hover:bg-gray-50 dark:hover:bg-gray-700/50 cursor-pointer" onClick={() => setSelectedContact(contact)}>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-semibold text-sm">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center text-white font-semibold text-sm">
                               {contact.avatar}
                             </div>
                             <div>
@@ -919,7 +920,7 @@ export default function CRMPage() {
                           <div className="flex items-center gap-1" onClick={e => e.stopPropagation()}>
                             <button onClick={() => window.location.href = 'tel:' + contact.phone} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Call"><Phone size={16} /></button>
                             <button onClick={() => window.location.href = 'mailto:' + contact.email} className="p-1.5 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg" title="Email"><Mail size={16} /></button>
-                            <button onClick={() => window.open('https://wa.me/' + contact.phone.replace(/[^0-9]/g, ''), '_blank')} className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg" title="WhatsApp"><MessageSquare size={16} /></button>
+                            <button onClick={() => openWhatsAppChat(contact.phone)} className="p-1.5 text-gray-500 hover:text-green-600 hover:bg-green-50 rounded-lg" title="WhatsApp"><MessageSquare size={16} /></button>
                             <button
                               onClick={() => { setQuickNoteContactId(contact.id); setQuickNoteText(''); setShowQuickNoteModal(true); }}
                               className="p-1.5 text-gray-500 hover:text-purple-600 hover:bg-purple-50 rounded-lg"
@@ -950,7 +951,7 @@ export default function CRMPage() {
                 <div key={contact.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4 hover:shadow-lg hover:border-blue-200 dark:hover:border-blue-500/30 transition-all cursor-pointer group" onClick={() => setSelectedContact(contact)}>
                   <div className="flex items-start justify-between mb-3">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">{contact.avatar}</div>
+                      <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center text-white font-bold shadow-md shadow-blue-500/20 group-hover:scale-105 transition-transform">{contact.avatar}</div>
                       <div>
                         <p className="font-semibold text-gray-900 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">{contact.name}</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400">{contact.company}</p>
@@ -1371,7 +1372,7 @@ const ContactDetailModal: React.FC<{ contact: Contact; onClose: () => void; onCo
     <div className="fixed inset-0 bg-black/50 flex items-end sm:items-center justify-center z-50 p-0 sm:p-4">
       <div className="bg-white dark:bg-gray-800 rounded-t-2xl sm:rounded-2xl shadow-2xl w-full max-w-3xl max-h-[95vh] sm:max-h-[90vh] overflow-y-auto">
         {/* Header */}
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 p-4 sm:p-5 md:p-6">
+        <div className="bg-gradient-to-r from-blue-600 to-orange-500 p-4 sm:p-5 md:p-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="w-16 h-16 rounded-full bg-white/20 flex items-center justify-center text-white font-bold text-2xl">

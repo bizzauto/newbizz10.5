@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Copy, Check, QrCode, Code, Share2, ExternalLink, LinkIcon, MessageSquare, Download, Globe } from 'lucide-react';
 import QRCode from 'qrcode';
@@ -169,7 +169,7 @@ const StoreSharePage: React.FC = () => {
         {/* Store URL Preview */}
         <div className="bg-white dark:bg-gray-800 rounded-xl p-4 sm:p-5 md:p-6 border border-gray-200 dark:border-gray-700 mb-6">
           <div className="flex items-center gap-3 mb-4">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-orange-500 rounded-xl flex items-center justify-center">
               <Globe size={24} className="text-white" />
             </div>
             <div>

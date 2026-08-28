@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Plus, Eye, Trash2, Copy, Layout, Loader2, Edit2, Search, Sparkles } from 'lucide-react';
 import FunnelTemplatePicker from './FunnelTemplatePicker';
@@ -194,7 +194,7 @@ export default function FunnelBuilder() {
             </button>
             <button
               onClick={() => setIsCreateOpen(true)}
-              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl font-medium hover:shadow-lg transition-all"
+              className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white px-4 py-2 rounded-xl font-medium hover:shadow-lg transition-all"
             >
               <Plus size={18} />
               New Funnel
@@ -243,7 +243,7 @@ export default function FunnelBuilder() {
               </button>
               <button
                 onClick={() => setIsCreateOpen(true)}
-                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white px-4 py-2 rounded-xl font-medium hover:shadow-lg transition-all"
+                className="inline-flex items-center gap-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white px-4 py-2 rounded-xl font-medium hover:shadow-lg transition-all"
               >
                 <Plus size={18} />
                 Start Blank
@@ -255,7 +255,7 @@ export default function FunnelBuilder() {
         <div className="grid gap-4">
           {funnels.map((funnel) => (
             <div key={funnel.id} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 flex items-center gap-4 hover:shadow-md transition-all">
-              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center flex-shrink-0">
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-orange-500 rounded-xl flex items-center justify-center flex-shrink-0">
                 <Layout size={20} className="text-white" />
               </div>
               <div className="flex-1 min-w-0">

@@ -242,7 +242,7 @@ export default function FileUploader({
             </div>
           ) : (
             <>
-              <div className="w-14 h-14 bg-gradient-to-br from-blue-50 to-purple-50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl flex items-center justify-center">
+              <div className="w-14 h-14 bg-gradient-to-br from-blue-50 to-orange-50 dark:from-blue-900/30 dark:to-purple-900/30 rounded-xl flex items-center justify-center">
                 <Upload size={24} className="text-blue-500" />
               </div>
               <div>

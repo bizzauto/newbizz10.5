@@ -140,7 +140,7 @@ const AutoSetupWizard: React.FC<AutoSetupProps> = ({ onComplete }) => {
     <div className="max-w-2xl mx-auto">
       {/* Header */}
       <div className="text-center mb-8">
-        <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+        <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4">
           <Sparkles size={32} className="text-white" />
         </div>
         <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
@@ -358,7 +358,7 @@ const AutoSetupWizard: React.FC<AutoSetupProps> = ({ onComplete }) => {
             <button
               onClick={() => setStep('confirm')}
               disabled={!isDataComplete()}
-              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium hover:from-blue-600 hover:to-purple-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
+              className="px-6 py-3 bg-gradient-to-r from-blue-500 to-orange-500 text-white rounded-xl font-medium hover:from-blue-600 hover:to-orange-600 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center gap-2"
             >
               Continue <ArrowRight size={18} />
             </button>

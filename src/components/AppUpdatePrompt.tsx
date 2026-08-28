@@ -42,7 +42,7 @@ const AppUpdatePrompt: React.FC = () => {
       <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-sm w-full p-6 shadow-2xl animate-scale-in">
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+            <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-orange-500 rounded-xl flex items-center justify-center">
               <RefreshCw size={24} className="text-white" />
             </div>
             <div>
@@ -75,7 +75,7 @@ const AppUpdatePrompt: React.FC = () => {
               window.location.reload();
               setShowUpdate(false);
             }}
-            className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-purple-600 text-white rounded-xl font-medium text-sm hover:from-blue-600 hover:to-purple-700 transition-all"
+            className="flex-1 px-4 py-2.5 bg-gradient-to-r from-blue-500 to-orange-500 text-white rounded-xl font-medium text-sm hover:from-blue-600 hover:to-orange-600 transition-all"
           >
             Update Now
           </button>

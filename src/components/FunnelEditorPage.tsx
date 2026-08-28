@@ -404,7 +404,7 @@ export default function FunnelEditorPage() {
           >
             <ArrowLeft size={18} />
           </button>
-          <div className="p-1.5 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg">
+          <div className="p-1.5 bg-gradient-to-br from-blue-500 to-orange-500 rounded-lg">
             <Layout size={16} className="text-white" />
           </div>
           <input

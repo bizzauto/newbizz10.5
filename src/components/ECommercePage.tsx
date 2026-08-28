@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Plus, Search, Package, ShoppingCart, TrendingUp, Eye, Edit, Trash2, Share2, X, MessageSquare, Upload, AlertTriangle, Tag, Percent, Trash, Minus, Plus as PlusIcon, Check, Clock, Truck, CreditCard, ExternalLink, Store, Copy, QrCode } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import apiClient, { ecommerceAPI } from '../lib/api';
@@ -371,7 +371,7 @@ const ECommercePage: React.FC = () => {
           </button>
           <button
             onClick={() => setShowCart(true)}
-            className="relative flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all"
+            className="relative flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all"
           >
             <ShoppingCart size={18} />
             <span>Cart</span>
@@ -390,7 +390,7 @@ const ECommercePage: React.FC = () => {
           </button>
           <button
             onClick={() => { setEditingProduct(null); setShowProductModal(true); }}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all"
+            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all"
           >
             <Plus size={18} />
             <span>Add Product</span>
@@ -605,7 +605,7 @@ const ECommercePage: React.FC = () => {
               <div key={coupon.id || coupon.code} className="bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-4">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center">
+                    <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-orange-500 rounded-xl flex items-center justify-center">
                       <Percent size={20} className="text-white" />
                     </div>
                     <div>
@@ -794,7 +794,7 @@ const AddProductModal: React.FC<{
         </div>
         <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
           <button onClick={onClose} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
-          <button onClick={handleSubmit} disabled={!name || !price} className="px-4 sm:px-5 md:px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg disabled:opacity-50 transition-all">
+          <button onClick={handleSubmit} disabled={!name || !price} className="px-4 sm:px-5 md:px-6 py-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-lg hover:shadow-lg disabled:opacity-50 transition-all">
             {product ? 'Update Product' : 'Add Product'}
           </button>
         </div>
@@ -861,7 +861,7 @@ const CartModal: React.FC<{
                   <span className="text-gray-900 dark:text-white">₹{subtotal.toLocaleString()}</span>
                 </div>
               </div>
-              <button onClick={onCheckout} className="w-full mt-4 py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all">
+              <button onClick={onCheckout} className="w-full mt-4 py-3 bg-gradient-to-r from-blue-600 to-orange-500 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-blue-500/25 transition-all">
                 Checkout • ₹{subtotal.toLocaleString()}
               </button>
             </>
@@ -892,7 +892,7 @@ const CouponDisplayModal: React.FC<{
               <div key={coupon.id || coupon.code} className="p-4 border border-gray-200 dark:border-gray-700 rounded-xl">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-purple-600 rounded-lg flex items-center justify-center">
+                    <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-orange-500 rounded-lg flex items-center justify-center">
                       <Percent size={16} className="text-white" />
                     </div>
                     <div>
@@ -987,7 +987,7 @@ const AddCouponModal: React.FC<{
         </div>
         <div className="flex items-center justify-end gap-3 p-4 border-t border-gray-200 dark:border-gray-700">
           <button onClick={onClose} className="px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg">Cancel</button>
-          <button onClick={handleSubmit} disabled={!code || !value} className="px-4 sm:px-5 md:px-6 py-2 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-lg hover:shadow-lg disabled:opacity-50 transition-all">Create Coupon</button>
+          <button onClick={handleSubmit} disabled={!code || !value} className="px-4 sm:px-5 md:px-6 py-2 bg-gradient-to-r from-blue-600 to-orange-500 text-white rounded-lg hover:shadow-lg disabled:opacity-50 transition-all">Create Coupon</button>
         </div>
       </div>
     </div>

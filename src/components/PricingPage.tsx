@@ -35,7 +35,7 @@ const PricingCard: React.FC<PricingCardProps> = ({ plan, onSelect, loading }) =>
     >
       {plan.popular && (
         <div className="absolute -top-3 sm:-top-4 left-1/2 transform -translate-x-1/2">
-          <span className="bg-gradient-to-r from-blue-600 to-purple-600 text-white text-[10px] sm:text-xs font-bold px-3 py-1 sm:px-4 sm:py-1.5 rounded-full whitespace-nowrap shadow-lg shadow-blue-500/25">
+          <span className="bg-gradient-to-r from-blue-600 to-orange-500 text-white text-[10px] sm:text-xs font-bold px-3 py-1 sm:px-4 sm:py-1.5 rounded-full whitespace-nowrap shadow-lg shadow-blue-500/25">
             ✨ Most Popular
           </span>
         </div>
@@ -101,7 +101,7 @@ const PricingCard: React.FC<PricingCardProps> = ({ plan, onSelect, loading }) =>
           disabled={loading}
           className={`w-full py-3.5 rounded-xl font-semibold transition-all flex items-center justify-center gap-2 cursor-pointer ${
             plan.popular
-              ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white hover:from-blue-700 hover:to-purple-700 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0'
+              ? 'bg-gradient-to-r from-blue-600 to-orange-500 text-white hover:from-blue-700 hover:to-orange-600 shadow-lg shadow-blue-500/25 hover:shadow-xl hover:shadow-blue-500/30 hover:-translate-y-0.5 active:translate-y-0'
               : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white hover:bg-gray-200 dark:hover:bg-gray-600'
           } disabled:opacity-50`}
         >

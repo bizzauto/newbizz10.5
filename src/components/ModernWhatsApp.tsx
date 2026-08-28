@@ -13,6 +13,7 @@ import { evolutionAPI } from '../lib/api';
 import WhatsAppConnectModal from './WhatsAppConnectModal';
 import type { EvolutionStatus } from './WhatsAppConnectModal';
 import AnimatedCounter from './AnimatedCounter';
+import { useIsMobile } from '../hooks/useViewport';
 
 type Tab = 'broadcast' | 'inbox' | 'templates' | 'campaigns' | 'settings' | 'analytics';
 
@@ -24,6 +25,7 @@ interface ModernWhatsAppProps {
 const ModernWhatsApp: React.FC<ModernWhatsAppProps> = ({ everConnected: everConnectedProp = false }) => {
   const navigate = useNavigate();
   const { user, isDemoMode } = useAuthStore();
+  const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<Tab>('broadcast');
   const [message, setMessage] = useState('');
 
@@ -64,6 +66,8 @@ const ModernWhatsApp: React.FC<ModernWhatsAppProps> = ({ everConnected: everConn
   // App-launch auto-connect: check live status; if connected show it,
   // if scanning or a prior integration exists, re-pair and show QR modal,
   // otherwise show a "Connect WhatsApp" button.
+  // On mobile we always auto-open the connect modal when not connected, so
+  // the Evolution pairing code is generated immediately (no QR scan needed).
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -71,15 +75,15 @@ const ModernWhatsApp: React.FC<ModernWhatsAppProps> = ({ everConnected: everConn
       if (cancelled) return;
       if (data?.status === 'connected') {
         // Already connected — live state shown above.
-      } else if (data?.status === 'scanning' || everConnected) {
-        // Auto re-pair: refresh the session and open the QR modal.
+      } else if (isMobile || data?.status === 'scanning' || everConnected) {
+        // Auto re-pair: refresh the session and open the connect modal.
         setConnectOpen(true);
       }
     })();
     return () => {
       cancelled = true;
     };
-  }, [refreshStatus, everConnected]);
+  }, [refreshStatus, everConnected, isMobile]);
 
   const handleEvoConnected = useCallback(
     async (info: EvolutionStatus) => {
@@ -214,6 +218,7 @@ const ModernWhatsApp: React.FC<ModernWhatsAppProps> = ({ everConnected: everConn
       <WhatsAppConnectModal
         open={connectOpen}
         everConnected={everConnected}
+        phone={evoInfo?.phone || ''}
         onClose={() => setConnectOpen(false)}
         onConnected={handleEvoConnected}
       />

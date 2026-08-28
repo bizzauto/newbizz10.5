@@ -189,7 +189,7 @@ export default function FunnelPreviewPage() {
           >
             <ArrowLeft size={18} />
           </button>
-          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+          <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-blue-500 to-orange-500 flex items-center justify-center flex-shrink-0">
             <Eye size={14} className="text-white" />
           </div>
           <div className="min-w-0">
