@@ -3,6 +3,27 @@ import { prisma } from '../db.js';
 import { LeadCaptureService } from './lead-capture.service.js';
 
 /**
+ * Human-readable text for IMAP failures. node-imap emits network errors with a
+ * `code` (ETIMEDOUT / ENETUNREACH / ECONNREFUSED) and an EMPTY `message`, so
+ * raw err.message produces useless "IMAP error: " logs. This maps the common
+ * cases to actionable hints (outbound port blocked, wrong password, etc.).
+ */
+export function imapErrorText(err: any): string {
+  const code = err?.code || err?.errno || '';
+  const detail = err?.message || code || 'unknown IMAP error';
+  if (code === 'ETIMEDOUT' || code === 'ENETUNREACH' || code === 'EHOSTUNREACH') {
+    return `Server imap.gmail.com:993 tak pahunch nahi paya (${code}) — ye server ka NETWORK/FIREWALL issue hai, credentials ka nahi. Hosting firewall mein outbound TCP 993 open karwao ya provider se poochho.`;
+  }
+  if (code === 'ECONNREFUSED') {
+    return `IMAP server ne connection refuse kiya (ECONNREFUSED) — host/port check karo (Gmail: imap.gmail.com:993).`;
+  }
+  if (/authentication|AUTHENTICATIONFAILED|Invalid credentials|LOGIN/i.test(detail)) {
+    return `IMAP login fail — Gmail ke liye normal password nahi chalega. Google Account → Security → 2-Step Verification → App Passwords se 16-char App Password banao.`;
+  }
+  return `IMAP error: ${detail}`;
+}
+
+/**
  * IndiaMART Email Integration Service
  * Fetches enquiry emails from user's email and extracts leads
  */
@@ -505,9 +526,9 @@ export class IndiaMARTEmailService {
           });
         });
 
-        imap.once('error', (err) => {
+        imap.once('error', (err: any) => {
           console.error(`[IndiaMART] IMAP connection error:`, err);
-          reject(new Error(`IMAP error: ${err.message}`));
+          reject(new Error(imapErrorText(err)));
         });
 
         imap.connect();

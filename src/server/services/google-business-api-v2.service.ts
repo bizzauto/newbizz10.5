@@ -167,8 +167,10 @@ async function resilientCall({ url, accessToken, method = 'GET', body, label, ma
 
   if (status === 429) {
     throw new GBPQuotaError(
-      'Google Business Profile API rate limit reached. This usually means the OAuth app is still in TEST mode or Cloud Billing is not enabled on the project. ' +
-        'Enable Cloud Billing, publish/verify the OAuth consent screen, and retry after a short wait.',
+      'Google Business Profile API rate limit reached. Common causes: (1) GBP API access approval still pending — '
+        + 'Google approves projects only after the access request form at developers.google.com/my-business, '
+        + '(2) OAuth app in TEST mode, (3) Cloud Billing not enabled. '
+        + `Google said: ${googleMsg}`,
       status
     );
   }

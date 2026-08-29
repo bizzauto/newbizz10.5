@@ -1,6 +1,7 @@
 import { simpleParser } from 'mailparser';
 import { prisma } from '../db.js';
 import { LeadCaptureService } from './lead-capture.service.js';
+import { imapErrorText } from './indiamart-email.service.js';
 
 export type Platform = 'indiamart' | 'justdial' | 'tradeindia';
 
@@ -622,8 +623,8 @@ export class EmailLeadService {
           });
         });
 
-        imap.once('error', (err) => {
-          reject(new Error(`IMAP error: ${err.message}`));
+        imap.once('error', (err: any) => {
+          reject(new Error(imapErrorText(err)));
         });
 
         imap.connect();

@@ -1,7 +1,7 @@
 import { Router, Response } from 'express';
 import { prisma } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
-import { IndiaMARTEmailService } from '../services/indiamart-email.service.js';
+import { IndiaMARTEmailService, imapErrorText } from '../services/indiamart-email.service.js';
 import { EmailLeadService, Platform } from '../services/email-lead.service.js';
 import { LeadCaptureService } from '../services/lead-capture.service.js';
 import { GmailIMAPService } from '../services/gmail-imap.service.js';
@@ -246,9 +246,10 @@ router.post('/debug-emails', authenticate, async (req: any, res: Response) => {
         });
       });
 
-      imap.once('error', (err) => {
-        console.log('[Debug] IMAP error:', err.message);
-        safeResolve({ error: err.message });
+      imap.once('error', (err: any) => {
+        const text = imapErrorText(err);
+        console.log('[Debug] IMAP error:', text);
+        safeResolve({ error: text });
       });
 
       imap.connect();
@@ -389,12 +390,13 @@ router.post('/test-gmail', authenticate, async (req: any, res: Response) => {
         });
       });
 
-      imap.once('error', (err) => {
-        console.error('[TestGmail] IMAP error:', err.message);
-        safeResolve({ 
-          success: false, 
-          error: `IMAP error: ${err.message}`,
-          hint: 'Check email and App Password. For Gmail, use App Password from myaccount.google.com/apppasswords'
+      imap.once('error', (err: any) => {
+        const text = imapErrorText(err);
+        console.error('[TestGmail] IMAP error:', text);
+        safeResolve({
+          success: false,
+          error: text,
+          hint: 'Network issue: open outbound TCP 993. Credentials issue: use a Gmail App Password from myaccount.google.com/apppasswords'
         });
       });
 
