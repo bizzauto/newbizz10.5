@@ -12,6 +12,7 @@ import {
   AlertCircle, CheckCircle, VolumeX
 , Loader, Server} from 'lucide-react';
 import apiClient, { whatsappAPI } from '../lib/api';
+import { useIsMobile } from '../hooks/useViewport';
 import { useToast } from './Toast';
 import ClaudeWhatsAppSettings from './ClaudeWhatsAppSettings';
 import UnofficialWhatsAppSettings from './UnofficialWhatsAppSettings';
@@ -152,7 +153,7 @@ const evolutionAPI = {
   getConfig: () => apiClient.get('/evolution/config'),
   saveConfig: (data: any) => apiClient.post('/evolution/config', data),
   createInstance: (data: any) => apiClient.post('/evolution/instance', data),
-  connectInstance: (instanceName: string, phone?: string) => apiClient.post('/evolution/connect', { instanceName, phone }),
+  connectInstance: (instanceName: string, phone?: string, mobile?: boolean) => apiClient.post('/evolution/connect', { instanceName, phone, mobile }),
   getStatus: (instanceName: string) => apiClient.get(`/evolution/status?instanceName=${instanceName}`),
   disconnectInstance: (instanceName: string) => apiClient.post('/evolution/disconnect', { instanceName }),
   getChats: (instanceName: string) => apiClient.get(`/evolution/chats?instanceName=${instanceName}`),
@@ -205,9 +206,14 @@ const QRConnectView: React.FC<{
   onEvolutionConfigChange?: (config: EvolutionConfig) => void;
   onEvolutionConnect?: () => void;
   apiError?: string | null;
-}> = ({ connectionStatus, connectedPhone, onConnect, onDisconnect, onRefreshQR, qrValue, connectionMode = 'qr', onModeChange = () => { }, evolutionConfig = { baseUrl: '', apiKey: '', instanceName: '', phone: '', configured: false }, onEvolutionConfigChange = () => { }, onEvolutionConnect = () => { }, apiError = null }) => {
+  isMobileDevice?: boolean;
+  pairingCode?: string;
+  needsPairingPhone?: boolean;
+  onPairingConnect?: (phone: string) => void;
+}> = ({ connectionStatus, connectedPhone, onConnect, onDisconnect, onRefreshQR, qrValue, connectionMode = 'qr', onModeChange = () => { }, evolutionConfig = { baseUrl: '', apiKey: '', instanceName: '', phone: '', configured: false }, onEvolutionConfigChange = () => { }, onEvolutionConnect = () => { }, apiError = null, isMobileDevice = false, pairingCode = '', needsPairingPhone = false, onPairingConnect = () => { } }) => {
   const [step, setStep] = useState(0);
   const [showEvolutionForm, setShowEvolutionForm] = useState(false);
+  const [pairingPhone, setPairingPhone] = useState('');
 
   useEffect(() => {
     if (connectionStatus === 'scanning') {
@@ -416,8 +422,32 @@ const QRConnectView: React.FC<{
                 {evolutionConfig.configured ? (
                   <div className="space-y-4">
                     {connectionStatus === 'scanning' || connectionStatus === 'connecting' ? (
-                      <div className="text-center space-y-4">
-                        {qrValue ? (
+                      pairingCode ? (
+                        /* MOBILE PAIRING CODE — a phone cannot scan its own QR */
+                        <div className="text-center space-y-4">
+                          <p className="text-sm font-semibold text-purple-800 dark:text-purple-300">
+                            Type this code in WhatsApp
+                          </p>
+                          <div className="inline-block bg-purple-50 dark:bg-purple-900/30 border-2 border-purple-300 dark:border-purple-700 rounded-xl px-6 py-4">
+                            <span className="text-3xl sm:text-4xl font-black tracking-[0.25em] text-purple-700 dark:text-purple-300">
+                              {pairingCode}
+                            </span>
+                          </div>
+                          <ol className="text-xs text-gray-600 dark:text-gray-300 text-left max-w-xs mx-auto space-y-1 list-decimal list-inside">
+                            <li>Open WhatsApp on this phone</li>
+                            <li>Settings / Menu → Linked devices</li>
+                            <li>Tap "Link with phone number instead"</li>
+                            <li>Enter the code above</li>
+                          </ol>
+                          <button
+                            onClick={onEvolutionConnect}
+                            className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:text-purple-300 underline"
+                          >
+                            Generate new code
+                          </button>
+                        </div>
+                      ) : qrValue ? (
+                        <div className="text-center space-y-4">
                           <div className="bg-white dark:bg-gray-600 dark:text-white rounded-xl p-4 border-2 border-purple-300 inline-block mx-auto">
                             {qrValue.startsWith('data:') || qrValue.startsWith('http') ? (
                               <img
@@ -444,20 +474,67 @@ const QRConnectView: React.FC<{
                               {connectionStatus === 'connecting' ? 'Connecting...' : 'Scan this QR code with WhatsApp'}
                             </p>
                             <p className="text-xs text-gray-400 mt-1">
-                              Open WhatsApp &gt; Linked Devices &gt; Link a Device
+                              {isMobileDevice
+                                ? 'You cannot scan your own screen — add your number below to get a pairing code'
+                                : 'Open WhatsApp > Linked Devices > Link a Device'}
                             </p>
                           </div>
-                        ) : (
-                          <div className="flex items-center justify-center gap-2 text-purple-600 dark:text-purple-400">
-                            <Loader size={20} className="animate-spin" />
-                            <span>Generating QR code...</span>
-                          </div>
-                        )}
+                          {isMobileDevice && (
+                            <div className="text-center space-y-2">
+                              <input
+                                type="tel"
+                                value={pairingPhone}
+                                onChange={e => setPairingPhone(e.target.value)}
+                                placeholder="919999999999"
+                                className="w-full max-w-xs mx-auto px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm text-center"
+                              />
+                              <button
+                                onClick={() => onPairingConnect(pairingPhone)}
+                                className="w-full max-w-xs mx-auto px-4 py-2.5 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors font-semibold flex items-center justify-center gap-2"
+                              >
+                                <Smartphone size={16} />
+                                Get Pairing Code
+                              </button>
+                            </div>
+                          )}
+                          <button
+                            onClick={onEvolutionConnect}
+                            className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:text-purple-300 underline"
+                          >
+                            Refresh QR Code
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center justify-center gap-2 text-purple-600 dark:text-purple-400">
+                          <Loader size={20} className="animate-spin" />
+                          <span>Generating QR code...</span>
+                        </div>
+                      )
+                    ) : needsPairingPhone ? (
+                      /* MOBILE: no configured number — ask for it so pairing code works */
+                      <div className="text-center space-y-3">
+                        <p className="text-sm text-gray-700 dark:text-gray-200">
+                          A phone cannot scan its own QR. Enter your WhatsApp number to get a pairing code:
+                        </p>
+                        <input
+                          type="tel"
+                          value={pairingPhone}
+                          onChange={e => setPairingPhone(e.target.value)}
+                          placeholder="919999999999"
+                          className="w-full max-w-xs mx-auto px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-purple-500 text-sm text-center"
+                        />
                         <button
-                          onClick={onEvolutionConnect}
-                          className="text-sm text-purple-600 dark:text-purple-400 hover:text-purple-800 dark:text-purple-300 underline"
+                          onClick={() => onPairingConnect(pairingPhone)}
+                          className="w-full px-4 py-3 bg-purple-600 text-white rounded-xl hover:bg-purple-700 transition-colors font-semibold shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2"
                         >
-                          Refresh QR Code
+                          <Smartphone size={20} />
+                          Generate Pairing Code
+                        </button>
+                        <button
+                          onClick={() => setShowEvolutionForm(true)}
+                          className="text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:text-gray-200 underline"
+                        >
+                          Update Configuration
                         </button>
                       </div>
                     ) : (
@@ -2306,7 +2383,9 @@ const WhatsAppModule: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   const [isEvolutionConnected, setIsEvolutionConnected] = useState(false);
   const [connectionMode, setConnectionMode] = useState<ConnectionMode>('meta');
   const [evolutionQR, setEvolutionQR] = useState('');
+  const [evolutionPairingCode, setEvolutionPairingCode] = useState('');
   const [apiError, setApiError] = useState<string | null>(null);
+  const isMobile = useIsMobile();
 
   // Handle OAuth redirect params (success/error from Meta callback)
   useEffect(() => {
@@ -2451,16 +2530,18 @@ const WhatsAppModule: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     return () => { mounted = false; clearInterval(interval); };
   }, [connectionStatus, evolutionInstanceName]);
 
-  const handleEvolutionConnect = async () => {
+  const handleEvolutionConnect = async (phoneOverride?: string) => {
     setApiError(null);
     if (!evolutionConfig.configured) {
       setApiError('Please configure Evolution API first');
       return;
     }
+    const phoneToUse = phoneOverride ?? evolutionConfig.phone;
     try {
       const instanceName = evolutionConfig.instanceName || `instance-${Date.now()}`;
       setEvolutionInstanceName(instanceName);
       setEvolutionQR(''); // Clear previous QR
+      setEvolutionPairingCode('');
 
       // Try to create instance (include apiKey!)
       try {
@@ -2468,20 +2549,33 @@ const WhatsAppModule: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
           instanceName,
           baseUrl: evolutionConfig.baseUrl,
           apiKey: evolutionConfig.apiKey,
-          phone: evolutionConfig.phone,
+          phone: phoneToUse,
         });
       } catch {
         // Instance may already exist, continue
       }
 
-      // Connect and get QR
-      const connectRes = await evolutionAPI.connectInstance(instanceName, evolutionConfig.phone);
-      // Server wraps response: { success: true, data: { qrCode, qrCodeBase64, status } }
+      // Connect. On mobile the backend asks Evolution for a pairing code
+      // (a phone cannot scan its own QR); desktop gets the plain QR.
+      const connectRes = await evolutionAPI.connectInstance(instanceName, phoneToUse, isMobile);
+      // Server wraps response: { success: true, data: { qrCode, qrCodeBase64, status, pairingCode } }
       const responseData = connectRes?.data?.data || connectRes?.data;
       const qrCode = responseData?.qrCodeBase64 || responseData?.qrCode || '';
+      const pairingCode = responseData?.pairingCode || '';
+      if (pairingCode) {
+        setEvolutionPairingCode(pairingCode);
+        setConnectionStatus('scanning');
+        return;
+      }
       if (qrCode) {
         setEvolutionQR(qrCode);
         setConnectionStatus('scanning');
+      } else if (isMobile) {
+        // Diagnostic: show what the server actually returned so the cause is visible
+        setApiError(
+          'Pairing code nahi mila. Server response: ' + JSON.stringify(responseData).slice(0, 200)
+          + '. Aapka Evolution server phone-number linking support nahi karta YA usme SERVER_URL set nahi hai.'
+        );
       } else {
         // No QR yet - show general error with helpful message
         // Common issue: instance already exists in 'connecting' state
@@ -2494,6 +2588,18 @@ const WhatsAppModule: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
     } catch (err: any) {
       setApiError(err?.message || 'Failed to connect to Evolution API');
     }
+  };
+
+  // Mobile pairing: save the entered number, then connect with it immediately
+  const handlePairingConnect = (phone: string) => {
+    const digits = (phone || '').replace(/\D/g, '');
+    if (digits.length < 10 || digits.length > 15 || digits === '919999999999') {
+      setApiError('Enter a valid WhatsApp number with country code (10-15 digits, e.g. 919999999999)');
+      return;
+    }
+    setApiError(null);
+    setEvolutionConfig(prev => ({ ...prev, phone: digits }));
+    handleEvolutionConnect(digits);
   };
 
   const handleEvolutionConfigSave = async (config: EvolutionConfig) => {
@@ -2654,8 +2760,15 @@ const WhatsAppModule: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
             onModeChange={setConnectionMode}
             evolutionConfig={evolutionConfig}
             onEvolutionConfigChange={handleEvolutionConfigSave}
-            onEvolutionConnect={handleEvolutionConnect}
+            onEvolutionConnect={() => handleEvolutionConnect()}
             apiError={apiError}
+            isMobileDevice={isMobile}
+            pairingCode={evolutionPairingCode}
+            needsPairingPhone={(() => {
+              const d = (evolutionConfig.phone || '').replace(/\D/g, '');
+              return isMobile && !(d.length >= 10 && d.length <= 15 && d !== '919999999999');
+            })()}
+            onPairingConnect={handlePairingConnect}
           />
         )}
         {currentView === 'chats' && (
