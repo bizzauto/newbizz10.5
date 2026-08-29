@@ -224,8 +224,8 @@ const QRConnectView: React.FC<{
 
   if (connectionStatus === 'connected') {
     return (
-      <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-green-50 dark:from-gray-800 to-emerald-50 dark:to-gray-900">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl dark:shadow-2xl p-10 max-w-lg w-full mx-4 text-center">
+      <div className="flex-1 overflow-y-auto flex items-start justify-center bg-gradient-to-br from-green-50 dark:from-gray-800 to-emerald-50 dark:to-gray-900">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl dark:shadow-2xl p-6 sm:p-10 max-w-lg w-full mx-4 my-auto text-center">
           <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
             <CheckCircle size={48} className="text-green-500" />
           </div>
@@ -282,8 +282,8 @@ const QRConnectView: React.FC<{
   }
 
   return (
-      <div className="flex-1 flex items-start sm:items-center justify-center bg-gradient-to-br from-gray-50 dark:from-gray-800 to-blue-50 dark:to-gray-900">
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl dark:shadow-2xl p-6 sm:p-10 max-w-2xl w-full mx-4 my-4">
+    <div className="flex-1 overflow-y-auto flex items-start justify-center bg-gradient-to-br from-gray-50 dark:from-gray-800 to-blue-50 dark:to-gray-900">
+      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl dark:shadow-2xl p-6 sm:p-10 max-w-2xl w-full mx-4 my-auto">
         {apiError && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start gap-3" role="alert">
             <AlertCircle size={20} className="text-red-500 mt-0.5 flex-shrink-0" />
@@ -2692,7 +2692,7 @@ const WhatsAppModule: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
   ];
 
   return (
-    <div className="h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
+    <div className="h-[100dvh] flex flex-col bg-gray-50 dark:bg-gray-900">
       {/* Top Navigation Bar */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 flex items-center justify-between h-14 flex-shrink-0">
         <div className="flex items-center gap-3">
