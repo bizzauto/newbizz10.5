@@ -297,14 +297,20 @@ export class EvolutionApiService {
     let connectResponse: any = null;
     let lastError: any = null;
 
-    // Connect via plain GET /instance/connect/:name (no query params) — this is
-    // the proven flow from the working older build. It returns a base64 QR that
-    // the modal renders. Some Evolution versions also return a `pairingCode`
-    // field; we surface that as a text code if present (bonus), but we never
-    // send `?number=` here because several hosted/older Evolution versions reject
-    // or ignore it and break QR generation. Matching the old repo keeps mobile
-    // and desktop on the same reliable connect path.
-    const connectUrl = `${config.baseUrl}/instance/connect/${resolvedInstanceName}`;
+    // On mobile we MUST use the pairing-code flow: a phone cannot scan a QR shown
+    // on its own screen. A pairing code is requested with `?number=<phone>` on
+    // GET /instance/connect/:name — Evolution then returns a top-level
+    // `pairingCode` (e.g. "ABCD-EFGH") instead of (or alongside) the QR. This
+    // requires the USER'S REAL WhatsApp number; the placeholder is NEVER sent as a
+    // pairing number (that would bind the code to a fake number and trigger the
+    // known `{"count":0}` bug). Desktop keeps the plain QR flow.
+    const isPlaceholderPhone = (p: string) =>
+      !p || p.replace(/\D/g, '') === '919999999999' || p.replace(/\D/g, '').length < 10;
+    const pairingNumber =
+      mobile && !isPlaceholderPhone(resolvedPhone) ? resolvedPhone.replace(/\D/g, '') : '';
+    const connectUrl = pairingNumber
+      ? `${config.baseUrl}/instance/connect/${resolvedInstanceName}?number=${encodeURIComponent(pairingNumber)}`
+      : `${config.baseUrl}/instance/connect/${resolvedInstanceName}`;
     const connectCall = () =>
       axios.get(connectUrl, { headers: { apikey: config.apiKey }, timeout: 30000 });
 

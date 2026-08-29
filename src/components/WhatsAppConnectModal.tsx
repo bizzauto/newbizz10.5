@@ -51,6 +51,8 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
   const [connectedPhone, setConnectedPhone] = useState<string>('');
   const [copied, setCopied] = useState<boolean>(false);
   const [pairingUnsupported, setPairingUnsupported] = useState<boolean>(false);
+  const [phoneInput, setPhoneInput] = useState<string>(phone || '');
+  const [phoneError, setPhoneError] = useState<string>('');
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef<boolean>(true);
   const autoOpenRef = useRef<boolean>(false);
@@ -95,11 +97,14 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
     }, POLL_INTERVAL);
   }, [clearPoll, pollStatus]);
 
-  const doConnect = useCallback(async () => {
+  const doConnect = useCallback(async (connectPhone?: string) => {
     setConnecting(true);
     setError('');
     try {
-      const resp: any = await evolutionAPI.connect({ mobile: isMobile });
+      const resp: any = await evolutionAPI.connect({
+        mobile: isMobile,
+        phone: connectPhone && connectPhone.replace(/\D/g, '').length >= 10 ? connectPhone : '',
+      });
       const data = resp?.data?.data || resp?.data || {};
       const pairingCode: string = data.pairingCode || '';
       const q: string = data.qrCode || data.qrCodeBase64 || '';
@@ -133,15 +138,31 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
     }
   }, [startPolling, isMobile]);
 
+  const startConnect = useCallback(async () => {
+    const raw = (phoneInput || phone || '').replace(/\D/g, '');
+    if (!/^\d{10,15}$/.test(raw)) {
+      setPhoneError('Enter a valid WhatsApp number with country code (10-15 digits, e.g. 919999999999).');
+      return;
+    }
+    setPhoneError('');
+    doConnect(raw);
+  }, [phoneInput, phone, doConnect]);
+
   // Open effect: kick off connect + polling
   useEffect(() => {
     mountedRef.current = true;
     if (open) {
-      // Auto-connect on open for both desktop and mobile (proven flow from the
-      // working older build): GET /instance/connect/:name returns a base64 QR
-      // that we render. Mobile cannot scan its own QR, so we show the QR plus a
-      // note to scan from WhatsApp on another device — matching the old behavior.
-      doConnect();
+      if (!isMobile) {
+        // Desktop: plain QR auto-connect (scan from phone).
+        doConnect();
+      } else if (phone && phone.replace(/\D/g, '').length >= 10) {
+        // Mobile + a real configured number: auto-request the pairing code.
+        doConnect(phone);
+      }
+      // Mobile without a configured number: show the number-input form (the
+      // open-effect branch below), where the user enters their WhatsApp number
+      // and taps "Generate pairing code". A phone cannot scan its own QR, so we
+      // must use the pairing-code flow here.
     }
     return () => {
       mountedRef.current = false;
@@ -245,7 +266,7 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
             <p className="text-slate-200 text-sm font-semibold mb-1">Couldn't connect</p>
             <p className="text-[11px] text-slate-400 mb-4 px-2">{error}</p>
             <button
-              onClick={doConnect}
+              onClick={() => doConnect(phoneInput || phone || undefined)}
               disabled={connecting}
               className="ai-btn-primary text-sm px-4 py-2 flex items-center gap-1.5 mb-2"
             >
@@ -256,6 +277,31 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
               className="text-[11px] text-indigo-300 underline hover:text-indigo-200"
             >
               Set instance config
+            </button>
+          </div>
+        ) : (isMobile && !qr && !connecting) ? (
+          <div className="flex flex-col items-center w-full">
+            <p className="text-[11px] text-slate-400 mb-3 text-center px-2">
+              Enter the WhatsApp number you want to link (with country code). We'll generate an
+              8-character pairing code to type into WhatsApp → Linked devices → Link with phone number.
+            </p>
+            <input
+              type="tel"
+              inputMode="numeric"
+              value={phoneInput}
+              onChange={(e) => setPhoneInput(e.target.value)}
+              placeholder="919999999999"
+              className="w-full ai-glass rounded-xl px-4 py-3 text-center text-lg tracking-wider text-white placeholder:text-slate-500 outline-none focus:ring-2 focus:ring-orange-400/60"
+              aria-label="WhatsApp number to link"
+            />
+            {phoneError && (
+              <p className="text-[11px] text-amber-300 mt-2 text-center px-2">{phoneError}</p>
+            )}
+            <button
+              onClick={startConnect}
+              className="ai-btn-primary text-sm px-5 py-2.5 mt-3 flex items-center gap-1.5"
+            >
+              <Smartphone size={14} /> Generate pairing code
             </button>
           </div>
         ) : pairing ? (
