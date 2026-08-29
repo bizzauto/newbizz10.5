@@ -276,8 +276,8 @@ const QRConnectView: React.FC<{
   }
 
   return (
-    <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-gray-50 dark:from-gray-800 to-blue-50 dark:to-gray-900">
-      <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl dark:shadow-2xl p-10 max-w-2xl w-full mx-4">
+      <div className="flex-1 flex items-start sm:items-center justify-center bg-gradient-to-br from-gray-50 dark:from-gray-800 to-blue-50 dark:to-gray-900">
+        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl dark:shadow-2xl p-6 sm:p-10 max-w-2xl w-full mx-4 my-4">
         {apiError && (
           <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start gap-3" role="alert">
             <AlertCircle size={20} className="text-red-500 mt-0.5 flex-shrink-0" />
@@ -295,25 +295,27 @@ const QRConnectView: React.FC<{
           <p className="text-gray-600 dark:text-gray-300">Link your WhatsApp Business account to start messaging</p>
         </div>
 
-        {/* Connection Mode Selector */}
-        <div className="flex justify-center mb-6">
-          <div className="inline-flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
-            <button
-              onClick={() => onModeChange('meta')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${connectionMode === 'meta' ? 'bg-white dark:bg-gray-600 shadow-sm text-green-700 dark:text-green-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                }`}
-            >
-              <Shield size={16} />
-              Meta Official API
-            </button>
-            <button
-              onClick={() => onModeChange('evolution')}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${connectionMode === 'evolution' ? 'bg-white dark:bg-gray-600 shadow-sm text-purple-700 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
-                }`}
-            >
-              <Zap size={16} />
-              Evolution API
-            </button>
+        {/* Connection Mode Selector — sticky so it is always reachable on mobile */}
+        <div className="sticky top-0 z-20 -mx-6 sm:-mx-10 px-6 sm:px-10 pt-6 sm:pt-10 pb-3 bg-white dark:bg-gray-800 mb-3 rounded-t-2xl">
+          <div className="flex justify-center">
+            <div className="inline-flex bg-gray-100 dark:bg-gray-700 rounded-xl p-1">
+              <button
+                onClick={() => onModeChange('meta')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${connectionMode === 'meta' ? 'bg-white dark:bg-gray-600 shadow-sm text-green-700 dark:text-green-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+              >
+                <Shield size={16} />
+                Meta Official API
+              </button>
+              <button
+                onClick={() => onModeChange('evolution')}
+                className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${connectionMode === 'evolution' ? 'bg-white dark:bg-gray-600 shadow-sm text-purple-700 dark:text-purple-300' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200'
+                  }`}
+              >
+                <Zap size={16} />
+                Evolution API
+              </button>
+            </div>
           </div>
         </div>
 
