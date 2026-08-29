@@ -109,7 +109,16 @@ const WhatsAppConnectModal: React.FC<WhatsAppConnectModalProps> = ({
       const pairingCode: string = data.pairingCode || '';
       const q: string = data.qrCode || data.qrCodeBase64 || '';
       if (!pairingCode && !q) {
-        setError('No QR or pairing code returned. Evolution may not be configured on the server.');
+        const rawDump = JSON.stringify(data).slice(0, 300);
+        if (isMobile) {
+          setError(
+            'Pairing code nahi mila. Server ne code nahi diya. ' +
+            'Iska matlab aapka Evolution server phone-number linking support nahi karta YA usme SERVER_URL set nahi hai. ' +
+            `Server response: ${rawDump}`
+          );
+        } else {
+          setError('No QR returned. Evolution may not be configured on the server. Server response: ' + rawDump);
+        }
         setConnecting(false);
         return;
       }
