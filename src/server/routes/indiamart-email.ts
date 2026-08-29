@@ -121,7 +121,8 @@ router.get('/config', authenticate, async (req: any, res: Response) => {
         spreadsheetId: config.spreadsheetId,
         autoSync: config.autoSync || false,
         syncInterval: config.syncInterval || 60,
-        lastSyncAt: config.lastSyncAt,
+        lastSyncAt: config.lastSyncAt || integration.lastSyncAt,
+        lastError: integration.lastError || null,
         isActive: integration.isActive,
       },
     });

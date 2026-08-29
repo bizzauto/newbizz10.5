@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../lib/authStore';
-import { evolutionAPI } from '../lib/api';
+import { evolutionAPI, messageTemplateAPI } from '../lib/api';
 import WhatsAppConnectModal from './WhatsAppConnectModal';
 import type { EvolutionStatus } from './WhatsAppConnectModal';
 import AnimatedCounter from './AnimatedCounter';
@@ -479,49 +479,150 @@ const InboxView: React.FC<InboxViewProps> = ({ conversations, activeChat, setAct
   );
 };
 
-// TEMPLATES TAB
+// TEMPLATES TAB — marketing templates backed by /message-templates (auto-seeded pack + custom)
 const TemplatesView: React.FC = () => {
-  const templates = [
-    { name: 'Welcome Message', category: 'Onboarding', icon: <Sparkles size={16} />, gradient: 'from-indigo-500 to-purple-500', uses: 142, conversion: 38 },
-    { name: 'Cart Recovery', category: 'Sales', icon: <Target size={16} />, gradient: 'from-pink-500 to-rose-500', uses: 89, conversion: 27 },
-    { name: 'Appointment Reminder', category: 'Service', icon: <Calendar size={16} />, gradient: 'from-amber-500 to-orange-500', uses: 234, conversion: 91 },
-    { name: 'Win-back', category: 'Retention', icon: <RefreshCw size={16} />, gradient: 'from-cyan-500 to-blue-500', uses: 67, conversion: 18 },
-    { name: 'Birthday Wish', category: 'Engagement', icon: <Star size={16} />, gradient: 'from-fuchsia-500 to-pink-500', uses: 56, conversion: 78 },
-    { name: 'Feedback Request', category: 'Reviews', icon: <MessageSquare size={16} />, gradient: 'from-emerald-500 to-teal-500', uses: 123, conversion: 42 },
-  ];
+  const [templates, setTemplates] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [name, setName] = useState('');
+  const [category, setCategory] = useState('MARKETING');
+  const [content, setContent] = useState('');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+  const [copiedId, setCopiedId] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const resp: any = await messageTemplateAPI.list();
+      const data = resp?.data?.data || resp?.data || [];
+      setTemplates(Array.isArray(data) ? data : []);
+    } catch {
+      setTemplates([]);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleCreate = async () => {
+    if (!name.trim() || !content.trim()) { setError('Name and content are required'); return; }
+    setSaving(true); setError('');
+    try {
+      await messageTemplateAPI.create({ name: name.trim(), content, category });
+      setName(''); setContent(''); setCategory('MARKETING'); setError('');
+      setShowCreate(false);
+      load();
+    } catch (e: any) {
+      setError(e?.response?.data?.error || e?.message || 'Failed to save template');
+    } finally { setSaving(false); }
+  };
+
+  const handleCopy = async (t: any) => {
+    try { await navigator.clipboard.writeText(t.content || ''); } catch { /* clipboard denied */ }
+    messageTemplateAPI.markUsed(t.id).catch(() => {});
+    setTemplates(prev => prev.map(x => x.id === t.id ? { ...x, usageCount: (x.usageCount || 0) + 1 } : x));
+    setCopiedId(t.id);
+    setTimeout(() => setCopiedId(''), 1500);
+  };
+
+  const handleDelete = async (id: string) => {
+    setTemplates(prev => prev.filter(t => t.id !== id));
+    messageTemplateAPI.remove(id).catch(() => load());
+  };
+
+  if (loading) {
+    return <div className="ai-glass rounded-2xl p-8 text-center text-slate-300 text-sm">Loading templates…</div>;
+  }
 
   return (
     <div>
       <div className="flex items-center justify-between mb-3 sm:mb-4">
         <div className="flex items-center gap-2">
-          <h2 className="text-sm sm:text-base font-bold text-white">Template Library</h2>
+          <h2 className="text-sm sm:text-base font-bold text-white">Marketing Templates</h2>
           <span className="text-[10px] px-1.5 py-0.5 ai-glass rounded-full text-slate-300">{templates.length} templates</span>
         </div>
-        <button className="ai-btn-primary text-xs px-3 py-1.5 flex items-center gap-1">
+        <button onClick={() => setShowCreate(true)} className="ai-btn-primary text-xs px-3 py-1.5 flex items-center gap-1">
           <Plus size={12} /> New Template
         </button>
       </div>
+
       <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 ai-stagger">
-        {templates.map((t, i) => (
-          <div key={i} className="ai-glass rounded-2xl p-4 ai-lift cursor-pointer group">
-            <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${t.gradient} flex items-center justify-center text-white shadow-lg mb-3 group-hover:scale-110 transition-transform`}>
-              {t.icon}
+        {templates.map(t => (
+          <div key={t.id} className="ai-glass rounded-2xl p-4 ai-lift flex flex-col">
+            <div className="flex items-center justify-between mb-2 gap-2">
+              <h3 className="text-sm font-bold text-white truncate">{t.name}</h3>
+              <span className={`text-[9px] px-1.5 py-0.5 rounded-full font-bold flex-shrink-0 ${t.category === 'MARKETING' ? 'bg-pink-500/20 text-pink-300' : 'bg-cyan-500/20 text-cyan-300'}`}>{t.category}</span>
             </div>
-            <h3 className="text-sm font-bold text-white">{t.name}</h3>
-            <p className="text-[10px] text-slate-400 mt-0.5">{t.category}</p>
-            <div className="flex items-center justify-between mt-3 pt-3 border-t border-white/5">
-              <div>
-                <p className="text-[9px] text-slate-500">Used</p>
-                <p className="text-xs font-bold text-white">{t.uses}x</p>
+            <div className="flex-1 max-h-28 overflow-hidden rounded-lg bg-white/5 p-2.5 mb-2">
+              <p className="text-[11px] text-slate-300 whitespace-pre-wrap leading-relaxed">{t.content}</p>
+            </div>
+            {!!(t.variables || []).length && (
+              <div className="flex flex-wrap gap-1 mb-2">
+                {(t.variables as string[]).map(v => (
+                  <span key={v} className="text-[9px] px-1.5 py-0.5 bg-indigo-500/20 text-indigo-300 rounded-full">{'{{' + v + '}}'}</span>
+                ))}
               </div>
-              <div>
-                <p className="text-[9px] text-slate-500">Conversion</p>
-                <p className="text-xs font-bold text-emerald-300">{t.conversion}%</p>
+            )}
+            <div className="flex items-center justify-between pt-2 border-t border-white/5">
+              <span className="text-[9px] text-slate-500">Used {t.usageCount || 0}x</span>
+              <div className="flex items-center gap-1.5">
+                <button onClick={() => handleDelete(t.id)} className="text-[10px] px-2 py-1 ai-glass rounded-md text-rose-300 hover:text-rose-200">Delete</button>
+                <button onClick={() => handleCopy(t)} className="text-[10px] px-2.5 py-1 ai-btn-primary rounded-md">
+                  {copiedId === t.id ? 'Copied ✓' : 'Copy'}
+                </button>
               </div>
             </div>
           </div>
         ))}
       </div>
+
+      {templates.length === 0 && (
+        <div className="ai-glass rounded-2xl p-8 text-center">
+          <p className="text-sm text-slate-300 mb-1">No templates yet</p>
+          <p className="text-xs text-slate-500">Create your first marketing template</p>
+        </div>
+      )}
+
+      {showCreate && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+          onClick={() => setShowCreate(false)}
+        >
+          <div className="ai-glass rounded-2xl p-5 w-full max-w-md space-y-3" onClick={e => e.stopPropagation()}>
+            <h3 className="text-sm font-bold text-white">New Template</h3>
+            <input
+              value={name}
+              onChange={e => setName(e.target.value)}
+              placeholder="Template name (e.g. Diwali Offer)"
+              className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+            />
+            <select
+              value={category}
+              onChange={e => setCategory(e.target.value)}
+              className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm focus:outline-none focus:border-indigo-500"
+            >
+              <option value="MARKETING">Marketing</option>
+              <option value="UTILITY">Utility (reminders)</option>
+            </select>
+            <textarea
+              value={content}
+              onChange={e => setContent(e.target.value)}
+              rows={6}
+              placeholder={'Hi {{name}}! Big news… \n\nUse variables like {{name}}, {{discount}}, {{product}} — replace them while sending.'}
+              className="w-full px-3 py-2.5 bg-white/5 border border-white/10 rounded-xl text-white text-sm placeholder-slate-500 focus:outline-none focus:border-indigo-500"
+            />
+            {error && <p className="text-[11px] text-rose-400">{error}</p>}
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setShowCreate(false)} className="px-3 py-2 text-xs text-slate-300 hover:text-white">Cancel</button>
+              <button onClick={handleCreate} disabled={saving} className="ai-btn-primary text-xs px-4 py-2 disabled:opacity-50">
+                {saving ? 'Saving…' : 'Save Template'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

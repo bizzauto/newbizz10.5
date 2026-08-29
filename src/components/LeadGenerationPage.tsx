@@ -268,7 +268,7 @@ export default function LeadGenerationPage(){
     <div className="p-2 bg-white/20 rounded-lg"><Zap size={24} className="text-white"/></div>
     <div>
      <h3 className="text-white font-semibold">Email Lead Capture</h3>
-     <p className="text-white/80 text-sm">{imConfig?.configured?`Connected: ${imConfig.email}`:'Connect email to auto-capture leads from IndiaMART, JustDial, TradeIndia'}</p>
+     <p className="text-white/80 text-sm">{imConfig?.configured?`Connected: ${imConfig.email}${imConfig.autoSync?` · Auto every ${imConfig.syncInterval||60} min`:' · Auto-sync OFF'}`:'Connect email to auto-capture leads from IndiaMART, JustDial, TradeIndia'}</p>
     </div>
    </div>
    <div className="flex items-center gap-2">
@@ -313,6 +313,11 @@ export default function LeadGenerationPage(){
    <div className="bg-white/10 rounded-lg p-3 text-center"><p className="text-white text-xl font-bold">{syncResult.newLeads||0}</p><p className="text-white/70 text-xs">New Leads</p></div>
    <div className="bg-white/10 rounded-lg p-3 text-center"><p className="text-white text-xl font-bold">{imConfig?.lastSyncAt?new Date(imConfig.lastSyncAt).toLocaleTimeString():'Never'}</p><p className="text-white/70 text-xs">Last Sync</p></div>
   </div>}
+  {imConfig?.configured&&imConfig?.lastError&&(
+   <div className="mt-3 bg-red-900/40 border border-red-400/40 rounded-lg p-3 text-white text-xs">
+    Auto-sync error: {imConfig.lastError} — Settings mein email/app-password check karo, ya Sync dabao.
+   </div>
+  )}
  </div>
 
  {/* Platform Stats */}

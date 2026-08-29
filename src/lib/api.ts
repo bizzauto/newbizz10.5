@@ -233,6 +233,15 @@ export const evolutionAPI = {
   chats: () => apiClient.get('/evolution/chats'),
 };
 
+// Marketing message templates (Evolution / simple text templates — not Meta WABA)
+export const messageTemplateAPI = {
+  list: () => apiClient.get('/message-templates'),
+  create: (data: { name: string; content: string; category?: string }) =>
+    apiClient.post('/message-templates', data),
+  markUsed: (id: string) => apiClient.patch(`/message-templates/${id}/use`),
+  remove: (id: string) => apiClient.delete(`/message-templates/${id}`),
+};
+
 // Campaigns API
 export const campaignsAPI = {
   list: (params?: any) => apiClient.get('/campaigns', { params }),
