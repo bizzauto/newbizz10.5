@@ -28,6 +28,17 @@ const apiClient = axios.create({
   },
 });
 
+/**
+ * Base URL for components that use raw fetch() instead of apiClient.
+ * Guarantees the `/api` suffix: if VITE_API_URL was built without it
+ * (e.g. "https://bizzautoai.com"), raw fetches would hit SPA routes and
+ * receive index.html, producing "Unexpected token '<' ... is not valid JSON".
+ */
+export const webFetchBase = (): string => {
+  const raw = String(import.meta.env.VITE_API_URL || '/api').replace(/\/+$/, '');
+  return /\/api$/.test(raw) ? raw : `${raw}/api`;
+};
+
 // Request interceptor - Add auth token + CSRF token for state-changing methods
 apiClient.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');

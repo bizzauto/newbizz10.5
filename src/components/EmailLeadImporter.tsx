@@ -1,6 +1,7 @@
 ﻿import React, { useState } from 'react';
 import { Upload, FileText, User, Phone, Mail, MapPin, Package, CheckCircle, AlertCircle, Copy, Plus, Trash2 } from 'lucide-react';
 import { useToast } from './Toast';
+import { webFetchBase } from '../lib/api';
 
 interface LeadData {
   name: string;
@@ -11,7 +12,7 @@ interface LeadData {
   city: string;
 }
 
-const API = import.meta.env.VITE_API_URL || '/api';
+const API = webFetchBase();
 
 const EmailLeadImporter: React.FC = () => {
   const { toast: showToast } = useToast();
