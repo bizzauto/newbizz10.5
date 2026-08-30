@@ -171,6 +171,7 @@ model Business {
   loyaltyPoints               LoyaltyPoints[]
   loyaltyProgram              LoyaltyProgram?
   loyaltyRewards              LoyaltyReward[]
+  whatsAppFlows               WhatsAppFlow[]
   messageTemplates            MessageTemplate[]
   newEmailTemplates           NewEmailTemplate[]
   orderNotifications          OrderNotification[]
@@ -313,6 +314,7 @@ model Contact {
   stockAlerts          StockAlert[]
   supportTickets       SupportTicket[]
   wishlists            Wishlist[]
+  whatsAppFlowSessions WhatsAppFlowSession[]
 
   @@unique([businessId, phone])
   @@unique([businessId, email])
@@ -441,6 +443,55 @@ model MessageTemplate {
   business     Business  @relation(fields: [businessId], references: [id])
 
   @@unique([businessId, name])
+}
+
+// ==================== WHATSAPP FLOW BUILDER (visual chatbot) ====================
+// NOTE: prisma.ChatbotFlow is the legacy keyword→response bot (in use).
+// WhatsAppFlow is the new multi-step visual flow engine — separate table.
+
+model WhatsAppFlow {
+  id             String    @id @default(cuid())
+  businessId     String
+  name           String
+  description    String?
+  // Trigger config: { type: 'keyword'|'first_message'|'any_message', keyword?: string, matchType?: 'contains'|'exact', scope?: 'individual'|'group'|'all' }
+  trigger        Json
+  // Flow graph: { nodes: [{ id, type: 'message'|'question'|'condition'|'delay'|'tag'|'handoff'|'jump', data: {...}, position?: {x,y} }], edges: [{ id, source, target, sourceHandle? }] }
+  graph          Json
+  isActive       Boolean   @default(true)
+  // Anti-spam: same contact re-enters flow only after this many hours
+  reentryHours   Int       @default(24)
+  priority       Int       @default(0)
+  createdBy      String?
+  runCount       Int       @default(0)
+  lastRunAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  business       Business  @relation(fields: [businessId], references: [id])
+  sessions       WhatsAppFlowSession[]
+
+  @@index([businessId, isActive])
+}
+
+model WhatsAppFlowSession {
+  id            String    @id @default(cuid())
+  flowId        String
+  contactId     String
+  businessId    String
+  // Node the contact is currently waiting on (null = completed)
+  currentNodeId String?
+  // Captured variables: { name: 'Rahul', service: 'seo' }
+  variables     Json?
+  status        String    @default("active") // active | completed | abandoned | handed_off
+  enteredAt     DateTime  @default(now())
+  lastActivity  DateTime  @default(now())
+  completedAt   DateTime?
+  flow          WhatsAppFlow     @relation(fields: [flowId], references: [id])
+  contact       Contact          @relation(fields: [contactId], references: [id])
+
+  @@unique([flowId, contactId])
+  @@index([businessId, status])
+  @@index([contactId, status])
 }
 
 model Campaign {

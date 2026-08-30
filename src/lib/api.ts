@@ -257,6 +257,24 @@ export const evolutionAPI = {
   }) => apiClient.post('/evolution/rotation-settings', data),
 };
 
+// WhatsApp Flow Builder (visual chatbot flows)
+export const whatsappFlowAPI = {
+  list: () => apiClient.get('/whatsapp-flows'),
+  get: (id: string) => apiClient.get(`/whatsapp-flows/${id}`),
+  create: (data: {
+    name: string;
+    description?: string;
+    trigger: { type: 'keyword' | 'first_message' | 'any_message'; keyword?: string; matchType?: 'contains' | 'exact' };
+    graph: { nodes: any[]; edges: any[] };
+    reentryHours?: number;
+    priority?: number;
+  }) => apiClient.post('/whatsapp-flows', data),
+  update: (id: string, data: any) => apiClient.put(`/whatsapp-flows/${id}`, data),
+  toggle: (id: string) => apiClient.post(`/whatsapp-flows/${id}/toggle`),
+  sessions: (id: string) => apiClient.get(`/whatsapp-flows/${id}/sessions`),
+  remove: (id: string) => apiClient.delete(`/whatsapp-flows/${id}`),
+};
+
 // Marketing message templates (Evolution / simple text templates — not Meta WABA)
 export const messageTemplateAPI = {
   list: () => apiClient.get('/message-templates'),

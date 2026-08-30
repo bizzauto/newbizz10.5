@@ -174,10 +174,22 @@ router.post('/webhook/:businessId', async (req: AuthRequest, res: Response) => {
           });
         }
 
+        // Flow builder first — visual flows win over AI auto-reply
+        const messageText = message.text?.body || '';
+        try {
+          const { handleIncomingForFlows } = await import('../services/whatsapp-flow-engine.service.js');
+          const flowHandled = await handleIncomingForFlows(businessId, contact.id, senderPhone, messageText);
+          if (flowHandled) {
+            console.log(`[WhatsApp] Flow builder handled message from ${senderPhone}`);
+            continue;
+          }
+        } catch (flowErr: any) {
+          console.warn('[WhatsApp] Flow engine error (continuing to AI):', flowErr?.message);
+        }
+
         // AI Auto-Reply + Workflow Triggers (new intelligent handler)
         try {
           const { handleIncomingMessage } = await import('../services/ai-auto-reply.service.js');
-          const messageText = message.text?.body || '';
           const autoResult = await handleIncomingMessage(businessId, senderPhone, messageText, message.id);
           console.log(`[WhatsApp] Auto-reply result: replied=${autoResult.replied}, channel=${autoResult.channel}, workflow=${autoResult.workflowTriggered}`);
         } catch (aiError: any) {

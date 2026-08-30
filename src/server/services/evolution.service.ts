@@ -1020,6 +1020,14 @@ try {
 
         const msgType = msg.message?.conversation || msg.message?.extendedTextMessage ? 'text' : msg.message?.imageMessage ? 'image' : msg.message?.videoMessage ? 'video' : msg.message?.audioMessage ? 'audio' : msg.message?.documentMessage ? 'document' : 'text';
         await prisma.message.create({ data: { businessId, contactId: contact.id, direction: 'inbound', type: msgType, content, waMessageId: msg.key?.id, status: 'received' } });
+
+        // Flow builder: visual flows take priority over AI auto-reply
+        if (content) {
+          import('./whatsapp-flow-engine.service.js')
+            .then(({ handleIncomingForFlows }) => handleIncomingForFlows(businessId, contact.id, from, content))
+            .then((handled) => { if (!handled) return import('./ai-auto-reply.service.js').then(({ handleIncomingMessage }) => handleIncomingMessage(businessId, from, content, msg.key?.id)); })
+            .catch((e) => console.warn('[Evolution] flow/auto-reply hook:', e?.message));
+        }
         break;
       }
       case 'MESSAGES_UPDATE': {

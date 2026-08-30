@@ -16,6 +16,7 @@ import { useIsMobile } from '../hooks/useViewport';
 import { useToast } from './Toast';
 import ClaudeWhatsAppSettings from './ClaudeWhatsAppSettings';
 import UnofficialWhatsAppSettings from './UnofficialWhatsAppSettings';
+import WhatsAppFlowBuilder from './WhatsAppFlowBuilder';
 
 // ============================================================
 // TYPES
@@ -3025,12 +3026,8 @@ const WhatsAppModule: React.FC<{ onBack?: () => void }> = ({ onBack }) => {
         {currentView === 'campaigns' && <CampaignsView />}
         {currentView === 'settings' && <WhatsAppSettingsView />}
         {currentView === 'chatbot' && (
-          <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900">
-            <div className="text-center">
-              <Bot size={64} className="mx-auto text-gray-300 mb-4" />
-              <h2 className="text-xl sm:text-2xl font-semibold text-gray-900 dark:text-white mb-2">Chatbot Builder</h2>
-              <p className="text-gray-500 dark:text-gray-400">Visual flow builder coming soon!</p>
-            </div>
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <WhatsAppFlowBuilder />
           </div>
         )}
         {currentView === 'claude' && (
