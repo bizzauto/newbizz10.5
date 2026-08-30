@@ -37,6 +37,51 @@ router.post('/config', authenticate, async (req: any, res: any) => {
   }
 });
 
+// ==================== ANTI-BAN SETTINGS ====================
+
+// Get anti-ban settings (delay / group delay / jitter / daily cap)
+router.get('/antiban-settings', authenticate, async (req: any, res: any) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ success: false, error: 'Business ID required' });
+
+    const settings = await EvolutionApiService.getAntiBanSettings(businessId);
+    res.json({ success: true, data: settings });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Save anti-ban settings
+router.post('/antiban-settings', authenticate, async (req: any, res: any) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ success: false, error: 'Business ID required' });
+
+    const { enabled, messageDelayMs, groupMessageDelayMs, randomDelayMs, maxMessagesPerDay } = req.body ?? {};
+
+    // Validation: clamp sane ranges so a bad UI payload can't set 0s spam delays
+    const clamp = (v: unknown, min: number, max: number, fallback: number) => {
+      const n = Number(v);
+      if (!Number.isFinite(n)) return fallback;
+      return Math.min(max, Math.max(min, Math.round(n)));
+    };
+
+    const patch: Record<string, any> = {};
+    if (enabled !== undefined) patch.enabled = Boolean(enabled);
+    if (messageDelayMs !== undefined) patch.messageDelayMs = clamp(messageDelayMs, 500, 600000, 2000);
+    if (groupMessageDelayMs !== undefined) patch.groupMessageDelayMs = clamp(groupMessageDelayMs, 1000, 600000, 5000);
+    if (randomDelayMs !== undefined) patch.randomDelayMs = clamp(randomDelayMs, 0, 120000, 1000);
+    if (maxMessagesPerDay !== undefined) patch.maxMessagesPerDay = clamp(maxMessagesPerDay, 0, 10000, 100);
+
+    await EvolutionApiService.saveAntiBanSettings(businessId, patch);
+    const settings = await EvolutionApiService.getAntiBanSettings(businessId);
+    res.json({ success: true, message: 'Anti-ban settings saved', data: settings });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ==================== INSTANCE ====================
 
 // Create Evolution API instance

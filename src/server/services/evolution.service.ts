@@ -2,6 +2,32 @@ import axios from 'axios';
 import crypto from 'crypto';
 import { prisma } from '../db.js';
 import { circuitBreaker } from '../services/circuit-breaker.service.js';
+import { spinAndPersonalize } from '../utils/spintax.js';
+
+// Anti-ban settings
+export interface AntiBanSettings {
+  enabled: boolean;
+  messageDelayMs: number;
+  groupMessageDelayMs: number;
+  randomDelayMs: number;
+  maxMessagesPerDay: number;
+}
+
+export const DEFAULT_ANTI_BAN_SETTINGS: AntiBanSettings = {
+  enabled: true,
+  messageDelayMs: 2000,
+  groupMessageDelayMs: 5000,
+  randomDelayMs: 1000,
+  maxMessagesPerDay: 100,
+};
+
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function isGroupJid(to: string): boolean {
+  return to.includes('@g.us') || to.includes('@g.chat');
+}
 
 /**
  * Evolution API Service
@@ -580,7 +606,62 @@ export class EvolutionApiService {
     }
   }
 
+  // ==================== ANTI-BAN SETTINGS ====================
+
+  static async getAntiBanSettings(businessId: string): Promise<AntiBanSettings> {
+    try {
+      const integration = await prisma.integration.findFirst({ where: { businessId, type: 'evolution_api', isActive: true } });
+      const config = (integration?.config as any) || {};
+      return { ...DEFAULT_ANTI_BAN_SETTINGS, ...(config.antiBanSettings || {}) };
+    } catch {
+      return { ...DEFAULT_ANTI_BAN_SETTINGS };
+    }
+  }
+
+  static async saveAntiBanSettings(businessId: string, settings: Partial<AntiBanSettings>): Promise<void> {
+    const integration = await prisma.integration.findFirst({ where: { businessId, type: 'evolution_api', isActive: true } });
+    if (!integration) return;
+    const config = integration.config as any;
+    config.antiBanSettings = { ...(config.antiBanSettings || {}), ...settings };
+    await prisma.integration.update({ where: { id: integration.id }, data: { config } });
+  }
+
+  static async checkDailyLimit(businessId: string, settings: AntiBanSettings): Promise<boolean> {
+    if (!settings.enabled || settings.maxMessagesPerDay <= 0) return false;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const count = await prisma.message.count({
+      where: { businessId, direction: 'outbound', createdAt: { gte: today } },
+    });
+    return count >= settings.maxMessagesPerDay;
+  }
+
   // ==================== MESSAGING ====================
+
+  /**
+   * Render a message template: {name}/{phone}/{business} + spintax variation.
+   * Looks up the contact by phone so bulk campaigns get unique, personalized
+   * messages (top anti-ban signal). Falls back to raw template on any failure.
+   */
+  private static async renderMessage(businessId: string, to: string, template: string): Promise<string> {
+    try {
+      const cleanPhone = to.replace(/\D/g, '').replace(/^91(?=\d{10}$)/, '');
+      let name: string | null = null;
+      if (!isGroupJid(to)) {
+        const contact = await prisma.contact.findFirst({
+          where: { businessId, phone: { in: [to, cleanPhone] } },
+          select: { name: true },
+        });
+        name = contact?.name || null;
+      }
+      let businessName: string | null = null;
+      const business = await prisma.business.findUnique({ where: { id: businessId }, select: { name: true } });
+      businessName = business?.name || null;
+      return spinAndPersonalize(template, { name, phone: cleanPhone, business: businessName });
+    } catch {
+      return template;
+    }
+  }
 
   /**
    * Send text message
@@ -589,32 +670,46 @@ export class EvolutionApiService {
     businessId: string,
     to: string,
     message: string,
-    options: { delay?: number; linkPreview?: boolean } = {}
+    options: { delay?: number; linkPreview?: boolean; applyAntiBan?: boolean } = {}
   ): Promise<any> {
     const config = await this.getConfig(businessId);
-    const formattedNumber = this.formatPhone(to);
+    const isGroup = isGroupJid(to);
+    const formattedNumber = isGroup ? to : this.formatPhone(to);
     const idempotencyKey = crypto.randomUUID();
+    const rendered = await this.renderMessage(businessId, to, message);
+
+    if (options.applyAntiBan !== false) {
+      const settings = await this.getAntiBanSettings(businessId);
+      if (settings.enabled) {
+        const baseDelay = isGroup ? settings.groupMessageDelayMs : settings.messageDelayMs;
+        const jitter = settings.randomDelayMs > 0 ? Math.random() * settings.randomDelayMs : 0;
+        await sleep(baseDelay + jitter);
+      }
+      if (await this.checkDailyLimit(businessId, await this.getAntiBanSettings(businessId))) {
+        throw new Error('Daily message limit reached');
+      }
+    }
 
     try {
       const response = await circuitBreaker.execute(
         'evolution-api',
         () => axios.post(
           `${config.baseUrl}/message/sendText/${config.instanceName}`,
-          { number: formattedNumber, text: message, delay: options.delay || 0, linkPreview: options.linkPreview ?? true, optionsId: idempotencyKey },
+          { number: formattedNumber, text: rendered, delay: options.delay || 0, linkPreview: options.linkPreview ?? true, optionsId: idempotencyKey },
           { headers: { apikey: config.apiKey }, timeout: 15000 }
         ),
         { timeoutMs: 15000 }
       );
 
       await prisma.message.create({
-        data: { businessId, direction: 'outbound', type: 'text', content: message, waMessageId: response.data?.key?.id, status: 'sent' },
+        data: { businessId, direction: 'outbound', type: 'text', content: rendered, waMessageId: response.data?.key?.id, status: 'sent' },
       });
       await prisma.business.update({ where: { id: businessId }, data: { totalMessages: { increment: 1 } } });
 
       return response.data;
     } catch (error: any) {
       await prisma.message.create({
-        data: { businessId, direction: 'outbound', type: 'text', content: message, status: 'failed', error: error.response?.data?.message || error.message },
+        data: { businessId, direction: 'outbound', type: 'text', content: rendered, status: 'failed', error: error.response?.data?.message || error.message },
       });
       throw error;
     }
@@ -629,24 +724,38 @@ export class EvolutionApiService {
     mediaUrl: string,
     mediaType: 'image' | 'video' | 'document' | 'audio',
     caption?: string,
-    options: { delay?: number } = {}
+    options: { delay?: number; applyAntiBan?: boolean } = {}
   ): Promise<any> {
     const config = await this.getConfig(businessId);
-    const formattedNumber = this.formatPhone(to);
+    const isGroup = isGroupJid(to);
+    const formattedNumber = isGroup ? to : this.formatPhone(to);
+    const renderedCaption = caption ? await this.renderMessage(businessId, to, caption) : caption;
+
+    if (options.applyAntiBan !== false) {
+      const settings = await this.getAntiBanSettings(businessId);
+      if (settings.enabled) {
+        const baseDelay = isGroup ? settings.groupMessageDelayMs : settings.messageDelayMs;
+        const jitter = settings.randomDelayMs > 0 ? Math.random() * settings.randomDelayMs : 0;
+        await sleep(baseDelay + jitter);
+      }
+      if (await this.checkDailyLimit(businessId, await this.getAntiBanSettings(businessId))) {
+        throw new Error('Daily message limit reached');
+      }
+    }
 
     try {
       const response = await circuitBreaker.execute(
         'evolution-api',
         () => axios.post(
           `${config.baseUrl}/message/sendMedia/${config.instanceName}`,
-          { number: formattedNumber, mediatype: mediaType, media: { url: mediaUrl }, delay: options.delay || 0, ...(caption ? { caption } : {}) },
+          { number: formattedNumber, mediatype: mediaType, media: { url: mediaUrl }, delay: options.delay || 0, ...(renderedCaption ? { caption: renderedCaption } : {}) },
           { headers: { apikey: config.apiKey }, timeout: 15000 }
         ),
         { timeoutMs: 15000 }
       );
 
       await prisma.message.create({
-        data: { businessId, direction: 'outbound', type: mediaType, content: caption || '', mediaUrl, mediaType, waMessageId: response.data?.key?.id, status: 'sent' },
+        data: { businessId, direction: 'outbound', type: mediaType, content: renderedCaption || '', mediaUrl, mediaType, waMessageId: response.data?.key?.id, status: 'sent' },
       });
       await prisma.business.update({ where: { id: businessId }, data: { totalMessages: { increment: 1 } } });
       return response.data;
@@ -666,10 +775,21 @@ export class EvolutionApiService {
       footer?: string;
       buttons: Array<{ type: 'reply' | 'url' | 'call'; title: string; url?: string; phone?: string }>;
     },
-    options: { delay?: number } = {}
+    options: { delay?: number; applyAntiBan?: boolean } = {}
   ): Promise<any> {
     const config = await this.getConfig(businessId);
-    const formattedNumber = this.formatPhone(to);
+    const isGroup = isGroupJid(to);
+    const formattedNumber = isGroup ? to : this.formatPhone(to);
+    const renderedText = await this.renderMessage(businessId, to, template.text);
+
+    if (options.applyAntiBan !== false) {
+      const settings = await this.getAntiBanSettings(businessId);
+      if (settings.enabled) {
+        const baseDelay = isGroup ? settings.groupMessageDelayMs : settings.messageDelayMs;
+        const jitter = settings.randomDelayMs > 0 ? Math.random() * settings.randomDelayMs : 0;
+        await sleep(baseDelay + jitter);
+      }
+    }
 try {
       const response = await circuitBreaker.execute(
         'evolution-api',
@@ -677,7 +797,7 @@ try {
           `${config.baseUrl}/message/sendButtons/${config.instanceName}`,
           {
             number: formattedNumber,
-            text: template.text,
+            text: renderedText,
             footer: template.footer || '',
             buttons: template.buttons.map((btn, i) => ({
               index: i + 1,
@@ -691,7 +811,7 @@ try {
         { timeoutMs: 15000 }
       );
       await prisma.message.create({
-        data: { businessId, direction: 'outbound', type: 'template', content: template.text, interactiveType: 'button', waMessageId: response.data?.key?.id, status: 'sent' },
+        data: { businessId, direction: 'outbound', type: 'template', content: renderedText, interactiveType: 'button', waMessageId: response.data?.key?.id, status: 'sent' },
       });
       return response.data;
     } catch (error: any) {
@@ -700,34 +820,64 @@ try {
   }
 
   /**
-   * Bulk send messages with rate limiting
+   * Bulk send messages with rate limiting.
+   * Anti-ban: uses per-business settings (delay + group delay + jitter + daily
+   * cap). Each queued message stores its per-message delay so the worker that
+   * drains the queue sleeps between sends. The daily cap trims the batch.
    */
   static async bulkSend(
     businessId: string,
     messages: Array<{ to: string; type: 'text' | 'template'; content: string; templateData?: any; contactId?: string }>,
     options: { delayBetween?: number; campaignId?: string } = {}
-  ): Promise<{ queued: number; estimatedTime: string }> {
-    const { delayBetween = 2000, campaignId } = options;
+  ): Promise<{ queued: number; estimatedTime: string; skippedDailyLimit: number }> {
+    const { campaignId } = options;
+    const settings = await this.getAntiBanSettings(businessId);
+
+    // Effective per-message delay: explicit param wins, else anti-ban base + jitter
+    const baseDelay = options.delayBetween ?? (settings.enabled ? settings.messageDelayMs : 2000);
+    const jitter = settings.enabled ? settings.randomDelayMs : 0;
+
+    // Daily cap: trim the batch so we never queue past the remaining allowance
+    let batch = messages;
+    let skippedDailyLimit = 0;
+    if (settings.enabled && settings.maxMessagesPerDay > 0) {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const sentToday = await prisma.message.count({
+        where: { businessId, direction: 'outbound', createdAt: { gte: today } },
+      });
+      const remaining = Math.max(0, settings.maxMessagesPerDay - sentToday);
+      if (batch.length > remaining) {
+        skippedDailyLimit = batch.length - remaining;
+        batch = batch.slice(0, remaining);
+        console.log(`[Evolution] bulkSend: daily limit — queued ${batch.length}, skipped ${skippedDailyLimit}`);
+      }
+    }
+
+    if (batch.length === 0) {
+      return { queued: 0, estimatedTime: '0s', skippedDailyLimit };
+    }
 
     const queued = await prisma.$transaction(
-      messages.map((msg) =>
-        prisma.message.create({
-          data: { businessId, contactId: msg.contactId, campaignId, direction: 'outbound', type: msg.type, content: msg.content, status: 'queued', metadata: { provider: 'evolution_api', to: msg.to, templateData: msg.templateData, delayBetween, retryCount: 0, queuedAt: new Date().toISOString() } },
-        })
-      )
+      batch.map((msg) => {
+        const perMsgDelay = Math.round(baseDelay + (jitter > 0 ? Math.random() * jitter : 0));
+        return prisma.message.create({
+          data: { businessId, contactId: msg.contactId, campaignId, direction: 'outbound', type: msg.type, content: msg.content, status: 'queued', metadata: { provider: 'evolution_api', to: msg.to, templateData: msg.templateData, delayBetween: perMsgDelay, antiBan: settings.enabled, retryCount: 0, queuedAt: new Date().toISOString() } },
+        });
+      })
     );
 
     if (campaignId) {
       await prisma.campaign.update({
         where: { id: campaignId },
-        data: { totalSent: { increment: messages.length }, targetContacts: { increment: messages.length } },
+        data: { totalSent: { increment: batch.length }, targetContacts: { increment: batch.length } },
       });
     }
 
-    const totalSeconds = Math.ceil((messages.length * delayBetween) / 1000);
+    const totalSeconds = Math.ceil((batch.length * baseDelay) / 1000);
     const estimatedTime = totalSeconds < 60 ? `${totalSeconds}s` : `${Math.ceil(totalSeconds / 60)}m ${totalSeconds % 60}s`;
 
-    return { queued: messages.length, estimatedTime };
+    return { queued: batch.length, estimatedTime, skippedDailyLimit };
   }
 
   // ==================== CONTACTS & CHATS ====================

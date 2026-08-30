@@ -159,6 +159,14 @@ const evolutionAPI = {
   getChats: (instanceName: string) => apiClient.get(`/evolution/chats?instanceName=${instanceName}`),
   getMessages: (data: any) => apiClient.post('/evolution/messages', data),
   sendText: (data: any) => apiClient.post('/evolution/send/text', data),
+  getAntiBanSettings: () => apiClient.get('/evolution/antiban-settings'),
+  saveAntiBanSettings: (data: {
+    enabled?: boolean;
+    messageDelayMs?: number;
+    groupMessageDelayMs?: number;
+    randomDelayMs?: number;
+    maxMessagesPerDay?: number;
+  }) => apiClient.post('/evolution/antiban-settings', data),
 };
 
 // Helper: try API first, fall back to mock data
@@ -1902,9 +1910,45 @@ const WhatsAppSettingsView: React.FC = () => {
   const [autoReplies, setAutoReplies] = useState<AutoReplyRule[]>([]);
   const [autoRepliesLoading, setAutoRepliesLoading] = useState(true);
 
+  // Anti-ban settings state
+  const [antiBan, setAntiBan] = useState({
+    enabled: true,
+    messageDelayMs: 2000,
+    groupMessageDelayMs: 5000,
+    randomDelayMs: 1000,
+    maxMessagesPerDay: 100,
+  });
+  const [antiBanLoading, setAntiBanLoading] = useState(true);
+  const [antiBanSaving, setAntiBanSaving] = useState(false);
+
   useEffect(() => {
     fetchAutoReplies().then(r => { setAutoReplies(r); setAutoRepliesLoading(false); });
+    evolutionAPI.getAntiBanSettings()
+      .then(res => {
+        const s = res?.data?.data;
+        if (s) setAntiBan({
+          enabled: !!s.enabled,
+          messageDelayMs: s.messageDelayMs ?? 2000,
+          groupMessageDelayMs: s.groupMessageDelayMs ?? 5000,
+          randomDelayMs: s.randomDelayMs ?? 1000,
+          maxMessagesPerDay: s.maxMessagesPerDay ?? 100,
+        });
+      })
+      .catch(() => {})
+      .finally(() => setAntiBanLoading(false));
   }, []);
+
+  const saveAntiBan = async () => {
+    setAntiBanSaving(true);
+    try {
+      await evolutionAPI.saveAntiBanSettings(antiBan);
+      toast.success('Anti-ban settings saved');
+    } catch {
+      toast.error('Failed to save anti-ban settings');
+    } finally {
+      setAntiBanSaving(false);
+    }
+  };
   const [newKeyword, setNewKeyword] = useState('');
   const [newResponse, setNewResponse] = useState('');
   const [businessHoursEnabled, setBusinessHoursEnabled] = useState(true);
@@ -1918,6 +1962,53 @@ const WhatsAppSettingsView: React.FC = () => {
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-5 md:p-6">
         <div className="max-w-3xl mx-auto space-y-6">
+          {/* Anti-Ban Protection */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5 md:p-6">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-orange-100 rounded-lg flex items-center justify-center"><Shield size={20} className="text-orange-600 dark:text-orange-400" /></div>
+                <div><h3 className="font-semibold text-gray-900 dark:text-white">Anti-Ban Protection</h3><p className="text-xs text-gray-500 dark:text-gray-400">Safe sending: delays, variation &amp; daily limits (bulk + auto-reply)</p></div>
+              </div>
+              <button onClick={() => setAntiBan(p => ({ ...p, enabled: !p.enabled }))} className={`relative w-12 h-6 rounded-full transition-colors ${antiBan.enabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+                <div className={`absolute w-5 h-5 bg-white dark:bg-gray-300 rounded-full top-0.5 transition-transform shadow-sm ${antiBan.enabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
+
+            {antiBan.enabled && !antiBanLoading && (
+              <div className="space-y-4 mt-4 pt-4 border-t border-gray-100">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Message Delay: {(antiBan.messageDelayMs / 1000).toFixed(1)}s</label>
+                    <input type="range" min={500} max={60000} step={500} value={antiBan.messageDelayMs} onChange={e => setAntiBan(p => ({ ...p, messageDelayMs: Number(e.target.value) }))} className="w-full accent-green-600" />
+                    <p className="text-xs text-gray-400 mt-1">Wait between two messages</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Group Delay: {(antiBan.groupMessageDelayMs / 1000).toFixed(1)}s</label>
+                    <input type="range" min={1000} max={120000} step={1000} value={antiBan.groupMessageDelayMs} onChange={e => setAntiBan(p => ({ ...p, groupMessageDelayMs: Number(e.target.value) }))} className="w-full accent-green-600" />
+                    <p className="text-xs text-gray-400 mt-1">Extra wait for group messages</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Random Jitter: +{antiBan.randomDelayMs}ms</label>
+                    <input type="range" min={0} max={30000} step={500} value={antiBan.randomDelayMs} onChange={e => setAntiBan(p => ({ ...p, randomDelayMs: Number(e.target.value) }))} className="w-full accent-green-600" />
+                    <p className="text-xs text-gray-400 mt-1">Random extra delay — hides fixed-interval pattern</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-200 mb-1">Daily Limit: {antiBan.maxMessagesPerDay} msgs/day</label>
+                    <input type="range" min={0} max={2000} step={50} value={antiBan.maxMessagesPerDay} onChange={e => setAntiBan(p => ({ ...p, maxMessagesPerDay: Number(e.target.value) }))} className="w-full accent-green-600" />
+                    <p className="text-xs text-gray-400 mt-1">0 = no limit. New numbers: keep it under 100</p>
+                  </div>
+                </div>
+                <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3 text-xs text-blue-700 dark:text-blue-300">
+                  <strong>Pro tip:</strong> Templates mein <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">{'{Hi|Hello|Namaste}'}</code> spintax aur <code className="bg-blue-100 dark:bg-blue-900 px-1 rounded">{'{name}'}</code> use karo — har message unique banega, ban risk sabse kam.
+                </div>
+                <button onClick={saveAntiBan} disabled={antiBanSaving} className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 disabled:opacity-50">
+                  {antiBanSaving ? 'Saving...' : 'Save Anti-Ban Settings'}
+                </button>
+              </div>
+            )}
+            {antiBanLoading && <p className="text-xs text-gray-400 mt-3">Loading anti-ban settings…</p>}
+          </div>
+
           {/* Auto Reply */}
           <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5 md:p-6">
             <div className="flex items-center justify-between mb-4">

@@ -297,31 +297,16 @@ async function sendAutoReply(
       return true;
     }
 
-    // Try Evolution API
+    // Try Evolution API (routes through EvolutionApiService so anti-ban delay +
+    // spintax variation apply to auto-replies too. sendText() logs the message
+    // row itself, so no duplicate record is created here.)
     const evoIntegration = await prisma.integration.findFirst({
       where: { businessId, type: 'evolution_api', isActive: true },
     });
 
     if (evoIntegration) {
-      const config = evoIntegration.config as any;
-      await axios.post(
-        `${config.baseUrl}/message/sendText/${config.instanceName}`,
-        { number: to.replace(/\D/g, ''), textMessage: { text: message } },
-        { headers: { apikey: config.apiKey } }
-      );
-
-      await prisma.message.create({
-        data: {
-          businessId,
-          contactId,
-          direction: 'outbound',
-          type: 'text',
-          content: message,
-          status: 'sent',
-          metadata: { autoReply: true },
-        },
-      });
-
+      const { EvolutionApiService } = await import('./evolution.service.js');
+      await EvolutionApiService.sendText(businessId, to, message, { applyAntiBan: true });
       return true;
     }
 

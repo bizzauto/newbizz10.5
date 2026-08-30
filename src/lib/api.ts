@@ -242,6 +242,14 @@ export const evolutionAPI = {
   deleteInstance: () => apiClient.delete('/evolution/instance'),
   sendText: (data: any) => apiClient.post('/evolution/send/text', data),
   chats: () => apiClient.get('/evolution/chats'),
+  getAntiBanSettings: () => apiClient.get('/evolution/antiban-settings'),
+  saveAntiBanSettings: (data: {
+    enabled?: boolean;
+    messageDelayMs?: number;
+    groupMessageDelayMs?: number;
+    randomDelayMs?: number;
+    maxMessagesPerDay?: number;
+  }) => apiClient.post('/evolution/antiban-settings', data),
 };
 
 // Marketing message templates (Evolution / simple text templates — not Meta WABA)
