@@ -160,6 +160,8 @@ const evolutionAPI = {
   getChats: (instanceName: string) => apiClient.get(`/evolution/chats?instanceName=${instanceName}`),
   getMessages: (data: any) => apiClient.post('/evolution/messages', data),
   sendText: (data: any) => apiClient.post('/evolution/send/text', data),
+  sendMedia: (data: { to: string; mediaUrl: string; mediaType: 'image' | 'video' | 'document' | 'audio'; caption?: string }) =>
+    apiClient.post('/evolution/send/media', data),
   getAntiBanSettings: () => apiClient.get('/evolution/antiban-settings'),
   saveAntiBanSettings: (data: {
     enabled?: boolean;
@@ -705,6 +707,10 @@ const ChatView: React.FC<{
   const [showAttachMenu, setShowAttachMenu] = useState(false);
   const [filter, setFilter] = useState<'all' | 'unread' | 'groups' | 'open' | 'pending' | 'closed'>('all');
   const [templates, setTemplates] = useState<WATemplate[]>([]);
+  // Media attach (photo/video/document)
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [attachKind, setAttachKind] = useState<'image' | 'video' | 'document'>('image');
+  const [uploadingMedia, setUploadingMedia] = useState(false);
 
   useEffect(() => {
     fetchTemplates().then(setTemplates);
@@ -785,6 +791,75 @@ const ChatView: React.FC<{
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       handleSend();
+    }
+  };
+
+  // ── Media send (photo / video / document) ──
+  const openFilePicker = (kind: 'image' | 'video' | 'document') => {
+    setAttachKind(kind);
+    setShowAttachMenu(false);
+    if (fileInputRef.current) {
+      fileInputRef.current.accept =
+        kind === 'image' ? 'image/jpeg,image/png,image/webp,image/gif'
+        : kind === 'video' ? 'video/mp4'
+        : 'application/pdf,image/jpeg,image/png,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      fileInputRef.current.click();
+    }
+  };
+
+  const handleMediaPicked = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    e.target.value = ''; // allow re-picking the same file
+    if (!file || !selectedContact) return;
+    if (!isConnected || !evolutionInstanceName) {
+      alert('WhatsApp connected nahi hai — pehle connect karo.');
+      return;
+    }
+
+    setUploadingMedia(true);
+    // Optimistic bubble with local preview
+    const localUrl = URL.createObjectURL(file);
+    const newMsg: WAMessage = {
+      id: `msg-${Date.now()}`,
+      content: '',
+      caption: message.trim() || undefined,
+      timestamp: new Date().toISOString(),
+      time: new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true }),
+      direction: 'outbound',
+      status: 'sending',
+      type: attachKind === 'document' ? 'document' : attachKind,
+      mediaUrl: localUrl,
+    };
+    setMessages(prev => [...prev, newMsg]);
+    setMessage('');
+
+    try {
+      // 1. Upload via existing /api/upload (category: general — 10MB, mp4/jpg/png/webp/gif/pdf allowed)
+      const form = new FormData();
+      form.append('file', file);
+      form.append('category', 'general');
+      const upRes = await apiClient.post('/upload', form, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const fileUrl: string = upRes?.data?.data?.files?.[0]?.url || upRes?.data?.data?.url || upRes?.data?.url || '';
+      if (!fileUrl) throw new Error('Upload failed — no URL returned');
+
+      // 2. Absolute URL for WhatsApp servers (they fetch the link)
+      const absUrl = fileUrl.startsWith('http') ? fileUrl : `${window.location.origin}${fileUrl}`;
+
+      // 3. Send via Evolution media endpoint (anti-ban delay auto-applies)
+      await evolutionAPI.sendMedia({
+        to: selectedContact.phone.replace(/\s/g, ''),
+        mediaUrl: absUrl,
+        mediaType: attachKind === 'document' ? 'document' : attachKind,
+        caption: newMsg.caption,
+      });
+
+      setMessages(prev => prev.map(m => m.id === newMsg.id ? { ...m, status: 'sent', mediaUrl: absUrl } : m));
+    } catch (err: any) {
+      const detail = err?.response?.data?.error || err?.message || 'Media send failed';
+      alert(`Media send failed: ${detail}`);
+      setMessages(prev => prev.map(m => m.id === newMsg.id ? { ...m, status: 'failed' } : m));
+    } finally {
+      setUploadingMedia(false);
     }
   };
 
@@ -1062,6 +1137,21 @@ const ChatView: React.FC<{
                             {msg.caption && <p className="text-sm text-gray-800 dark:text-gray-100 mt-1">{msg.caption}</p>}
                           </div>
                         )}
+                        {msg.type === 'video' && msg.mediaUrl && (
+                          <div className="mb-2">
+                            <video src={msg.mediaUrl} controls className="rounded-lg max-w-full max-h-72" />
+                            {msg.caption && <p className="text-sm text-gray-800 dark:text-gray-100 mt-1">{msg.caption}</p>}
+                          </div>
+                        )}
+                        {msg.type === 'document' && msg.mediaUrl && (
+                          <a href={msg.mediaUrl} target="_blank" rel="noreferrer" className="mb-2 flex items-center gap-2 bg-white/70 dark:bg-gray-600/70 rounded-lg px-3 py-2 hover:bg-white transition-colors">
+                            <FileText size={18} className="text-blue-500 flex-shrink-0" />
+                            <div className="min-w-0">
+                              <p className="text-sm text-gray-800 dark:text-gray-100 truncate">{msg.caption || 'Document'}</p>
+                              <p className="text-[10px] text-gray-500">Tap to open</p>
+                            </div>
+                          </a>
+                        )}
                         {msg.content && <p className="text-sm text-gray-800 dark:text-gray-100 whitespace-pre-wrap">{msg.content}</p>}
                         <div className={`flex items-center justify-end gap-1 mt-1 ${msg.direction === 'outbound' ? '' : ''}`}>
                           <span className="text-[10px] text-gray-500 dark:text-gray-400">{msg.time}</span>
@@ -1173,20 +1263,22 @@ const ChatView: React.FC<{
                   {showAttachMenu && (
                     <div className="mb-3 flex gap-3 justify-center">
                       {[
-                        { icon: <ImageIcon size={20} />, label: 'Photo', color: 'bg-purple-500' },
-                        { icon: <Video size={20} />, label: 'Video', color: 'bg-red-500' },
-                        { icon: <FileText size={20} />, label: 'Document', color: 'bg-blue-500' },
-                        { icon: <Users size={20} />, label: 'Contact', color: 'bg-teal-500' },
+                        { icon: <ImageIcon size={20} />, label: 'Photo', color: 'bg-purple-500', kind: 'image' as const },
+                        { icon: <Video size={20} />, label: 'Video', color: 'bg-red-500', kind: 'video' as const },
+                        { icon: <FileText size={20} />, label: 'Document', color: 'bg-blue-500', kind: 'document' as const },
+                        { icon: <Users size={20} />, label: 'Contact', color: 'bg-teal-500', kind: null },
                       ].map(item => (
-                        <button key={item.label} className="flex flex-col items-center gap-1" onClick={() => setShowAttachMenu(false)}>
+                        <button key={item.label} className="flex flex-col items-center gap-1" onClick={() => item.kind ? openFilePicker(item.kind) : setShowAttachMenu(false)}>
                           <div className={`w-12 h-12 ${item.color} rounded-full flex items-center justify-center text-white shadow-lg hover:scale-110 transition-transform`}>
-                            {item.icon}
+                            {uploadingMedia && item.kind ? <Loader size={18} className="animate-spin" /> : item.icon}
                           </div>
                           <span className="text-xs text-gray-600 dark:text-gray-300">{item.label}</span>
                         </button>
                       ))}
                     </div>
                   )}
+                  {/* Hidden file input for media attach */}
+                  <input ref={fileInputRef} type="file" hidden onChange={handleMediaPicked} />
                   <div className="flex items-center gap-2">
                     <button onClick={() => setShowEmojiPicker(!showEmojiPicker)} className="p-2 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full text-gray-600 dark:text-gray-300" title="Emoji">
                       <Smile size={22} />
