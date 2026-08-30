@@ -814,6 +814,12 @@ startAutoPostScheduler().catch((err: any) =>
 // captures enquiries into the CRM automatically.
 startIndiaMARTAutosync();
 
+// WhatsApp legacy queue drainer: sends rows stuck in 'queued' from before the
+// BullMQ dispatch path (or when Redis was down at enqueue time). Skips
+// BullMQ-dispatched rows — no double sends.
+import { startWhatsAppQueueDrainer } from './services/whatsapp.service.js';
+startWhatsAppQueueDrainer();
+
 // JustDial / email-inbox lead auto-pull (per-business opt-in via
 // Business.leadInboxConfig). No-op for businesses without config.
 import { startLeadInboxAutosync } from './services/lead-inbox-autosync.service.js';

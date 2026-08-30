@@ -3,7 +3,18 @@ import axios from 'axios';
 import { prisma } from '../db.js';
 import { decrypt, encrypt } from '../utils/auth.js';
 
-const WHATSAPP_API_BASE = 'https://graph.facebook.com/v18.0';
+const WHATSAPP_API_BASE = 'https://graph.facebook.com/v21.0';
+
+/**
+ * Meta Cloud API requires the recipient as digits only — no "+", spaces,
+ * dashes or grouping separators. "+91 98765-43210" → "919876543210".
+ */
+function normalizeMetaPhone(to: string): string {
+  return (to || '').replace(/\D/g, '');
+}
+
+/** Media types that accept a caption on the Cloud API (audio/sticker do NOT). */
+const CAPTION_TYPES = new Set(['image', 'video', 'document']);
 
 /**
  * WhatsApp Service with proxy support and bulk messaging
@@ -19,6 +30,8 @@ export class WhatsAppService {
     options: {
       messageId?: string;
       useProxy?: boolean;
+      /** Skip writing a new message row (queue drainer updates the existing row instead) */
+      skipLog?: boolean;
     } = {}
   ): Promise<any> {
     const business = await prisma.business.findUnique({
@@ -35,9 +48,10 @@ export class WhatsAppService {
 
     const payload = {
       messaging_product: 'whatsapp',
-      to,
+      recipient_type: 'individual',
+      to: normalizeMetaPhone(to),
       type: 'text',
-      text: { body: message },
+      text: { preview_url: true, body: message },
     };
 
     try {
@@ -60,18 +74,19 @@ export class WhatsAppService {
       const response = await axios.post(url, payload, config);
 
       // Save message to database
-      await
-    prisma.message.create({
-        data: {
-          businessId,
-          contactId: options.messageId,
-          direction: 'outbound',
-          type: 'text',
-          content: message,
-          waMessageId: response.data.messages?.[0]?.id,
-          status: 'sent',
-        },
-      });
+      if (!options.skipLog) {
+        await prisma.message.create({
+          data: {
+            businessId,
+            contactId: options.messageId,
+            direction: 'outbound',
+            type: 'text',
+            content: message,
+            waMessageId: response.data.messages?.[0]?.id,
+            status: 'sent',
+          },
+        });
+      }
 
       // Update business stats
       await prisma.business.update({
@@ -84,17 +99,19 @@ export class WhatsAppService {
       console.error('WhatsApp send error:', error.response?.data || error.message);
 
       // Save failed message
-      await prisma.message.create({
-        data: {
-          businessId,
-          contactId: options.messageId,
-          direction: 'outbound',
-          type: 'text',
-          content: message,
-          status: 'failed',
-          error: error.response?.data?.error?.message || error.message,
-        },
-      });
+      if (!options.skipLog) {
+        await prisma.message.create({
+          data: {
+            businessId,
+            contactId: options.messageId,
+            direction: 'outbound',
+            type: 'text',
+            content: message,
+            status: 'failed',
+            error: error.response?.data?.error?.message || error.message,
+          },
+        });
+      }
 
       throw error;
     }
@@ -109,7 +126,7 @@ export class WhatsAppService {
     templateName: string,
     language: string = 'en',
     variables: any[] = [],
-    options: { useProxy?: boolean } = {}
+    options: { useProxy?: boolean; skipLog?: boolean; contactId?: string } = {}
   ): Promise<any> {
     const business = await prisma.business.findUnique({
       where: { id: businessId },
@@ -125,22 +142,20 @@ export class WhatsAppService {
 
     const payload: any = {
       messaging_product: 'whatsapp',
-      to,
+      recipient_type: 'individual',
+      to: normalizeMetaPhone(to),
       type: 'template',
       template: {
         name: templateName,
         language: { code: language },
-        components: [],
+        ...(variables.length > 0 ? {
+          components: [{
+            type: 'body',
+            parameters: variables.map((v) => ({ type: 'text', text: String(v) })),
+          }],
+        } : {}),
       },
     };
-
-    // Add variables if provided
-    if (variables.length > 0) {
-      payload.template.components.push({
-        type: 'body',
-        parameters: variables.map((v) => ({ type: 'text', text: v })),
-      });
-    }
 
     try {
       const config: any = {
@@ -160,19 +175,21 @@ export class WhatsAppService {
 
       const response = await axios.post(url, payload, config);
 
-      await prisma.message.create({
-        data: {
-          businessId,
-          direction: 'outbound',
-          type: 'template',
-          content: templateName,
-          templateName,
-          templateVars: variables,
-          templateLanguage: language,
-          waMessageId: response.data.messages?.[0]?.id,
-          status: 'sent',
-        },
-      });
+      if (!options.skipLog) {
+        await prisma.message.create({
+          data: {
+            businessId,
+            direction: 'outbound',
+            type: 'template',
+            content: templateName,
+            templateName,
+            templateVars: variables,
+            templateLanguage: language,
+            waMessageId: response.data.messages?.[0]?.id,
+            status: 'sent',
+          },
+        });
+      }
 
       await prisma.business.update({
         where: { id: businessId },
@@ -195,7 +212,7 @@ export class WhatsAppService {
     mediaUrl: string,
     mediaType: 'image' | 'video' | 'document' | 'audio',
     caption?: string,
-    options: { useProxy?: boolean } = {}
+    options: { useProxy?: boolean; skipLog?: boolean } = {}
   ): Promise<any> {
     const business = await prisma.business.findUnique({
       where: { id: businessId },
@@ -211,11 +228,14 @@ export class WhatsAppService {
 
     const payload: any = {
       messaging_product: 'whatsapp',
-      to,
+      recipient_type: 'individual',
+      to: normalizeMetaPhone(to),
       type: mediaType,
       [mediaType]: {
         link: mediaUrl,
-        caption,
+        // Caption is only valid for image/video/document — sending it with
+        // audio returns a 100 invalid-parameter error from Meta.
+        ...(CAPTION_TYPES.has(mediaType) && caption ? { caption } : {}),
       },
     };
 
@@ -237,18 +257,20 @@ export class WhatsAppService {
 
       const response = await axios.post(url, payload, config);
 
-      await prisma.message.create({
-        data: {
-          businessId,
-          direction: 'outbound',
-          type: mediaType,
-          content: caption || '',
-          mediaUrl,
-          mediaType,
-          waMessageId: response.data.messages?.[0]?.id,
-          status: 'sent',
-        },
-      });
+      if (!options.skipLog) {
+        await prisma.message.create({
+          data: {
+            businessId,
+            direction: 'outbound',
+            type: mediaType,
+            content: caption || '',
+            mediaUrl,
+            mediaType,
+            waMessageId: response.data.messages?.[0]?.id,
+            status: 'sent',
+          },
+        });
+      }
 
       await prisma.business.update({
         where: { id: businessId },
@@ -303,6 +325,7 @@ export class WhatsAppService {
             templateVars: msg.variables,
             status: 'queued',
             metadata: {
+              to: msg.to,
               useProxy,
               retryCount: 0,
               queuedAt: new Date().toISOString(),
@@ -311,6 +334,47 @@ export class WhatsAppService {
         })
       )
     );
+
+    // FAST PATH: enqueue to the BullMQ whatsapp-messages queue so the existing
+    // worker (with retries/backoff/rotation) drains them. The worker handler
+    // supports text/template. Legacy rows (pre-BullMQ) are drained by
+    // startWhatsAppQueueDrainer() which skips BullMQ-dispatched rows, so no
+    // double sends.
+    let enqueuedToBullMQ = false;
+    try {
+      const { queues } = await import('../workers/index.js');
+      const q = queues?.whatsappMessages;
+      if (q && typeof q.add === 'function' && messages.length > 0) {
+        for (const [i, msg] of messages.entries()) {
+          await q.add(
+            'send_message',
+            {
+              businessId,
+              to: normalizeMetaPhone(msg.to),
+              type: msg.type,
+              content: msg.content,
+              templateName: msg.templateName,
+              templateLanguage: (msg as any).language || 'en',
+              variables: msg.variables || [],
+              contactId: msg.contactId,
+              campaignId,
+              useProxy,
+            },
+            {
+              // pace sends: rateLimit msgs per second → delay per message
+              delay: Math.round((i * 1000) / Math.max(1, rateLimit)),
+            }
+          );
+        }
+        enqueuedToBullMQ = true;
+        await prisma.message.updateMany({
+          where: { id: { in: queued.map((m: any) => m.id) } },
+          data: { metadata: { dispatchedVia: 'bullmq', useProxy, retryCount: 0, queuedAt: new Date().toISOString() } },
+        });
+      }
+    } catch (enqueueErr: any) {
+      console.warn('[WhatsApp] BullMQ enqueue failed — falling back to legacy queue drainer:', enqueueErr?.message);
+    }
 
     // Update campaign stats if applicable
     if (campaignId) {
@@ -329,7 +393,7 @@ export class WhatsAppService {
         ? `${estimatedSeconds}s`
         : `${Math.ceil(estimatedSeconds / 60)}m ${estimatedSeconds % 60}s`;
 
-    return { queued: messages.length, estimatedTime };
+    return { queued: messages.length, estimatedTime, via: enqueuedToBullMQ ? 'bullmq' : 'legacy-drainer' } as { queued: number; estimatedTime: string; via?: string };
   }
 
   /**
@@ -408,12 +472,15 @@ export class WhatsAppService {
   }
 
   /**
-   * Process queued messages with parallel batch processing.
+   * Legacy queue drainer for rows created BEFORE BullMQ dispatch existed
+   * (or when Redis was down at enqueue time). BullMQ-dispatched rows carry
+   * metadata.dispatchedVia === 'bullmq' and are SKIPPED here to prevent
+   * double sends — the worker owns those.
    * Uses Promise.allSettled with controlled concurrency to avoid rate limits.
    */
   static async processQueue(limit = 100): Promise<number> {
     const queuedMessages = await prisma.message.findMany({
-      where: { status: 'queued' },
+      where: { status: 'queued', NOT: { metadata: { path: ['dispatchedVia'], equals: 'bullmq' } } },
       orderBy: { createdAt: 'asc' },
       take: limit,
     });
@@ -430,27 +497,47 @@ export class WhatsAppService {
       const results = await Promise.allSettled(
         batch.map(async (msg) => {
           try {
+            const recipient = (msg.metadata as any)?.to || '';
+            if (!recipient) {
+              // Nothing we can do — mark failed so it stops being retried forever
+              await prisma.message.update({
+                where: { id: msg.id },
+                data: { status: 'failed', error: 'Missing recipient (metadata.to empty)', statusTimestamp: new Date() },
+              });
+              return { success: false, msg, skipped: true };
+            }
+
             if (msg.type === 'text') {
               await this.sendTextMessage(
                 msg.businessId,
-                (msg.metadata as any)?.to || '',
+                recipient,
                 msg.content || '',
                 {
                   messageId: msg.contactId || undefined,
                   useProxy: (msg.metadata as any)?.useProxy || false,
+                  skipLog: true, // the queued row itself is the audit record
                 }
               );
             } else if (msg.type === 'template') {
               await this.sendTemplate(
                 msg.businessId,
-                (msg.metadata as any)?.to || '',
+                recipient,
                 msg.templateName || '',
                 msg.templateLanguage || 'en',
                 msg.templateVars as any[] || [],
                 {
                   useProxy: (msg.metadata as any)?.useProxy || false,
+                  skipLog: true,
+                  contactId: msg.contactId || undefined,
                 }
               );
+            } else {
+              // Unknown type for the drainer — fail fast with a clear reason
+              await prisma.message.update({
+                where: { id: msg.id },
+                data: { status: 'failed', error: `Unsupported queued type: ${msg.type}`, statusTimestamp: new Date() },
+              });
+              return { success: false, msg, skipped: true };
             }
 
             await prisma.message.update({
@@ -466,15 +553,18 @@ export class WhatsAppService {
 
       // Handle results — mark successes and retries/failures
       for (const result of results) {
-        if (result.status === 'fulfilled' && result.value.success) {
+        const settled = result as PromiseSettledResult<{ success: boolean; msg: any; skipped?: boolean; error?: any }>;
+        if (settled.status === 'fulfilled' && settled.value?.success) {
           processed++;
         } else {
-          const msg = result.status === 'fulfilled' ? result.value.msg : null;
-          const error = result.status === 'fulfilled' ? result.value.error : result.reason;
+          const msg = settled.status === 'fulfilled' ? settled.value.msg : null;
+          const skipped = settled.status === 'fulfilled' ? !!settled.value.skipped : false;
+          const error = settled.status === 'fulfilled' ? settled.value.error : settled.reason;
 
-          if (msg) {
+          if (msg && !skipped) {
             const metadata = (msg.metadata as any) || {};
             const retryCount = metadata.retryCount || 0;
+            const errMsg = error?.message || 'Unknown send error';
 
             if (retryCount < 3) {
               // Retry — update metadata with incremented retry count
@@ -484,7 +574,7 @@ export class WhatsAppService {
                   metadata: {
                     ...metadata,
                     retryCount: retryCount + 1,
-                    lastError: error.message,
+                    lastError: errMsg,
                     lastRetryAt: new Date().toISOString(),
                   },
                 },
@@ -495,11 +585,11 @@ export class WhatsAppService {
                 where: { id: msg.id },
                 data: {
                   status: 'failed',
-                  error: error.message,
+                  error: errMsg,
                   metadata: {
                     ...metadata,
                     retryCount,
-                    lastError: error.message,
+                    lastError: errMsg,
                     failedAt: new Date().toISOString(),
                   },
                 },
@@ -562,20 +652,49 @@ export class WhatsAppService {
   }
 
   /**
-   * Verify webhook signature
+   * Verify webhook signature (timing-safe comparison — plain === leaks
+   * match-position info via early exit).
    */
   static verifyWebhookSignature(
     payload: string,
     signature: string,
     secret: string
   ): boolean {
+    if (!signature || !secret) return false;
     const expected = crypto
       .createHmac('sha256', secret)
       .update(payload)
       .digest('hex');
-
-    return signature === `sha256=${expected}`;
+    const provided = signature.startsWith('sha256=') ? signature.slice(7) : signature;
+    const a = Buffer.from(expected, 'utf8');
+    const b = Buffer.from(provided, 'utf8');
+    if (a.length !== b.length) return false;
+    return crypto.timingSafeEqual(a, b);
   }
+}
+
+/**
+ * Legacy queue drainer scheduler. WhatsAppService.bulkSend dispatches to
+ * BullMQ when Redis is up; this covers rows created while Redis was down
+ * (and pre-existing backlog). BullMQ-dispatched rows are skipped inside
+ * processQueue, so there is no double-send.
+ */
+let queueDrainerStarted = false;
+export function startWhatsAppQueueDrainer(intervalMs = 60_000): void {
+  if (queueDrainerStarted) return;
+  queueDrainerStarted = true;
+  const tick = async () => {
+    try {
+      const n = await WhatsAppService.processQueue(25);
+      if (n > 0) console.log(`[WhatsApp QueueDrainer] drained ${n} legacy queued message(s)`);
+    } catch (err: any) {
+      console.warn('[WhatsApp QueueDrainer] tick failed:', err?.message);
+    }
+  };
+  // First pass shortly after boot, then on interval.
+  setTimeout(tick, 15_000).unref?.();
+  setInterval(tick, intervalMs).unref?.();
+  console.log('[WhatsApp QueueDrainer] started (every 60s, legacy rows only)');
 }
 
 export default WhatsAppService;
