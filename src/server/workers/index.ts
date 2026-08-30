@@ -174,12 +174,17 @@ whatsappWorker = new Worker(
     }
 
     // Handle regular messages
-    const { businessId, to, type, content, templateName, variables, contactId, useProxy } = job.data;
+    const { businessId, to, type, content, templateName, variables, contactId, useProxy, campaignId } = job.data;
+
+    // Campaign sends rotate across the business's Evolution instance pool
+    // (anti-ban number rotation); one-off/manual sends stay on the primary.
+    const rotate = Boolean(campaignId);
 
     if (type === 'text') {
       return await WhatsAppSendRouter.sendText(businessId, to, content, {
         messageId: contactId,
         useProxy,
+        rotate,
       });
     } else if (type === 'template') {
       return await WhatsAppSendRouter.sendTemplate(businessId, to, {
@@ -188,11 +193,13 @@ whatsappWorker = new Worker(
         variables,
       }, {
         useProxy,
+        rotate,
       });
     } else if (type === 'media') {
       const { mediaUrl, mediaType, caption } = job.data;
       return await WhatsAppSendRouter.sendMedia(businessId, to, mediaUrl, mediaType, caption, {
         useProxy,
+        rotate,
       });
     }
   },

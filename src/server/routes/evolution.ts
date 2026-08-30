@@ -82,6 +82,59 @@ router.post('/antiban-settings', authenticate, async (req: any, res: any) => {
   }
 });
 
+// ==================== NUMBER ROTATION (MULTI-ACCOUNT) ====================
+
+// Get rotation settings + primary instance reference
+router.get('/rotation-settings', authenticate, async (req: any, res: any) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ success: false, error: 'Business ID required' });
+
+    const [settings, primary] = await Promise.all([
+      EvolutionApiService.getRotationSettings(businessId),
+      EvolutionApiService.getPublicConfig(businessId).catch(() => null),
+    ]);
+    res.json({
+      success: true,
+      data: {
+        ...settings,
+        primaryInstanceName: primary?.instanceName || '',
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// Save rotation settings — pool of extra instances to round-robin across
+router.post('/rotation-settings', authenticate, async (req: any, res: any) => {
+  try {
+    const businessId = req.user?.businessId;
+    if (!businessId) return res.status(400).json({ success: false, error: 'Business ID required' });
+
+    const { enabled, pool } = req.body ?? {};
+    const cleanPool = Array.isArray(pool)
+      ? pool
+          .filter((p: any) => p && typeof p.instanceName === 'string' && p.instanceName.trim())
+          .slice(0, 10) // hard cap — each connected instance costs RAM
+          .map((p: any) => ({
+            instanceName: p.instanceName.trim(),
+            baseUrl: typeof p.baseUrl === 'string' && p.baseUrl.trim() ? p.baseUrl.trim() : undefined,
+            apiKey: typeof p.apiKey === 'string' && p.apiKey.trim() ? p.apiKey.trim() : undefined,
+          }))
+      : [];
+
+    await EvolutionApiService.saveRotationSettings(businessId, {
+      enabled: Boolean(enabled),
+      pool: cleanPool,
+    });
+    const settings = await EvolutionApiService.getRotationSettings(businessId);
+    res.json({ success: true, message: 'Rotation settings saved', data: settings });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // ==================== INSTANCE ====================
 
 // Create Evolution API instance

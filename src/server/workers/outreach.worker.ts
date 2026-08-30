@@ -7,9 +7,11 @@ import { createRedisConnection } from '../utils/redis-connection.js';
 /**
  * Smart send: routes through the unified WhatsApp send router
  * (prefers Meta if configured, falls back to Evolution).
+ * rotate=true → campaign/bulk sends round-robin across the business's
+ * Evolution instance pool (anti-ban number rotation).
  */
 async function smartSendText(businessId: string, to: string, message: string): Promise<any> {
-  return WhatsAppSendRouter.sendText(businessId, to, message);
+  return WhatsAppSendRouter.sendText(businessId, to, message, { rotate: true });
 }
 
 const redisConnection = createRedisConnection({ bullMQ: true });

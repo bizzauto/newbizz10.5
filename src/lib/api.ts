@@ -250,6 +250,11 @@ export const evolutionAPI = {
     randomDelayMs?: number;
     maxMessagesPerDay?: number;
   }) => apiClient.post('/evolution/antiban-settings', data),
+  getRotationSettings: () => apiClient.get('/evolution/rotation-settings'),
+  saveRotationSettings: (data: {
+    enabled?: boolean;
+    pool?: Array<{ instanceName: string; baseUrl?: string; apiKey?: string }>;
+  }) => apiClient.post('/evolution/rotation-settings', data),
 };
 
 // Marketing message templates (Evolution / simple text templates — not Meta WABA)

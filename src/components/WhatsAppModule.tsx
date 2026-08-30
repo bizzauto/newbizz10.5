@@ -167,6 +167,11 @@ const evolutionAPI = {
     randomDelayMs?: number;
     maxMessagesPerDay?: number;
   }) => apiClient.post('/evolution/antiban-settings', data),
+  getRotationSettings: () => apiClient.get('/evolution/rotation-settings'),
+  saveRotationSettings: (data: {
+    enabled?: boolean;
+    pool?: Array<{ instanceName: string; baseUrl?: string; apiKey?: string }>;
+  }) => apiClient.post('/evolution/rotation-settings', data),
 };
 
 // Helper: try API first, fall back to mock data
@@ -1921,6 +1926,15 @@ const WhatsAppSettingsView: React.FC = () => {
   const [antiBanLoading, setAntiBanLoading] = useState(true);
   const [antiBanSaving, setAntiBanSaving] = useState(false);
 
+  // Number rotation state
+  const [rotation, setRotation] = useState<{ enabled: boolean; pool: Array<{ instanceName: string; baseUrl: string; apiKey: string }> }>({
+    enabled: false,
+    pool: [],
+  });
+  const [primaryInstance, setPrimaryInstance] = useState('');
+  const [rotationLoading, setRotationLoading] = useState(true);
+  const [rotationSaving, setRotationSaving] = useState(false);
+
   useEffect(() => {
     fetchAutoReplies().then(r => { setAutoReplies(r); setAutoRepliesLoading(false); });
     evolutionAPI.getAntiBanSettings()
@@ -1936,6 +1950,19 @@ const WhatsAppSettingsView: React.FC = () => {
       })
       .catch(() => {})
       .finally(() => setAntiBanLoading(false));
+    evolutionAPI.getRotationSettings()
+      .then(res => {
+        const s = res?.data?.data;
+        if (s) {
+          setRotation({
+            enabled: !!s.enabled,
+            pool: (s.pool || []).map((p: any) => ({ instanceName: p.instanceName || '', baseUrl: p.baseUrl || '', apiKey: p.apiKey || '' })),
+          });
+          setPrimaryInstance(s.primaryInstanceName || '');
+        }
+      })
+      .catch(() => {})
+      .finally(() => setRotationLoading(false));
   }, []);
 
   const saveAntiBan = async () => {
@@ -1947,6 +1974,21 @@ const WhatsAppSettingsView: React.FC = () => {
       toast.error('Failed to save anti-ban settings');
     } finally {
       setAntiBanSaving(false);
+    }
+  };
+
+  const saveRotation = async () => {
+    setRotationSaving(true);
+    try {
+      await evolutionAPI.saveRotationSettings({
+        enabled: rotation.enabled,
+        pool: rotation.pool.filter(p => p.instanceName.trim()),
+      });
+      toast.success('Rotation settings saved');
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Failed to save rotation settings');
+    } finally {
+      setRotationSaving(false);
     }
   };
   const [newKeyword, setNewKeyword] = useState('');
@@ -2007,6 +2049,75 @@ const WhatsAppSettingsView: React.FC = () => {
               </div>
             )}
             {antiBanLoading && <p className="text-xs text-gray-400 mt-3">Loading anti-ban settings…</p>}
+          </div>
+
+          {/* Number Rotation (Multi-Account) */}
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-4 sm:p-5 md:p-6">
+            <div className="flex items-center justify-between mb-1">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center"><RefreshCw size={20} className="text-purple-600 dark:text-purple-400" /></div>
+                <div><h3 className="font-semibold text-gray-900 dark:text-white">Number Rotation</h3><p className="text-xs text-gray-500 dark:text-gray-400">Campaign messages round-robin across your WhatsApp numbers</p></div>
+              </div>
+              <button onClick={() => setRotation(p => ({ ...p, enabled: !p.enabled }))} className={`relative w-12 h-6 rounded-full transition-colors ${rotation.enabled ? 'bg-green-500' : 'bg-gray-300'}`}>
+                <div className={`absolute w-5 h-5 bg-white dark:bg-gray-300 rounded-full top-0.5 transition-transform shadow-sm ${rotation.enabled ? 'translate-x-6' : 'translate-x-0.5'}`} />
+              </button>
+            </div>
+
+            {!rotationLoading && rotation.enabled && (
+              <div className="space-y-4 mt-4 pt-4 border-t border-gray-100">
+                <div className="bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-3 text-xs text-purple-700 dark:text-purple-300">
+                  <strong>How it works:</strong> Msg 1 → {primaryInstance || 'Primary number'}, Msg 2 → Number 2, Msg 3 → Number 3, Msg 4 → {primaryInstance || 'Primary'} again…
+                  Har connected number ~50–150MB RAM use karta hai (server par). Sirf <strong>campaign/bulk</strong> sends rotate hote hain — normal chats &amp; auto-replies apne number se hi jaate hain.
+                </div>
+
+                {rotation.pool.map((entry, idx) => (
+                  <div key={idx} className="bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-700 rounded-lg p-3 space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-semibold text-gray-600 dark:text-gray-300">Number {idx + 2}</span>
+                      <button onClick={() => setRotation(p => ({ ...p, pool: p.pool.filter((_, i) => i !== idx) }))} className="p-1 hover:bg-red-100 rounded text-red-400"><Trash2 size={14} /></button>
+                    </div>
+                    <input
+                      type="text"
+                      value={entry.instanceName}
+                      onChange={e => setRotation(p => ({ ...p, pool: p.pool.map((x, i) => i === idx ? { ...x, instanceName: e.target.value } : x) }))}
+                      placeholder="Instance name (e.g. biz_number2)"
+                      className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
+                    />
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                      <input
+                        type="text"
+                        value={entry.baseUrl}
+                        onChange={e => setRotation(p => ({ ...p, pool: p.pool.map((x, i) => i === idx ? { ...x, baseUrl: e.target.value } : x) }))}
+                        placeholder="Evolution URL (blank = same server)"
+                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
+                      />
+                      <input
+                        type="password"
+                        value={entry.apiKey}
+                        onChange={e => setRotation(p => ({ ...p, pool: p.pool.map((x, i) => i === idx ? { ...x, apiKey: e.target.value } : x) }))}
+                        placeholder="API Key (blank = same key)"
+                        className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm"
+                      />
+                    </div>
+                    <p className="text-[11px] text-gray-400">Pehle is instance ko WhatsApp → Connect se ek baar connect karna hoga (QR scan us number se).</p>
+                  </div>
+                ))}
+
+                {rotation.pool.length < 9 && (
+                  <button
+                    onClick={() => setRotation(p => ({ ...p, pool: [...p.pool, { instanceName: '', baseUrl: '', apiKey: '' }] }))}
+                    className="w-full py-2 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg text-sm text-gray-500 dark:text-gray-400 hover:border-purple-400 hover:text-purple-500 transition-colors"
+                  >
+                    + Add Another Number
+                  </button>
+                )}
+
+                <button onClick={saveRotation} disabled={rotationSaving} className="px-4 py-2 bg-purple-500 text-white rounded-lg text-sm font-medium hover:bg-purple-600 disabled:opacity-50">
+                  {rotationSaving ? 'Saving...' : 'Save Rotation Settings'}
+                </button>
+              </div>
+            )}
+            {rotationLoading && <p className="text-xs text-gray-400 mt-3">Loading rotation settings…</p>}
           </div>
 
           {/* Auto Reply */}

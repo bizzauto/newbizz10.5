@@ -30,12 +30,15 @@ export interface SendTextOptions {
   useProxy?: boolean;
   delay?: number;
   linkPreview?: boolean;
+  /** Rotate across the business's Evolution instance pool (campaign sends only) */
+  rotate?: boolean;
 }
 
 export interface SendTemplateOptions {
   messageId?: string;
   useProxy?: boolean;
   delay?: number;
+  rotate?: boolean;
 }
 
 export interface BulkMessage {
@@ -96,6 +99,7 @@ export class WhatsAppSendRouter {
       return EvolutionApiService.sendText(businessId, to, message, {
         delay: opts.delay,
         linkPreview: opts.linkPreview,
+        rotate: opts.rotate,
       });
     }
 
@@ -131,6 +135,7 @@ export class WhatsAppSendRouter {
       if (isButtonTemplate) {
         return EvolutionApiService.sendTemplate(businessId, to, templateData, {
           delay: opts.delay,
+          rotate: opts.rotate,
         });
       }
       const text =
@@ -146,6 +151,7 @@ export class WhatsAppSendRouter {
       }
       return EvolutionApiService.sendText(businessId, to, text, {
         delay: opts.delay,
+        rotate: opts.rotate,
       });
     }
 
@@ -202,13 +208,14 @@ export class WhatsAppSendRouter {
     mediaUrl: string,
     mediaType: 'image' | 'video' | 'document' | 'audio',
     caption?: string,
-    opts: { delay?: number; useProxy?: boolean } = {}
+    opts: { delay?: number; useProxy?: boolean; rotate?: boolean } = {}
   ): Promise<any> {
     const { channel } = await this.resolveChannel(businessId);
 
     if (channel === 'evolution') {
       return EvolutionApiService.sendMedia(businessId, to, mediaUrl, mediaType, caption, {
         delay: opts.delay,
+        rotate: opts.rotate,
       });
     }
 

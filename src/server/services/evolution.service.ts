@@ -29,6 +29,20 @@ function isGroupJid(to: string): boolean {
   return to.includes('@g.us') || to.includes('@g.chat');
 }
 
+// Number rotation (multi-account round-robin, Saasyto-style)
+export interface RotationInstance {
+  instanceName: string;
+  baseUrl?: string; // optional — falls back to primary config
+  apiKey?: string;  // optional — falls back to primary config
+}
+
+export interface RotationSettings {
+  enabled: boolean;
+  pool: RotationInstance[];
+}
+
+const DEFAULT_ROTATION_SETTINGS: RotationSettings = { enabled: false, pool: [] };
+
 /**
  * Evolution API Service
  * 
@@ -636,6 +650,68 @@ export class EvolutionApiService {
     return count >= settings.maxMessagesPerDay;
   }
 
+  // ==================== NUMBER ROTATION ====================
+
+  // In-memory round-robin pointer per business. Losing it on restart is fine —
+  // any start index distributes load the same way.
+  private static rotationIndex = new Map<string, number>();
+
+  private static nextRotationIndex(businessId: string, size: number): number {
+    const cur = this.rotationIndex.get(businessId) ?? -1;
+    const next = (cur + 1) % size;
+    this.rotationIndex.set(businessId, next);
+    return next;
+  }
+
+  static async getRotationSettings(businessId: string): Promise<RotationSettings> {
+    try {
+      const integration = await prisma.integration.findFirst({ where: { businessId, type: 'evolution_api', isActive: true } });
+      const config = (integration?.config as any) || {};
+      const pool = Array.isArray(config.rotationSettings?.pool) ? config.rotationSettings.pool : [];
+      return { enabled: !!config.rotationSettings?.enabled, pool };
+    } catch {
+      return { ...DEFAULT_ROTATION_SETTINGS, pool: [] };
+    }
+  }
+
+  static async saveRotationSettings(businessId: string, patch: Partial<RotationSettings>): Promise<void> {
+    const integration = await prisma.integration.findFirst({ where: { businessId, type: 'evolution_api', isActive: true } });
+    if (!integration) throw new Error('Evolution API not configured yet — connect first');
+    const config = integration.config as any;
+    config.rotationSettings = {
+      ...(config.rotationSettings || {}),
+      ...patch,
+    };
+    await prisma.integration.update({ where: { id: integration.id }, data: { config } });
+  }
+
+  /**
+   * Resolve which instance should send the next message.
+   * rotate=false (default) → primary instance (conversation replies, auto-replies).
+   * rotate=true (campaigns/outreach) → round-robin across primary + pool.
+   */
+  private static async getSendTarget(businessId: string, rotate: boolean): Promise<{
+    baseUrl: string; apiKey: string; instanceName: string;
+  }> {
+    const primary = await this.getConfig(businessId);
+    if (!rotate) return primary;
+
+    const rot = await this.getRotationSettings(businessId);
+    const targets = [
+      primary,
+      ...rot.pool
+        .filter((p) => p.instanceName)
+        .map((p) => ({
+          baseUrl: p.baseUrl || primary.baseUrl,
+          apiKey: p.apiKey || primary.apiKey,
+          instanceName: p.instanceName,
+        })),
+    ].filter((t) => t.baseUrl && t.apiKey && t.instanceName);
+
+    if (targets.length <= 1) return primary;
+    return targets[this.nextRotationIndex(businessId, targets.length)];
+  }
+
   // ==================== MESSAGING ====================
 
   /**
@@ -670,9 +746,9 @@ export class EvolutionApiService {
     businessId: string,
     to: string,
     message: string,
-    options: { delay?: number; linkPreview?: boolean; applyAntiBan?: boolean } = {}
+    options: { delay?: number; linkPreview?: boolean; applyAntiBan?: boolean; rotate?: boolean } = {}
   ): Promise<any> {
-    const config = await this.getConfig(businessId);
+    const config = await this.getSendTarget(businessId, options.rotate === true);
     const isGroup = isGroupJid(to);
     const formattedNumber = isGroup ? to : this.formatPhone(to);
     const idempotencyKey = crypto.randomUUID();
@@ -685,7 +761,7 @@ export class EvolutionApiService {
         const jitter = settings.randomDelayMs > 0 ? Math.random() * settings.randomDelayMs : 0;
         await sleep(baseDelay + jitter);
       }
-      if (await this.checkDailyLimit(businessId, await this.getAntiBanSettings(businessId))) {
+      if (await this.checkDailyLimit(businessId, settings)) {
         throw new Error('Daily message limit reached');
       }
     }
@@ -724,9 +800,9 @@ export class EvolutionApiService {
     mediaUrl: string,
     mediaType: 'image' | 'video' | 'document' | 'audio',
     caption?: string,
-    options: { delay?: number; applyAntiBan?: boolean } = {}
+    options: { delay?: number; applyAntiBan?: boolean; rotate?: boolean } = {}
   ): Promise<any> {
-    const config = await this.getConfig(businessId);
+    const config = await this.getSendTarget(businessId, options.rotate === true);
     const isGroup = isGroupJid(to);
     const formattedNumber = isGroup ? to : this.formatPhone(to);
     const renderedCaption = caption ? await this.renderMessage(businessId, to, caption) : caption;
@@ -738,7 +814,7 @@ export class EvolutionApiService {
         const jitter = settings.randomDelayMs > 0 ? Math.random() * settings.randomDelayMs : 0;
         await sleep(baseDelay + jitter);
       }
-      if (await this.checkDailyLimit(businessId, await this.getAntiBanSettings(businessId))) {
+      if (await this.checkDailyLimit(businessId, settings)) {
         throw new Error('Daily message limit reached');
       }
     }
@@ -775,9 +851,9 @@ export class EvolutionApiService {
       footer?: string;
       buttons: Array<{ type: 'reply' | 'url' | 'call'; title: string; url?: string; phone?: string }>;
     },
-    options: { delay?: number; applyAntiBan?: boolean } = {}
+    options: { delay?: number; applyAntiBan?: boolean; rotate?: boolean } = {}
   ): Promise<any> {
-    const config = await this.getConfig(businessId);
+    const config = await this.getSendTarget(businessId, options.rotate === true);
     const isGroup = isGroupJid(to);
     const formattedNumber = isGroup ? to : this.formatPhone(to);
     const renderedText = await this.renderMessage(businessId, to, template.text);
