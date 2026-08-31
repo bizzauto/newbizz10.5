@@ -109,6 +109,7 @@ model Business {
   dograhWebhookSecret         String?
   gbpAutoPostDays             Json                    @default("[\"monday\", \"tuesday\", \"wednesday\", \"thursday\", \"friday\"]")
   gbpAutoPostEnabled          Boolean                 @default(false)
+  gbpReviewUrl                String?
   gbpAutoPostLastPosted       DateTime?
   gbpAutoPostTemplates        Json                    @default("[]")
   gbpAutoPostTime             String                  @default("09:00")

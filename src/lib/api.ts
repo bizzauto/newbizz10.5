@@ -409,7 +409,7 @@ export const reviewQrAPI = {
   remove: (id: string) => apiClient.delete(`/review-qr/${id}`),
   listNegativeFeedback: (limit?: number) => apiClient.get('/review-qr/negative-feedback', { params: limit ? { limit } : undefined }),
   deleteNegativeFeedback: (id: string) => apiClient.delete(`/review-qr/negative-feedback/${id}`),
-  updateSettings: (data: { autoReplyEnabled?: boolean; negativeRedirectUrl?: string }) =>
+  updateSettings: (data: { autoReplyEnabled?: boolean; negativeRedirectUrl?: string; reviewUrl?: string }) =>
     apiClient.put('/review-qr/settings', data),
 };
 

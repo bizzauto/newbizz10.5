@@ -145,11 +145,10 @@ export default function GoogleReviewsQRPage() {
         })),
       );
       const s = settingsRes.data?.data || {};
-      setReviewUrl(
-        s.reviewQrNegativeRedirectUrl
-          ? ""
-          : localStorage.getItem("bz-review-url") || "",
-      );
+      // Load the business-level review URL (previously this read from
+      // localStorage AND was force-cleared whenever negativeRedirectUrl was
+      // set — that's why the link "vanished" on save/reload).
+      setReviewUrl(s.gbpReviewUrl || localStorage.getItem("bz-review-url") || "");
       setNegativeRedirect(
         s.reviewQrNegativeRedirectUrl ||
           localStorage.getItem("bz-negative-redirect") ||
@@ -383,6 +382,7 @@ export default function GoogleReviewsQRPage() {
       await reviewQrAPI.updateSettings({
         autoReplyEnabled,
         negativeRedirectUrl: negativeRedirect,
+        reviewUrl, // business-level review URL — ab backend mein persist hota hai
       });
       localStorage.setItem("bz-review-url", reviewUrl);
       localStorage.setItem("bz-negative-redirect", negativeRedirect);

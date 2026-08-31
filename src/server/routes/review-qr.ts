@@ -387,7 +387,24 @@ router.post("/", authenticate, async (req: AuthRequest, res: Response) => {
         .status(400)
         .json({ success: false, error: "Name is required" });
     }
-    const targetUrl = url?.trim() || "https://g.page/bizzauto/review";
+    // Resolve target URL: explicit > business-level gbpReviewUrl > 400.
+    // The old silent default (g.page/bizzauto/review) sent customers to a
+    // Google SEARCH page instead of the business's actual review form.
+    let targetUrl = url?.trim() || "";
+    if (!targetUrl) {
+      const biz = await prisma.business.findUnique({
+        where: { id: req.user.businessId },
+        select: { gbpReviewUrl: true },
+      });
+      targetUrl = biz?.gbpReviewUrl || "";
+    }
+    if (!targetUrl) {
+      return res.status(400).json({
+        success: false,
+        error:
+          "Google Review URL required — Settings tab mein apna review link save karo, ya create karte waqt URL bhejo",
+      });
+    }
     if (!/^https?:\/\//i.test(targetUrl)) {
       return res
         .status(400)
@@ -431,6 +448,7 @@ router.get(
         select: {
           reviewQrAutoReplyEnabled: true,
           reviewQrNegativeRedirectUrl: true,
+          gbpReviewUrl: true,
         },
       });
       res.json({
@@ -451,7 +469,7 @@ router.put(
   authenticate,
   async (req: AuthRequest, res: Response) => {
     try {
-      const { autoReplyEnabled, negativeRedirectUrl } = req.body;
+      const { autoReplyEnabled, negativeRedirectUrl, reviewUrl } = req.body;
       const data: any = {};
       if (autoReplyEnabled !== undefined)
         data.reviewQrAutoReplyEnabled = !!autoReplyEnabled;
@@ -460,12 +478,22 @@ router.put(
           ? String(negativeRedirectUrl).trim()
           : null;
       }
+      // Business-level Google review URL — previously the frontend's
+      // reviewUrl had NO backend field at all, so "Save" silently lost it.
+      if (reviewUrl !== undefined) {
+        const trimmed = String(reviewUrl).trim();
+        if (trimmed && !/^https?:\/\//i.test(trimmed)) {
+          return res.status(400).json({ success: false, error: "Review URL must start with http(s)://" });
+        }
+        data.gbpReviewUrl = trimmed || null;
+      }
       const updated = await prisma.business.update({
         where: { id: req.user.businessId },
         data,
         select: {
           reviewQrAutoReplyEnabled: true,
           reviewQrNegativeRedirectUrl: true,
+          gbpReviewUrl: true,
         },
       });
       res.json({ success: true, data: updated });
