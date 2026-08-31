@@ -267,10 +267,18 @@ export default function GoogleReviewsQRPage() {
       toast.error("Enter a name");
       return;
     }
+    if (!reviewUrl.trim()) {
+      toast.error("Google Review URL zaroori hai — placeholder se review form nahi khulta");
+      return;
+    }
+    if (!/^https?:\/\//i.test(reviewUrl.trim())) {
+      toast.error("URL https:// ya http:// se shuru hona chahiye");
+      return;
+    }
     try {
       const res = await reviewQrAPI.create({
         name: newQRName.trim(),
-        url: reviewUrl || "https://g.page/bizzauto/review",
+        url: reviewUrl.trim(),
       });
       const q = res.data?.data;
       if (!q) throw new Error("No data");
@@ -1066,19 +1074,31 @@ export default function GoogleReviewsQRPage() {
               <div className="space-y-4 max-w-lg">
                 <div>
                   <label className="block text-sm font-medium mb-2">
-                    Google Review URL
+                    Google Review URL <span className="text-red-500">*</span>
                   </label>
                   <input
                     type="url"
                     value={reviewUrl}
                     onChange={(e) => setReviewUrl(e.target.value)}
-                    placeholder="https://g.page/your-business/review"
+                    placeholder="https://search.google.com/local/writereview?placeid=ChIJ..."
                     className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-700"
                   />
                   <p className="text-xs text-gray-500 mt-1">
-                    Your Google Maps review link. Find it in Google Business
-                    Profile dashboard.
+                    Tumhara ASLI Google review link chahiye — placeholder URL
+                    se sirf Google SEARCH khulta hai, review form nahi. Link
+                    aisa dikhega:{" "}
+                    <code className="text-[11px]">
+                      search.google.com/local/writereview?placeid=...
+                    </code>{" "}
+                    ya <code className="text-[11px]">g.page/r/.../review</code>
                   </p>
+                  {!reviewUrl.trim() && (
+                    <div className="mt-2 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg text-xs text-red-600 dark:text-red-400">
+                      <strong>Zaroori:</strong> Isko khali chhodne se QR galat
+                      link pe le jayega. Google Business Profile → apna business
+                      → "Ask for reviews" se link copy karo.
+                    </div>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium mb-2">
