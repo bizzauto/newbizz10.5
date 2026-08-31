@@ -832,17 +832,19 @@ router.post('/orders/:id/verify-payment', async (req: AuthRequest, res: Response
           },
         });
 
-        // Record loyalty points
+        // Record loyalty points — must use the ORDER's contactId, not the
+        // authenticated user's id (they are different IDs; the old code
+        // credited points to the wrong entity).
         try {
           const program = await prisma.loyaltyProgram.findFirst({
             where: { businessId: req.user.businessId, isActive: true },
           });
-          if (program) {
+          if (program && order.contactId) {
             const pointsEarned = Math.floor(order.total * program.pointsPerRupee);
             await prisma.loyaltyPoints.create({
               data: {
                 businessId: req.user.businessId,
-                contactId: req.user.id,
+                contactId: order.contactId,
                 points: pointsEarned,
                 type: 'earn',
                 description: `Points earned for order ${order.orderNumber}`,
@@ -853,6 +855,36 @@ router.post('/orders/:id/verify-payment', async (req: AuthRequest, res: Response
         } catch (e) {
           // Non-critical, don't fail checkout
         }
+
+        // Payment confirmation to the customer (best effort) — previously the
+        // order went to 'processing' with ZERO customer communication.
+        (async () => {
+          try {
+            const full = await prisma.order.findUnique({
+              where: { id: updated.id },
+              include: { contact: { select: { id: true, name: true, phone: true, email: true } }, items: true },
+            });
+            if (!full?.contact) return;
+            const itemCount = (full.items || []).length;
+            const message = `Thank you {name}! Payment received for order ${full.orderNumber} (₹${full.total}). ${itemCount} item${itemCount > 1 ? 's' : ''} ${itemCount > 1 ? 'are' : 'is'} being processed. We'll update you when it ships!`;
+            const { WhatsAppSendRouter } = await import('../services/whatsapp-send-router.service.js');
+            if (full.contact.phone) {
+              await WhatsAppSendRouter.sendText(req.user.businessId, full.contact.phone, message, {
+                contactId: full.contact.id,
+              }).catch(() => {});
+            }
+            if (full.contact.email) {
+              const { EmailService } = await import('../services/email.service.js');
+              await EmailService.sendEmail(
+                full.contact.email,
+                `Payment confirmed - Order ${full.orderNumber}`,
+                `<p>Hi ${full.contact.name || 'Customer'},</p><p>Payment received for order <strong>${full.orderNumber}</strong> (₹${full.total}).</p><p>We'll update you when it ships!</p>`
+              ).catch(() => {});
+            }
+          } catch (e: any) {
+            console.warn('[Ecommerce] payment confirmation failed:', e?.message);
+          }
+        })();
 
         return res.json({ success: true, data: updated });
       }
@@ -1071,6 +1103,45 @@ router.patch('/orders/:id/status', requireRole('OWNER', 'ADMIN'), async (req: Au
       where: { id: req.params.id },
       data: { status },
     });
+
+    // Auto-notify the customer about the status change (best effort — never
+    // fail the status update because of a delivery problem). Previously this
+    // route sent nothing; the notification endpoint existed separately but was
+    // never wired to status changes.
+    (async () => {
+      try {
+        const full = await prisma.order.findUnique({
+          where: { id: updated.id },
+          include: { contact: { select: { id: true, name: true, phone: true, email: true } }, items: true },
+        });
+        if (!full?.contact) return;
+        const statusMessages: Record<string, string> = {
+          pending: `Your order ${full.orderNumber} has been received and is pending confirmation.`,
+          processing: `Your order ${full.orderNumber} is now being processed.`,
+          shipped: `Great news! Your order ${full.orderNumber} has been shipped.`,
+          delivered: `Your order ${full.orderNumber} has been delivered. Thank you for your purchase!`,
+          cancelled: `Your order ${full.orderNumber} has been cancelled.`,
+          refunded: `Your order ${full.orderNumber} has been refunded.`,
+        };
+        const message = statusMessages[status] || `Your order ${full.orderNumber} status: ${status}.`;
+        const { WhatsAppSendRouter } = await import('../services/whatsapp-send-router.service.js');
+        if (full.contact.phone) {
+          await WhatsAppSendRouter.sendText(req.user.businessId, full.contact.phone, message, {
+            contactId: full.contact.id,
+          }).catch(() => {});
+        }
+        if (full.contact.email) {
+          const { EmailService } = await import('../services/email.service.js');
+          await EmailService.sendEmail(
+            full.contact.email,
+            `Order ${full.orderNumber} - ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+            `<p>Hi ${full.contact.name || 'Customer'},</p><p>${message}</p><p>Total: ₹${full.total}</p>`
+          ).catch(() => {});
+        }
+      } catch (e: any) {
+        console.warn('[Ecommerce] order status notification failed:', e?.message);
+      }
+    })();
 
     res.json({ success: true, data: updated });
   } catch (error: any) {
