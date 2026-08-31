@@ -286,6 +286,19 @@ app.use(express.json({
 app.use(express.urlencoded({ extended: false, limit: '10mb' }));
 app.use(cookieParser());
 
+// Review QR public pages (/r/:slug) render a SELF-CONTAINED interstitial with
+// an inline <script>. The global helmet CSP blocks inline scripts, which left
+// the stars visible but dead (no click handlers ever attached). Serve a
+// permissive CSP for just this public, server-generated page — the rest of
+// the app keeps the strict policy.
+app.use('/r', (req, res, next) => {
+  res.setHeader(
+    'Content-Security-Policy',
+    "default-src 'self'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors 'none'"
+  );
+  next();
+});
+
 // Additional security headers
 app.use(securityHeaders);
 
