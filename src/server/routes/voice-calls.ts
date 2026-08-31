@@ -148,6 +148,7 @@ router.get('/settings', authenticate, async (req: AuthRequest, res: Response) =>
         dograhEnabled: true,
         dograhWebhookSecret: true,
         dograhDefaultAgentId: true,
+        dograhAgentUuid: true,
         telephonyProvider: true,
       },
     });
@@ -171,7 +172,7 @@ router.get('/settings', authenticate, async (req: AuthRequest, res: Response) =>
 // PUT /api/voice-calls/settings - Update Dograh settings
 router.put('/settings', authenticate, async (req: AuthRequest, res: Response) => {
   try {
-    const { dograhApiKey, dograhApiUrl, dograhEnabled, dograhDefaultAgentId, dograhWebhookSecret, telephonyProvider } = req.body;
+    const { dograhApiKey, dograhApiUrl, dograhEnabled, dograhDefaultAgentId, dograhWebhookSecret, dograhAgentUuid, telephonyProvider } = req.body;
 
     await prisma.business.update({
       where: { id: req.user.businessId },
@@ -180,6 +181,7 @@ router.put('/settings', authenticate, async (req: AuthRequest, res: Response) =>
         ...(dograhApiUrl !== undefined && { dograhApiUrl }),
         ...(dograhEnabled !== undefined && { dograhEnabled }),
         ...(dograhDefaultAgentId !== undefined && { dograhDefaultAgentId: dograhDefaultAgentId ? Number(dograhDefaultAgentId) : null }),
+        ...(dograhAgentUuid !== undefined && { dograhAgentUuid: dograhAgentUuid ? String(dograhAgentUuid).trim() : null }),
         ...(dograhWebhookSecret !== undefined && !String(dograhWebhookSecret || '').startsWith('••••••') && { dograhWebhookSecret }),
         ...(telephonyProvider !== undefined && { telephonyProvider }),
       },
@@ -220,6 +222,7 @@ router.post('/dial', authenticate, async (req: AuthRequest, res: Response) => {
         dograhApiUrl: true,
         dograhEnabled: true,
         dograhDefaultAgentId: true,
+        dograhAgentUuid: true,
       },
     });
 
@@ -228,13 +231,13 @@ router.post('/dial', authenticate, async (req: AuthRequest, res: Response) => {
     }
 
     const effectiveWorkflowId = workflowId || business.dograhDefaultAgentId;
-    if (!effectiveWorkflowId) {
-      return res.status(400).json({ success: false, error: 'No agent selected' });
+    if (!business.dograhAgentUuid && !effectiveWorkflowId) {
+      return res.status(400).json({ success: false, error: 'No agent selected — set Agent UUID or default agent in settings' });
     }
 
-    // Get agent name
+    // Get agent name (numeric path only; UUID path skips — name comes from webhook)
     const config = { apiUrl: business.dograhApiUrl!, apiKey: business.dograhApiKey };
-    const agent = await dograhService.getAgent(config, Number(effectiveWorkflowId));
+    const agent = business.dograhAgentUuid ? null : await dograhService.getAgent(config, Number(effectiveWorkflowId));
 
     // Create call log
     const callLog = await prisma.callLog.create({
@@ -254,7 +257,8 @@ router.post('/dial', authenticate, async (req: AuthRequest, res: Response) => {
 
     if (callType === 'phone') {
       const result = await dograhService.triggerPhoneCall(config, {
-        workflowId: Number(effectiveWorkflowId),
+        agentUuid: business.dograhAgentUuid || null,
+        workflowId: effectiveWorkflowId ? Number(effectiveWorkflowId) : undefined,
         phoneNumber,
         context: { ...context, callLogId: callLog.id, contactId },
       });

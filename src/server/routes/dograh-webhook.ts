@@ -58,6 +58,9 @@ router.post('/:businessId', async (req: AuthRequest, res: Response) => {
     } = payload;
 
     // Find existing CallLog or create one
+    // Dograh's payload is template-defined by the user's Webhook node — accept
+    // both documented (workflow_run_id) and legacy (run_id) field names.
+    const resolvedRunId = run_id ?? payload.workflow_run_id;
     const callLogId = gathered_context?.callLogId;
     let callLog = callLogId
       ? await prisma.callLog.findUnique({ where: { id: callLogId } })
@@ -78,12 +81,19 @@ router.post('/:businessId', async (req: AuthRequest, res: Response) => {
       });
     }
 
+    // Try to find by Dograh run id (idempotent replay protection)
+    if (!callLog && resolvedRunId) {
+      callLog = await prisma.callLog.findFirst({
+        where: { businessId, dograhRunId: resolvedRunId.toString() },
+      });
+    }
+
     // Create CallLog if still not found
     if (!callLog) {
       callLog = await prisma.callLog.create({
         data: {
           businessId,
-          dograhRunId: run_id?.toString(),
+          dograhRunId: resolvedRunId?.toString(),
           workflowId: workflow_id,
           workflowName: workflow_name || 'Voice Agent',
           direction: 'inbound',
@@ -96,8 +106,13 @@ router.post('/:businessId', async (req: AuthRequest, res: Response) => {
       });
     }
 
-    // Calculate duration from cost_info or annotations
-    const duration = annotations?.duration_seconds || gathered_context?.duration || 0;
+    // Calculate duration — Dograh puts it in cost_info.call_duration_seconds;
+    // fall back to annotations/gathered_context for older/custom templates.
+    const duration =
+      cost_info?.call_duration_seconds ??
+      annotations?.duration_seconds ??
+      gathered_context?.duration ??
+      0;
 
     // Update CallLog with completion data
     await prisma.callLog.update({
@@ -125,7 +140,7 @@ router.post('/:businessId', async (req: AuthRequest, res: Response) => {
           description: gathered_context?.summary || `Duration: ${duration}s`,
           metadata: {
             callLogId: callLog.id,
-            dograhRunId: run_id,
+            dograhRunId: resolvedRunId,
             recordingUrl: recording_url,
             costInfo: cost_info,
           },

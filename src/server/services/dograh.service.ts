@@ -63,10 +63,35 @@ class DograhService {
   }
 
   async triggerPhoneCall(config: DograhConfig, params: {
-    workflowId: number;
+    /** Agent UUID from Dograh's API Trigger node (production path) */
+    agentUuid?: string | null;
+    /** Legacy numeric workflow id — used only when no agentUuid is set */
+    workflowId?: number;
     phoneNumber: string;
     context?: Record<string, any>;
   }): Promise<{ runId: string; status: string }> {
+    // Production path (documented): POST /api/v1/public/agent/{agent-uuid}
+    // with { phone_number, initial_context }, X-API-Key header.
+    // Response: { status: 'initiated', workflow_run_id, workflow_run_name }
+    if (params.agentUuid) {
+      const res = await axios.post(
+        `${config.apiUrl}/api/v1/public/agent/${params.agentUuid}`,
+        {
+          phone_number: params.phoneNumber,
+          ...(params.context && { initial_context: params.context }),
+        },
+        {
+          headers: { 'X-API-Key': config.apiKey },
+          timeout: 30000,
+        }
+      );
+      return {
+        runId: res.data?.workflow_run_id?.toString() ?? res.data?.run_id?.toString() ?? '',
+        status: res.data?.status ?? 'initiated',
+      };
+    }
+
+    // Legacy fallback (numeric workflow id): old test-call endpoint.
     const res = await axios.post(`${config.apiUrl}/api/v1/test-phone-call`, {
       workflow_id: params.workflowId,
       phone_number: params.phoneNumber,

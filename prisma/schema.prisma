@@ -104,6 +104,7 @@ model Business {
   dograhApiKey                String?
   dograhApiUrl                String?
   dograhDefaultAgentId        Int?
+  dograhAgentUuid             String?
   dograhEnabled               Boolean                 @default(false)
   dograhWebhookSecret         String?
   gbpAutoPostDays             Json                    @default("[\"monday\", \"tuesday\", \"wednesday\", \"thursday\", \"friday\"]")
