@@ -8,23 +8,28 @@ import {
   Hash, Tag as TagIcon, Upload, Star, Archive
 } from 'lucide-react';
 import { useAuthStore } from '../lib/authStore';
+import apiClient from '../lib/api';
+
+// CRITICAL FIX: previous raw fetch() calls sent NO Authorization header while
+// every backend blog route requires auth — the entire Blog manager 401'd on
+// every request. apiClient attaches the token + handles refresh/CSRF.
 const blogAPI = {
-  list: (params?: any) => fetch(`/api/blog/posts?${new URLSearchParams(params || {})}`).then(r => r.json()),
-  get: (id: string) => fetch(`/api/blog/posts/${id}`).then(r => r.json()),
-  create: (data: any) => fetch('/api/blog/posts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
-  update: (id: string, data: any) => fetch(`/api/blog/posts/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
-  delete: (id: string) => fetch(`/api/blog/posts/${id}`, { method: 'DELETE' }).then(r => r.json()),
-  publish: (id: string) => fetch(`/api/blog/posts/${id}/publish`, { method: 'POST' }).then(r => r.json()),
-  unpublish: (id: string) => fetch(`/api/blog/posts/${id}/unpublish`, { method: 'POST' }).then(r => r.json()),
-  categories: () => fetch('/api/blog/categories').then(r => r.json()),
-  createCategory: (data: any) => fetch('/api/blog/categories', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
-  updateCategory: (id: string, data: any) => fetch(`/api/blog/categories/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) }).then(r => r.json()),
-  deleteCategory: (id: string) => fetch(`/api/blog/categories/${id}`, { method: 'DELETE' }).then(r => r.json()),
-  comments: (postId: string) => fetch(`/api/blog/posts/${postId}/comments`).then(r => r.json()),
-  approveComment: (postId: string, commentId: string) => fetch(`/api/blog/posts/${postId}/comments/${commentId}/approve`, { method: 'POST' }).then(r => r.json()),
-  rejectComment: (postId: string, commentId: string) => fetch(`/api/blog/posts/${postId}/comments/${commentId}/reject`, { method: 'POST' }).then(r => r.json()),
-  deleteComment: (postId: string, commentId: string) => fetch(`/api/blog/posts/${postId}/comments/${commentId}`, { method: 'DELETE' }).then(r => r.json()),
-  stats: () => fetch('/api/blog/stats').then(r => r.json()),
+  list: async (params?: any) => (await apiClient.get('/blog/posts', { params })).data,
+  get: async (id: string) => (await apiClient.get(`/blog/posts/${id}`)).data,
+  create: async (data: any) => (await apiClient.post('/blog/posts', data)).data,
+  update: async (id: string, data: any) => (await apiClient.put(`/blog/posts/${id}`, data)).data,
+  delete: async (id: string) => (await apiClient.delete(`/blog/posts/${id}`)).data,
+  publish: async (id: string) => (await apiClient.post(`/blog/posts/${id}/publish`)).data,
+  unpublish: async (id: string) => (await apiClient.post(`/blog/posts/${id}/unpublish`)).data,
+  categories: async () => (await apiClient.get('/blog/categories')).data,
+  createCategory: async (data: any) => (await apiClient.post('/blog/categories', data)).data,
+  updateCategory: async (id: string, data: any) => (await apiClient.put(`/blog/categories/${id}`, data)).data,
+  deleteCategory: async (id: string) => (await apiClient.delete(`/blog/categories/${id}`)).data,
+  comments: async (postId: string) => (await apiClient.get(`/blog/posts/${postId}/comments`)).data,
+  approveComment: async (postId: string, commentId: string) => (await apiClient.post(`/blog/posts/${postId}/comments/${commentId}/approve`)).data,
+  rejectComment: async (postId: string, commentId: string) => (await apiClient.post(`/blog/posts/${postId}/comments/${commentId}/reject`)).data,
+  deleteComment: async (postId: string, commentId: string) => (await apiClient.delete(`/blog/posts/${postId}/comments/${commentId}`)).data,
+  stats: async () => (await apiClient.get('/blog/stats')).data,
 };
 
 interface BlogPost {

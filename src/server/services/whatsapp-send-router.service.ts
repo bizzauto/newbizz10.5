@@ -33,6 +33,9 @@ export interface SendTextOptions {
   linkPreview?: boolean;
   /** Rotate across the business's Evolution instance pool (campaign sends only) */
   rotate?: boolean;
+  /** Disable the anti-ban pre-send sleep for synchronous bulk API actions
+   *  (default: anti-ban ON). Only pass false for deliberate one-shot sends. */
+  applyAntiBan?: boolean;
 }
 
 export interface SendTemplateOptions {
@@ -102,6 +105,7 @@ export class WhatsAppSendRouter {
         linkPreview: opts.linkPreview,
         rotate: opts.rotate,
         contactId: opts.contactId,
+        applyAntiBan: opts.applyAntiBan,
       } as any);
     }
 

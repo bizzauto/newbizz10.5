@@ -1,4 +1,4 @@
-import { Router, Response } from 'express';
+﻿import { Router, Response } from 'express';
 import { prisma } from '../db.js';
 import { authenticate, AuthRequest } from '../middleware/auth.js';
 import { WhatsAppSendRouter } from '../services/whatsapp-send-router.service.js';
@@ -191,7 +191,7 @@ router.post('/', authenticate, async (req: AuthRequest, res: Response) => {
     // Attempt to send immediately
     try {
       if (channel === 'whatsapp') {
-        await WhatsAppSendRouter.sendText(req.user.businessId, contact.phone, defaultMessage);
+        await WhatsAppSendRouter.sendText(req.user.businessId, contact.phone, defaultMessage, { applyAntiBan: false });
         await prisma.reviewRequest.update({
           where: { id: request.id },
           data: { status: 'sent', sentAt: new Date() },
@@ -290,7 +290,7 @@ router.post('/bulk', authenticate, async (req: AuthRequest, res: Response) => {
 
       try {
         if (channel === 'whatsapp') {
-          await WhatsAppSendRouter.sendText(req.user.businessId, contact.phone, defaultMessage);
+          await WhatsAppSendRouter.sendText(req.user.businessId, contact.phone, defaultMessage, { applyAntiBan: false });
           await prisma.reviewRequest.update({
             where: { id: request.id },
             data: { status: 'sent', sentAt: new Date() },
