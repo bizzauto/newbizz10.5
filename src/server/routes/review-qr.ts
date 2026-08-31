@@ -181,13 +181,18 @@ publicRouter.get("/:slug", async (req: Request, res: Response) => {
         </div>
       </div>
 
-      <!-- STEP 3: Redirecting -->
+      <!-- STEP 3: Thank You -->
       <div class="step" id="step3">
-        <h2>Thank you!</h2>
-        <p>Redirecting...</p>
-        <div style="margin-top:16px;">
+        <div style="font-size:54px;line-height:1;margin-bottom:10px">&#128591;</div>
+        <h2>Thank You!</h2>
+        <p id="thanksMsg">Aapke keemti feedback ke liye dhanyawad!</p>
+        <div id="spinnerWrap" style="margin-top:16px;display:none;">
           <svg class="spinner" viewBox="0 0 24 24" style="width:32px;height:32px;margin:0 auto;animation:spin 1s linear infinite"><circle cx="12" cy="12" r="10" stroke="#f59e0b" stroke-width="3" fill="none" stroke-dasharray="31.4 31.4" stroke-linecap="round"/></svg>
           <style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+          <p style="font-size:12px;color:#94a3b8;margin-top:8px;" id="redirectLabel">Redirecting...</p>
+        </div>
+        <div id="doneWrap" style="margin-top:16px;display:none;">
+          <p style="font-size:13px;color:#22c55e;font-weight:600;">&#10003; Done — hamari team jaldi sampark karegi!</p>
         </div>
       </div>
 
@@ -318,16 +323,38 @@ publicRouter.get("/:slug", async (req: Request, res: Response) => {
           // thank-you screen and do NOT fall back to the Google review URL —
           // that would leak a negative review publicly.
           persistNegativeFeedback(selectedRating, feedback);
-          showStep('step3');
-          setProgress(3);
-          setTimeout(function() {
-            if (hasNegativeUrl) {
-              window.location.href = negativeUrl;
-            }
-            // else: keep the user on the thank-you screen. Negative feedback
-            // is deliberately kept off Google.
-          }, 800);
+          showThankYou('feedback');
         });
+      }
+
+      // --- Shared Thank You screen (A: negative feedback, B: after opening
+      //     Google). Shows a warm message; spinner only when a redirect will
+      //     actually happen (previously customers were stuck on a
+      //     "Redirecting..." spinner forever when no redirect URL was set). ---
+      function showThankYou(mode) {
+        var msg = document.getElementById('thanksMsg');
+        var spinnerWrap = document.getElementById('spinnerWrap');
+        var doneWrap = document.getElementById('doneWrap');
+        if (mode === 'feedback') {
+          if (msg) msg.textContent = 'Aapke keemti feedback ke liye dhanyawad! Hamari team jaldi hi aapse sampark karegi aur ye solve karegi.';
+          if (spinnerWrap && hasNegativeUrl) {
+            spinnerWrap.style.display = 'block';
+            var lbl = document.getElementById('redirectLabel');
+            if (lbl) lbl.textContent = 'Aapko feedback form le ja rahe hain...';
+            setTimeout(function() { window.location.href = negativeUrl; }, 3500);
+          } else if (spinnerWrap && doneWrap) {
+            spinnerWrap.style.display = 'none';
+            doneWrap.style.display = 'block';
+          }
+        } else {
+          // mode === 'google'
+          if (msg) msg.textContent = 'Dhanyawad! Google review page khul raha hai — copy kiya hua text paste karke post kar dena. 🙏';
+          if (spinnerWrap) spinnerWrap.style.display = 'block';
+          var lbl2 = document.getElementById('redirectLabel');
+          if (lbl2) lbl2.textContent = 'Opening Google...';
+        }
+        showStep('step3');
+        setProgress(3);
       }
 
       // Best-effort persist of negative feedback to the server. Never blocks
@@ -347,11 +374,17 @@ publicRouter.get("/:slug", async (req: Request, res: Response) => {
         } catch (e) { /* non-fatal */ }
       }
 
-      // --- Positive path: Continue to Google ---
+      // --- Positive path: Thank-You screen, then open Google review form ---
       var goToGoogle = document.getElementById('goToGoogle');
       if (goToGoogle) {
-        goToGoogle.addEventListener('click', function() {
-          // Allow default link behavior (navigate to Google)
+        goToGoogle.addEventListener('click', function(e) {
+          // Take over navigation: show a warm Thank-You first, then open the
+          // Google review form in the same tab after a short pause. (Opening a
+          // new tab from this flow was unreliable on mobile browsers — popup
+          // blockers killed it silently.)
+          e.preventDefault();
+          showThankYou('google');
+          setTimeout(function() { window.location.href = reviewUrl; }, 2200);
         });
       }
     </script>
