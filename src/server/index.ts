@@ -822,6 +822,11 @@ startIndiaMARTAutosync();
 import { startWhatsAppQueueDrainer } from './services/whatsapp.service.js';
 startWhatsAppQueueDrainer();
 
+// Background schedulers: drains DripQueue, AppointmentReminder and CartRecovery
+// rows that were previously created but never processed (no drainer existed).
+import { startBackgroundSchedulers } from './services/background-schedulers.service.js';
+startBackgroundSchedulers();
+
 // JustDial / email-inbox lead auto-pull (per-business opt-in via
 // Business.leadInboxConfig). No-op for businesses without config.
 import { startLeadInboxAutosync } from './services/lead-inbox-autosync.service.js';

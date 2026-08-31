@@ -239,13 +239,20 @@ router.post('/:id/send', authenticate, async (req: AuthRequest, res: Response) =
       });
     }
 
-    // Mark as sent immediately
-    const updated = await prisma.appointmentReminder.update({
-      where: { id: req.params.id },
-      data: {
-        status: 'sent',
-        sentAt: new Date(),
-      },
+    // ACTUALLY send via the shared sender (previously this endpoint only
+    // flipped status='sent' in the DB without delivering anything).
+    const { sendAppointmentReminderNow } = await import('../services/background-schedulers.service.js');
+    const result = await sendAppointmentReminderNow(reminder.id);
+
+    if (!result.ok) {
+      return res.status(500).json({
+        success: false,
+        error: result.error || 'Failed to send reminder',
+      });
+    }
+
+    const updated = await prisma.appointmentReminder.findUnique({
+      where: { id: reminder.id },
     });
 
     res.json({
