@@ -523,6 +523,63 @@ router.delete("/:id", authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
+// ─── Auth: negative feedback inbox — list + stats ─────────────────────────────
+// GET /api/review-qr/negative-feedback?limit=100
+// Owners previously had NO way to see negative feedback (it was persisted to
+// DB with no read endpoint and no UI).
+router.get(
+  "/negative-feedback",
+  authenticate,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const limit = Math.min(200, Math.max(1, Number(req.query.limit) || 100));
+      const [items, stats] = await Promise.all([
+        prisma.negativeFeedback.findMany({
+          where: { businessId: req.user.businessId },
+          orderBy: { createdAt: "desc" },
+          take: limit,
+        }),
+        prisma.negativeFeedback.groupBy({
+          by: ["rating"],
+          where: { businessId: req.user.businessId },
+          _count: true,
+        }),
+      ]);
+      res.json({
+        success: true,
+        data: {
+          items,
+          total: items.length,
+          byRating: stats.map((s) => ({ rating: s.rating, count: s._count })),
+        },
+      });
+    } catch (error: any) {
+      console.error("[ReviewQR] negative feedback list error:", error.message);
+      res.status(500).json({ success: false, error: "Failed to fetch negative feedback" });
+    }
+  },
+);
+
+// ─── Auth: delete one negative feedback (after follow-up) ─────────────────────
+router.delete(
+  "/negative-feedback/:id",
+  authenticate,
+  async (req: AuthRequest, res: Response) => {
+    try {
+      const existing = await prisma.negativeFeedback.findFirst({
+        where: { id: req.params.id, businessId: req.user.businessId },
+      });
+      if (!existing) {
+        return res.status(404).json({ success: false, error: "Feedback not found" });
+      }
+      await prisma.negativeFeedback.delete({ where: { id: existing.id } });
+      res.json({ success: true, message: "Feedback deleted" });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: "Failed to delete feedback" });
+    }
+  },
+);
+
 export default router;
 
 // ─── Public: persist negative feedback (NEVER posted to Google) ────────────────

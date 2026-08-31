@@ -94,6 +94,30 @@ export default function GoogleReviewsQRPage() {
 
   // AI Review Reply state
   const [aiReplyGenerating, setAiReplyGenerating] = useState<string | null>(null);
+  // Negative feedback inbox (QR 1-3 star ratings — kept off Google)
+  interface NegFeedback { id: string; rating: number; feedback: string | null; qrSlug: string | null; createdAt: string; }
+  const [negativeFeedback, setNegativeFeedback] = useState<NegFeedback[]>([]);
+  const [loadingNegFeedback, setLoadingNegFeedback] = useState(false);
+
+  const loadNegativeFeedback = useCallback(async () => {
+    setLoadingNegFeedback(true);
+    try {
+      const res = await reviewQrAPI.listNegativeFeedback();
+      setNegativeFeedback(res?.data?.data?.items || []);
+    } catch { /* ignore */ }
+    setLoadingNegFeedback(false);
+  }, []);
+
+  const deleteNegativeFeedback = async (id: string) => {
+    try {
+      await reviewQrAPI.deleteNegativeFeedback(id);
+      setNegativeFeedback((prev) => prev.filter((f) => f.id !== id));
+    } catch { /* ignore */ }
+  };
+
+  useEffect(() => {
+    if (view === "analytics") loadNegativeFeedback();
+  }, [view, loadNegativeFeedback]);
   const [aiReplyCache, setAiReplyCache] = useState<Record<string, string>>({});
 
   // Load QR codes + settings from backend
@@ -947,6 +971,83 @@ export default function GoogleReviewsQRPage() {
                             </p>
                           </div>
                         )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Negative Feedback Inbox — QR scans rated 1-3 stars. Never
+                  reaches Google; owner follows up privately. */}
+              <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="font-semibold">Private Negative Feedback</h4>
+                  <button
+                    onClick={loadNegativeFeedback}
+                    className="text-xs text-amber-600 hover:underline flex items-center gap-1"
+                  >
+                    <Loader2
+                      size={12}
+                      className={loadingNegFeedback ? "animate-spin" : "hidden"}
+                    />{" "}
+                    Refresh
+                  </button>
+                </div>
+                {loadingNegFeedback ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 size={24} className="animate-spin text-gray-400" />
+                  </div>
+                ) : negativeFeedback.length === 0 ? (
+                  <p className="text-center text-gray-500 py-8 text-sm">
+                    No negative feedback yet — that's good news!
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {negativeFeedback.map((fb) => (
+                      <div
+                        key={fb.id}
+                        className="p-3 rounded-lg bg-red-50 dark:bg-red-900/10 border border-red-100 dark:border-red-900/30"
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className="flex gap-0.5">
+                            {[1, 2, 3, 4, 5].map((s) => (
+                              <Star
+                                key={s}
+                                size={12}
+                                className={
+                                  s <= fb.rating
+                                    ? "text-red-500 fill-red-500"
+                                    : "text-gray-300"
+                                }
+                              />
+                            ))}
+                          </div>
+                          <span className="text-xs text-gray-400">
+                            {fb.qrSlug ? `QR: ${fb.qrSlug}` : "Direct"}
+                          </span>
+                          <span className="text-xs text-gray-500 ml-auto">
+                            {new Date(fb.createdAt).toLocaleString("en-IN", {
+                              day: "2-digit",
+                              month: "short",
+                              hour: "2-digit",
+                              minute: "2-digit",
+                            })}
+                          </span>
+                          <button
+                            onClick={() => deleteNegativeFeedback(fb.id)}
+                            className="text-gray-400 hover:text-red-600"
+                            title="Delete after follow-up"
+                          >
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
+                        <p className="text-sm text-gray-700 dark:text-gray-300">
+                          {fb.feedback || (
+                            <span className="text-gray-400 italic">
+                              (No written feedback)
+                            </span>
+                          )}
+                        </p>
                       </div>
                     ))}
                   </div>

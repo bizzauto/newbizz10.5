@@ -407,6 +407,8 @@ export const reviewQrAPI = {
   update: (id: string, data: { name?: string; url?: string; fgColor?: string; bgColor?: string; status?: 'active' | 'paused'; suggestedReviews?: string[] }) =>
     apiClient.put(`/review-qr/${id}`, data),
   remove: (id: string) => apiClient.delete(`/review-qr/${id}`),
+  listNegativeFeedback: (limit?: number) => apiClient.get('/review-qr/negative-feedback', { params: limit ? { limit } : undefined }),
+  deleteNegativeFeedback: (id: string) => apiClient.delete(`/review-qr/negative-feedback/${id}`),
   updateSettings: (data: { autoReplyEnabled?: boolean; negativeRedirectUrl?: string }) =>
     apiClient.put('/review-qr/settings', data),
 };

@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { MapPin, Star, Phone, Clock, Globe, Camera, Edit3, MessageSquare, Eye, Plus, CheckCircle, XCircle, AlertCircle, BarChart3, Share2, Search, ExternalLink, RefreshCw, Loader2, Zap, Calendar, Trash2, Edit } from 'lucide-react';
+import { MapPin, Star, Phone, Clock, Globe, Camera, Edit3, MessageSquare, Eye, Plus, CheckCircle, XCircle, AlertCircle, BarChart3, Share2, Search, ExternalLink, RefreshCw, Loader2, Zap, Calendar, Trash2, Edit, QrCode } from 'lucide-react';
 import { googleBusinessAPI } from '../lib/api';
 import { useAuthStore } from '../lib/authStore';
+import GoogleReviewsQRPage from './GoogleReviewsQRPage';
 
 interface Review { id: string; author: string; rating: number; text: string; date: string; replied: boolean; replyText?: string; }
 interface BusinessPost { id: string; type: string; title: string; content: string; startDate: string; status: string; views: number; clicks: number; }
@@ -21,7 +22,7 @@ const Stars: React.FC<{ r: number; sz?: number }> = ({ r, sz = 18 }) => (
 const GoogleBusinessPage: React.FC = () => {
   const { business } = useAuthStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [view, setView] = useState<'profile' | 'reviews' | 'posts' | 'insights' | 'auto-post'>('profile');
+  const [view, setView] = useState<'profile' | 'reviews' | 'posts' | 'insights' | 'auto-post' | 'review-qr'>('profile');
   const [reviews, setReviews] = useState<Review[]>([]);
   const [posts, setPosts] = useState<BusinessPost[]>([]);
   const [loading, setLoading] = useState(true);
@@ -370,13 +371,14 @@ const GoogleBusinessPage: React.FC = () => {
           <p className="text-gray-600 dark:text-gray-400 mt-1">Manage your business on Google Search & Maps</p>
         </div>
         <div className="flex items-center gap-2 flex-wrap">
-          {(['profile', 'reviews', 'posts', 'insights', 'auto-post'] as const).map(v => (
+          {(['profile', 'reviews', 'posts', 'insights', 'auto-post', 'review-qr'] as const).map(v => (
             <button key={v} onClick={() => setView(v)} className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${view === v ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-400' : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-700'}`}>
               {v === 'profile' && <><MapPin size={14} className="inline mr-1" />Profile</>}
               {v === 'reviews' && <><Star size={14} className="inline mr-1" />Reviews</>}
               {v === 'posts' && <><MessageSquare size={14} className="inline mr-1" />Posts</>}
               {v === 'insights' && <><BarChart3 size={14} className="inline mr-1" />Insights</>}
               {v === 'auto-post' && <><Zap size={14} className="inline mr-1" />Auto-Post</>}
+              {v === 'review-qr' && <><QrCode size={14} className="inline mr-1" />Review QR</>}
             </button>
           ))}
         </div>
@@ -858,13 +860,15 @@ const GoogleBusinessPage: React.FC = () => {
                   </button>
                 </div>
                 <p className="text-xs text-gray-400 mt-3">
-                  💡 Tip: Create multiple templates and they will rotate daily for variety!
+                  dY'� Tip: Create multiple templates and they will rotate daily for variety!
                 </p>
               </div>
             </>
           )}
         </div>
       )}
+
+      {view === 'review-qr' && <GoogleReviewsQRPage />}
 
       {editOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEditOpen(false)}>
