@@ -365,10 +365,32 @@ stockAlertsRouter.post('/:id/notify', authenticate, async (req: AuthRequest, res
       return res.status(404).json({ success: false, error: 'Stock alert not found' });
     }
 
+    // Actually notify the customer via the shared drainer sender (previously
+    // this endpoint only flipped status='notified' without contacting anyone).
+    const { stockAlertTick } = await import('../services/background-schedulers.service.js');
+
+    // Notify this one alert regardless of product stock (manual override)
     const updated = await prisma.stockAlert.update({
       where: { id: req.params.id },
       data: { status: 'notified', notifiedAt: new Date() },
     });
+
+    // Fire the actual notification in the background — best effort
+    (async () => {
+      try {
+        const { WhatsAppSendRouter } = await import('../services/whatsapp-send-router.service.js');
+        const product = await prisma.product.findUnique({ where: { id: alert.productId }, select: { name: true } });
+        const message = `Good news! "${product?.name || 'The product'}" is back in stock — order now!`;
+        if (alert.customerPhone) {
+          await WhatsAppSendRouter.sendText(alert.businessId, alert.customerPhone, message, { contactId: alert.contactId || undefined });
+        } else if (alert.customerEmail) {
+          const { EmailService } = await import('../services/email.service.js');
+          await EmailService.sendEmail(alert.customerEmail, `Back in stock: ${product?.name || 'Product'}`, `<p>Good news! <strong>${product?.name || 'The product'}</strong> is back in stock. Order now!</p>`);
+        }
+      } catch (e: any) {
+        console.warn('[StockAlert] manual notify follow-up failed:', e?.message);
+      }
+    })();
 
     res.json({ success: true, data: updated });
   } catch (error: any) {

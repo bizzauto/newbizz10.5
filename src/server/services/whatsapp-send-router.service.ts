@@ -27,6 +27,7 @@ export interface ResolveChannelResult {
 
 export interface SendTextOptions {
   messageId?: string;
+  contactId?: string;
   useProxy?: boolean;
   delay?: number;
   linkPreview?: boolean;
@@ -100,13 +101,14 @@ export class WhatsAppSendRouter {
         delay: opts.delay,
         linkPreview: opts.linkPreview,
         rotate: opts.rotate,
-      });
+        contactId: opts.contactId,
+      } as any);
     }
 
     if (channel === 'meta') {
       const { WhatsAppService } = await import('./whatsapp.service.js');
       return WhatsAppService.sendTextMessage(businessId, to, message, {
-        messageId: opts.messageId,
+        messageId: opts.contactId || opts.messageId,
         useProxy: opts.useProxy,
       });
     }

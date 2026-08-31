@@ -202,6 +202,73 @@ export async function cartRecoveryTick(): Promise<number> {
   return sent;
 }
 
+// ─────────────────────── 4. STOCK ALERTS (back in stock) ───────────────────────
+
+export async function stockAlertTick(): Promise<number> {
+  // Pending alerts whose product is back in stock → notify the customer
+  const alerts = await prisma.stockAlert.findMany({
+    where: { status: 'pending' },
+    include: { product: { select: { name: true, quantity: true } } },
+    orderBy: { createdAt: 'asc' },
+    take: BATCH,
+  });
+  if (alerts.length === 0) return 0;
+
+  let sent = 0;
+  for (const alert of alerts) {
+    const product = alert.product as { name: string; quantity: number } | null;
+    if (!product) {
+      await prisma.stockAlert.update({ where: { id: alert.id }, data: { status: 'failed' } });
+      continue;
+    }
+    // Only notify when the product actually has stock again
+    if (product.quantity <= 0) continue;
+
+    const productName = product.name || 'The product';
+    const message = `Good news! "${productName}" is {back in stock|available again} — order now before it runs out!`;
+    let delivered = false;
+
+    try {
+      if (alert.contactId || alert.customerPhone) {
+        let phone = alert.customerPhone || '';
+        if (!phone && alert.contactId) {
+          const c = await prisma.contact.findUnique({ where: { id: alert.contactId }, select: { phone: true, name: true } });
+          if (c?.phone) phone = c.phone;
+        }
+        if (phone) {
+          await WhatsAppSendRouter.sendText(alert.businessId, phone, message, {
+            contactId: alert.contactId || undefined,
+          });
+          delivered = true;
+        }
+      }
+      if (!delivered && alert.customerEmail) {
+        const { EmailService } = await import('./email.service.js');
+        await EmailService.sendEmail(
+          alert.customerEmail,
+          `Back in stock: ${productName}`,
+          `<p>Good news! <strong>${productName}</strong> is back in stock. Order now!</p>`
+        );
+        delivered = true;
+      }
+    } catch (err: any) {
+      console.warn(`[StockAlertDrainer] ${alert.id} failed:`, err?.message);
+      // permanent contact-less row — fail it so it stops being retried
+      if (err?.message?.includes('not configured')) {
+        await prisma.stockAlert.update({ where: { id: alert.id }, data: { status: 'failed' } });
+      }
+      continue;
+    }
+
+    if (delivered) {
+      await prisma.stockAlert.update({ where: { id: alert.id }, data: { status: 'notified', notifiedAt: new Date() } });
+      sent++;
+    }
+  }
+  if (sent > 0) console.log(`[StockAlertDrainer] notified ${sent} customer(s)`);
+  return sent;
+}
+
 // ─────────────────────── SCHEDULER BOOT ───────────────────────
 
 let started = false;
@@ -216,12 +283,17 @@ export function startBackgroundSchedulers(): void {
   const runCartTick = async () => {
     try { await cartRecoveryTick(); } catch (e: any) { console.warn('[CartDrainer] tick:', e?.message); }
   };
+  const runStockTick = async () => {
+    try { await stockAlertTick(); } catch (e: any) { console.warn('[StockAlertDrainer] tick:', e?.message); }
+  };
 
   // First pass shortly after boot, then intervals (unref so shutdown is clean)
   setTimeout(runTicks, 20_000).unref?.();
   setInterval(runTicks, TICK_MS).unref?.();
   setTimeout(runCartTick, 90_000).unref?.();
   setInterval(runCartTick, CART_TICK_MS).unref?.();
+  setTimeout(runStockTick, 120_000).unref?.();
+  setInterval(runStockTick, CART_TICK_MS).unref?.();
 
-  console.log('[BackgroundSchedulers] started — drip (60s), reminders (60s), cart recovery (15min)');
+  console.log('[BackgroundSchedulers] started — drip (60s), reminders (60s), cart recovery (15min), stock alerts (15min)');
 }

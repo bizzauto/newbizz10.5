@@ -1356,59 +1356,89 @@ const ChatView: React.FC<{
                     <div>
                       <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Quick Actions</h4>
                       <div className="grid grid-cols-2 gap-2">
-                        <button className="flex items-center gap-2 p-2.5 bg-blue-50 rounded-lg text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100">
+                        <button
+                          onClick={async () => {
+                            try {
+                              await apiClient.post('/contacts', {
+                                name: selectedContact.name,
+                                phone: selectedContact.phone,
+                                source: 'whatsapp',
+                                whatsappOptIn: true,
+                              });
+                              alert('Contact saved to CRM');
+                            } catch (e: any) {
+                              alert(e?.response?.data?.error || 'Contact may already exist in CRM');
+                            }
+                          }}
+                          className="flex items-center gap-2 p-2.5 bg-blue-50 rounded-lg text-xs font-medium text-blue-700 dark:text-blue-300 hover:bg-blue-100"
+                        >
                           <Users size={14} /> Add to CRM
                         </button>
-                        <button className="flex items-center gap-2 p-2.5 bg-orange-50 rounded-lg text-xs font-medium text-orange-700 dark:text-orange-300 hover:bg-orange-100">
+                        <button onClick={() => onNavigate('broadcast')} className="flex items-center gap-2 p-2.5 bg-orange-50 rounded-lg text-xs font-medium text-orange-700 dark:text-orange-300 hover:bg-orange-100">
                           <Radio size={14} /> Broadcast
                         </button>
-                        <button className="flex items-center gap-2 p-2.5 bg-purple-50 rounded-lg text-xs font-medium text-purple-700 dark:text-purple-300 hover:bg-purple-100">
+                        <button onClick={() => onNavigate('chatbot')} className="flex items-center gap-2 p-2.5 bg-purple-50 rounded-lg text-xs font-medium text-purple-700 dark:text-purple-300 hover:bg-purple-100">
                           <Bot size={14} /> AI Chat
                         </button>
-                        <button className="flex items-center gap-2 p-2.5 bg-red-50 rounded-lg text-xs font-medium text-red-700 hover:bg-red-100">
+                        <button
+                          onClick={() => {
+                            const flag = 'whatsapp-blocked';
+                            if (!selectedContact.tags.includes(flag)) {
+                              selectedContact.tags.push(flag);
+                              apiClient.put(`/contacts/${selectedContact.id}`, { tags: selectedContact.tags }).catch(() => {});
+                            }
+                            alert('Contact marked as blocked in CRM (WhatsApp-blocked tag added)');
+                          }}
+                          className="flex items-center gap-2 p-2.5 bg-red-50 rounded-lg text-xs font-medium text-red-700 hover:bg-red-100"
+                        >
                           <VolumeX size={14} /> Block
                         </button>
                       </div>
                     </div>
 
-                    {/* CRM Info */}
-                    <div>
-                      <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">CRM Details</h4>
-                      <div className="space-y-2 text-sm">
-                        <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">Stage:</span><span className="font-medium text-green-600 dark:text-green-400">Contacted</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">Deal Value:</span><span className="font-medium">?50,000</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">Source:</span><span className="font-medium">WhatsApp</span></div>
-                        <div className="flex justify-between"><span className="text-gray-500 dark:text-gray-400">Created:</span><span className="font-medium">Mar 15, 2024</span></div>
-                      </div>
-                    </div>
-
-                    {/* Media */}
+                    {/* Shared Media — real media from this conversation */}
                     <div>
                       <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Shared Media</h4>
-                      <div className="grid grid-cols-3 gap-1.5">
-                        {[1, 2, 3].map(i => (
-                          <div key={i} className="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center">
-                            <ImageIcon size={20} className="text-gray-400" />
+                      {(() => {
+                        const media = messages.filter(m => (m.type === 'image' || m.type === 'video') && m.mediaUrl);
+                        if (media.length === 0) return <p className="text-xs text-gray-400">No media shared yet</p>;
+                        return (
+                          <div className="grid grid-cols-3 gap-1.5">
+                            {media.slice(-9).reverse().map(m => (
+                              <a key={m.id} href={m.mediaUrl} target="_blank" rel="noreferrer" className="aspect-square bg-gray-100 dark:bg-gray-700 rounded-lg flex items-center justify-center overflow-hidden">
+                                {m.type === 'image'
+                                  ? <img src={m.mediaUrl} alt="" className="w-full h-full object-cover" />
+                                  : <Video size={20} className="text-gray-400" />}
+                              </a>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        );
+                      })()}
                     </div>
 
-                    {/* Activity */}
+                    {/* Recent Activity — real message timestamps from this chat */}
                     <div>
                       <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase mb-2">Recent Activity</h4>
-                      <div className="space-y-2">
-                        {[
-                          { action: 'Message received', time: '2 min ago', icon: <MessageSquare size={12} /> },
-                          { action: 'Tag added: Hot Lead', time: '1 hour ago', icon: <Tag size={12} /> },
-                          { action: 'Added to pipeline', time: '2 hours ago', icon: <Users size={12} /> },
-                        ].map((act, i) => (
-                          <div key={i} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
-                            <div className="w-6 h-6 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-400">{act.icon}</div>
-                            <div className="flex-1"><p className="font-medium text-gray-700 dark:text-gray-200">{act.action}</p><p className="text-gray-400">{act.time}</p></div>
+                      {(() => {
+                        const acts = [
+                          ...messages.slice(-6).reverse().map(m => ({
+                            action: m.direction === 'inbound' ? 'Message received' : (m.type === 'text' ? 'Message sent' : `Sent ${m.type}`),
+                            time: m.time,
+                            icon: <MessageSquare size={12} />,
+                          })),
+                        ];
+                        if (acts.length === 0) return <p className="text-xs text-gray-400">No activity yet</p>;
+                        return (
+                          <div className="space-y-2">
+                            {acts.map((act, i) => (
+                              <div key={i} className="flex items-center gap-2 text-xs text-gray-600 dark:text-gray-300">
+                                <div className="w-6 h-6 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center text-gray-400">{act.icon}</div>
+                                <div className="flex-1"><p className="font-medium text-gray-700 dark:text-gray-200">{act.action}</p><p className="text-gray-400">{act.time}</p></div>
+                              </div>
+                            ))}
                           </div>
-                        ))}
-                      </div>
+                        );
+                      })()}
                     </div>
                   </div>
                 </div>

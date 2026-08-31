@@ -746,7 +746,7 @@ export class EvolutionApiService {
     businessId: string,
     to: string,
     message: string,
-    options: { delay?: number; linkPreview?: boolean; applyAntiBan?: boolean; rotate?: boolean } = {}
+    options: { delay?: number; linkPreview?: boolean; applyAntiBan?: boolean; rotate?: boolean; contactId?: string } = {}
   ): Promise<any> {
     const config = await this.getSendTarget(businessId, options.rotate === true);
     const isGroup = isGroupJid(to);
@@ -778,14 +778,14 @@ export class EvolutionApiService {
       );
 
       await prisma.message.create({
-        data: { businessId, direction: 'outbound', type: 'text', content: rendered, waMessageId: response.data?.key?.id, status: 'sent' },
+        data: { businessId, contactId: options.contactId, direction: 'outbound', type: 'text', content: rendered, waMessageId: response.data?.key?.id, status: 'sent' },
       });
       await prisma.business.update({ where: { id: businessId }, data: { totalMessages: { increment: 1 } } });
 
       return response.data;
     } catch (error: any) {
       await prisma.message.create({
-        data: { businessId, direction: 'outbound', type: 'text', content: rendered, status: 'failed', error: error.response?.data?.message || error.message },
+        data: { businessId, contactId: options.contactId, direction: 'outbound', type: 'text', content: rendered, status: 'failed', error: error.response?.data?.message || error.message },
       });
       throw error;
     }
