@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { CreditCard, Download, CheckCircle, ArrowUpRight, FileText, RefreshCw, Loader2, AlertCircle, Bell } from 'lucide-react';
-import { billingAPI, subscriptionsAPI, analyticsAPI } from '../lib/api';
+import apiClient, { billingAPI, subscriptionsAPI, analyticsAPI } from '../lib/api';
 import { useAuthStore } from '../lib/authStore';
 import ConfirmDialog from './ConfirmDialog';
 
@@ -265,7 +265,22 @@ const BillingPage: React.FC = () => {
               <p className="text-sm text-gray-500">No payment method on file</p>
             </div>
           )}
-          <button onClick={() => showToast('Payment settings page coming soon', 'info')} className="w-full py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50">Change Card</button>
+          <button
+            onClick={async () => {
+              const method = prompt('Payment method reference (UPI ID ya card last-4). e.g. "upi:bizzauto@upi" ya "4242"');
+              if (!method) return;
+              try {
+                await apiClient.put('/subscriptions/payment-method', { paymentMethodId: method });
+                showToast('Payment method updated', 'success');
+                loadBilling();
+              } catch (e: any) {
+                showToast(e?.response?.data?.error || 'Failed to update payment method', 'error');
+              }
+            }}
+            className="w-full py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            Change Card
+          </button>
           <div className="mt-4 pt-4 border-t border-gray-100">
             <h4 className="text-sm font-medium text-gray-700 mb-2">Billing Cycle</h4>
             <div className="flex gap-2">
