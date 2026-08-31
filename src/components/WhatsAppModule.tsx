@@ -2409,12 +2409,64 @@ const WhatsAppSettingsView: React.FC = () => {
 // ============================================================
 
 const CampaignsView: React.FC = () => {
-  const campaigns = [
-    { id: 'c1', name: 'Diwali Sale 2024', status: 'active', sent: 1250, delivered: 1200, read: 890, replied: 156, template: 'diwali_offer', createdAt: '2 days ago' },
-    { id: 'c2', name: 'New Year Greetings', status: 'scheduled', sent: 0, delivered: 0, read: 0, replied: 0, template: 'welcome_message', createdAt: '1 day ago' },
-    { id: 'c3', name: 'Flash Sale Weekend', status: 'completed', sent: 800, delivered: 780, read: 650, replied: 120, template: 'welcome_message', createdAt: '5 days ago' },
-    { id: 'c4', name: 'Follow-up Drip', status: 'draft', sent: 0, delivered: 0, read: 0, replied: 0, template: 'feedback_request', createdAt: '3 hours ago' },
-  ];
+  const toast = useToast();
+  interface CampaignRow {
+    id: string; name: string; status: string; type: string;
+    totalSent: number; delivered: number; read: number; replied: number;
+    templateName?: string | null; createdAt: string; scheduledAt?: string | null;
+  }
+  const [campaigns, setCampaigns] = useState<CampaignRow[]>([]);
+  const [stats, setStats] = useState({ totalSent: 0, deliveryRate: 0, read: 0, replied: 0, activeCampaigns: 0 });
+  const [loading, setLoading] = useState(true);
+  const [showCreate, setShowCreate] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [form, setForm] = useState({ name: '', type: 'drip', content: '', scheduledAt: '' });
+
+  const load = useCallback(async () => {
+    try {
+      const [listRes, statsRes] = await Promise.allSettled([
+        apiClient.get('/campaigns?limit=50'),
+        apiClient.get('/campaigns/stats/summary'),
+      ]);
+      if (listRes.status === 'fulfilled') {
+        const rows = listRes.value?.data?.data?.campaigns || [];
+        setCampaigns(rows.map((c: any) => ({
+          id: c.id, name: c.name, status: c.status, type: c.type,
+          totalSent: c.totalSent || 0, delivered: c.delivered || 0, read: c.read || 0, replied: c.replied || 0,
+          templateName: c.templateName, createdAt: new Date(c.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }),
+          scheduledAt: c.scheduledAt,
+        })));
+      }
+      if (statsRes.status === 'fulfilled') {
+        setStats(statsRes.value?.data?.data || stats);
+      }
+    } catch { /* keep previous */ }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const createCampaign = async () => {
+    if (!form.name.trim()) return;
+    setCreating(true);
+    try {
+      await apiClient.post('/campaigns', {
+        name: form.name,
+        type: form.type,
+        content: { message: form.content || form.name },
+        dripSteps: form.type === 'drip' ? [{ message: form.content || form.name, delay_hours: 0 }] : undefined,
+        ...(form.scheduledAt ? { scheduledAt: new Date(form.scheduledAt).toISOString() } : {}),
+      });
+      toast.success('Campaign created');
+      setShowCreate(false);
+      setForm({ name: '', type: 'drip', content: '', scheduledAt: '' });
+      await load();
+    } catch (e: any) {
+      toast.error(e?.response?.data?.error || 'Failed to create campaign');
+    } finally {
+      setCreating(false);
+    }
+  };
 
   const statusConfig: Record<string, { color: string; bg: string }> = {
     active: { color: 'text-green-700 dark:text-green-300', bg: 'bg-green-100' },
@@ -2429,38 +2481,74 @@ const CampaignsView: React.FC = () => {
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><Zap size={22} className="text-yellow-500" /> Campaigns</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Manage your drip campaigns and automated sequences</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Drip campaigns &amp; automated sequences — rotation + anti-ban auto-applied</p>
           </div>
-          <button className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium flex items-center gap-2">
+          <button onClick={() => setShowCreate(true)} className="px-4 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 font-medium flex items-center gap-2">
             <Plus size={18} /> New Campaign
           </button>
         </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-4 sm:p-5 md:p-6">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3 sm:gap-4 mb-6">
+        {/* Create form */}
+        {showCreate && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 mb-6 space-y-3">
+            <h3 className="font-semibold text-gray-900 dark:text-white">New Campaign</h3>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <input value={form.name} onChange={e => setForm(p => ({ ...p, name: e.target.value }))} placeholder="Campaign name e.g. Navratri Offer" className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm" />
+              <select value={form.type} onChange={e => setForm(p => ({ ...p, type: e.target.value }))} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm">
+                <option value="drip">Drip (scheduled steps)</option>
+                <option value="broadcast">Broadcast (send now)</option>
+              </select>
+            </div>
+            <textarea rows={3} value={form.content} onChange={e => setForm(p => ({ ...p, content: e.target.value }))} placeholder="Message — {Hi|Hello} {name}! spintax + personalization supported" className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm" />
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+              <input type="datetime-local" value={form.scheduledAt} onChange={e => setForm(p => ({ ...p, scheduledAt: e.target.value }))} className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm" />
+              <button onClick={createCampaign} disabled={creating || !form.name.trim()} className="px-5 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600 disabled:opacity-50">
+                {creating ? 'Creating…' : 'Create Campaign'}
+              </button>
+              <button onClick={() => setShowCreate(false)} className="px-4 py-2 text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+            </div>
+            <p className="text-xs text-gray-400">Targeting contacts/tags set karna ho to full Campaigns page use karo — yahan se quick campaign ban jayega (targetTags ke bina sab opted-in contacts ko queue hota hai jab dispatch hoga).</p>
+          </div>
+        )}
+
+        {/* Summary Cards — real numbers */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3 sm:gap-4 mb-6">
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 text-center">
-            <p className="text-xl sm:text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400">2,050</p>
+            <p className="text-xl sm:text-2xl sm:text-3xl font-bold text-green-600 dark:text-green-400">{stats.totalSent.toLocaleString()}</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">Total Sent</p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 text-center">
-            <p className="text-xl sm:text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">96.5%</p>
+            <p className="text-xl sm:text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">{stats.deliveryRate}%</p>
             <p className="text-sm text-gray-500 dark:text-gray-400">Delivery Rate</p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 text-center">
-            <p className="text-xl sm:text-2xl sm:text-3xl font-bold text-purple-600 dark:text-purple-400">72.8%</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Read Rate</p>
+            <p className="text-xl sm:text-2xl sm:text-3xl font-bold text-purple-600 dark:text-purple-400">{stats.read.toLocaleString()}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Read</p>
           </div>
           <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 text-center">
-            <p className="text-xl sm:text-2xl sm:text-3xl font-bold text-orange-600 dark:text-orange-300">13.4%</p>
-            <p className="text-sm text-gray-500 dark:text-gray-400">Reply Rate</p>
+            <p className="text-xl sm:text-2xl sm:text-3xl font-bold text-orange-600 dark:text-orange-300">{stats.replied.toLocaleString()}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Replied</p>
+          </div>
+          <div className="bg-white dark:bg-gray-800 rounded-xl p-4 border border-gray-200 dark:border-gray-700 text-center">
+            <p className="text-xl sm:text-2xl sm:text-3xl font-bold text-emerald-600 dark:text-emerald-400">{stats.activeCampaigns}</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400">Active</p>
           </div>
         </div>
 
         {/* Campaigns List */}
         <div className="space-y-3">
-          {campaigns.map(campaign => (
+          {loading ? (
+            <div className="text-center py-10 text-gray-400 text-sm">Loading campaigns…</div>
+          ) : campaigns.length === 0 ? (
+            <div className="text-center py-14 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
+              <Zap size={44} className="mx-auto text-gray-300 mb-3" />
+              <h3 className="font-semibold text-gray-900 dark:text-white mb-1">No campaigns yet</h3>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Pehla campaign banao — drip ya broadcast</p>
+              <button onClick={() => setShowCreate(true)} className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600">+ New Campaign</button>
+            </div>
+          ) : campaigns.map(campaign => (
             <div key={campaign.id} className="bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700 p-5 hover:shadow-md transition-shadow">
               <div className="flex items-center justify-between mb-3">
                 <div className="flex items-center gap-3">
@@ -2469,18 +2557,15 @@ const CampaignsView: React.FC = () => {
                   </div>
                   <div>
                     <h4 className="font-semibold text-gray-900 dark:text-white">{campaign.name}</h4>
-                    <p className="text-xs text-gray-500 dark:text-gray-400">Created {campaign.createdAt} � Template: {campaign.template.replace(/_/g, ' ')}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400">{campaign.type} · Created {campaign.createdAt}{campaign.scheduledAt ? ` · Scheduled ${new Date(campaign.scheduledAt).toLocaleString('en-IN', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })}` : ''}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <span className={`text-xs font-semibold px-3 py-1 rounded-full ${statusConfig[campaign.status]?.bg} ${statusConfig[campaign.status]?.color}`}>{campaign.status}</span>
-                  <button className="p-1.5 hover:bg-gray-100 dark:hover:bg-gray-700 dark:bg-gray-700 rounded-lg"><MoreVertical size={16} className="text-gray-500 dark:text-gray-400" /></button>
-                </div>
+                <span className={`text-xs font-semibold px-3 py-1 rounded-full ${statusConfig[campaign.status]?.bg} ${statusConfig[campaign.status]?.color}`}>{campaign.status}</span>
               </div>
 
-              {campaign.sent > 0 && (
+              {campaign.totalSent > 0 && (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5 sm:gap-3">
-                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2.5 text-center"><p className="text-lg font-bold text-blue-600 dark:text-blue-400">{campaign.sent.toLocaleString()}</p><p className="text-xs text-gray-500 dark:text-gray-400">Sent</p></div>
+                  <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-2.5 text-center"><p className="text-lg font-bold text-blue-600 dark:text-blue-400">{campaign.totalSent.toLocaleString()}</p><p className="text-xs text-gray-500 dark:text-gray-400">Sent</p></div>
                   <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-2.5 text-center"><p className="text-lg font-bold text-green-600 dark:text-green-400">{campaign.delivered.toLocaleString()}</p><p className="text-xs text-gray-500 dark:text-gray-400">Delivered</p></div>
                   <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-2.5 text-center"><p className="text-lg font-bold text-purple-600 dark:text-purple-400">{campaign.read.toLocaleString()}</p><p className="text-xs text-gray-500 dark:text-gray-400">Read</p></div>
                   <div className="bg-orange-50 dark:bg-orange-900/20 rounded-lg p-2.5 text-center"><p className="text-lg font-bold text-orange-600 dark:text-orange-300">{campaign.replied.toLocaleString()}</p><p className="text-xs text-gray-500 dark:text-gray-400">Replied</p></div>
@@ -2493,7 +2578,6 @@ const CampaignsView: React.FC = () => {
     </div>
   );
 };
-
 // ============================================================
 // SCHEDULED MESSAGES VIEW
 // ============================================================

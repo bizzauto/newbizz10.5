@@ -9,6 +9,43 @@ import { outreachQueue } from '../workers/outreach.worker.js';
 const router = Router();
 
 // Get all campaigns
+// Real aggregate stats for the Campaigns dashboard
+router.get('/stats/summary', authenticate, async (req: any, res: any) => {
+  try {
+    const businessId = req.user.businessId;
+    const [totals, statusCounts] = await Promise.all([
+      prisma.message.aggregate({
+        where: { businessId, direction: 'outbound', campaignId: { not: null } },
+        _count: true,
+      }),
+      prisma.message.groupBy({
+        by: ['status'],
+        where: { businessId, direction: 'outbound', campaignId: { not: null } },
+        _count: true,
+      }),
+    ]);
+
+    const byStatus: Record<string, number> = {};
+    for (const s of statusCounts) byStatus[s.status] = s._count;
+    const totalSent = totals._count || 0;
+    const delivered = (byStatus.delivered || 0) + (byStatus.read || 0);
+
+    res.json({
+      success: true,
+      data: {
+        totalSent,
+        delivered,
+        read: byStatus.read || 0,
+        replied: 0, // reply attribution needs inbound campaign linkage — shown as 0 until then
+        deliveryRate: totalSent > 0 ? Math.round((delivered / totalSent) * 1000) / 10 : 0,
+        activeCampaigns: await prisma.campaign.count({ where: { businessId, status: 'active' } }),
+      },
+    });
+  } catch (error: any) {
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 router.get('/', authenticate, cacheResponse(30), async (req: any, res: any) => {
   try {
     const { page = 1, limit = 50, status, type } = req.query;
@@ -48,8 +85,7 @@ router.get('/', authenticate, cacheResponse(30), async (req: any, res: any) => {
         },
       },
     });
-  } catch (error: any) {
-    console.error('Get campaigns error:', error);
+  } catch (error: any) {    console.error('Get campaigns error:', error);
     res.status(500).json({
       success: false,
       error: 'Failed to fetch campaigns',
