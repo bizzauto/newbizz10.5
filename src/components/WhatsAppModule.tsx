@@ -1494,6 +1494,8 @@ const BroadcastView: React.FC = () => {
   const [dripRandomJitter, setDripRandomJitter] = useState(true);
   const [dripMaxPerHour, setDripMaxPerHour] = useState(50);
   const [dripMaxPerDay, setDripMaxPerDay] = useState(500);
+  const lastBroadcastResult = useRef<any>(null);
+  const broadcastError = useRef<string | null>(null);
 
   useEffect(() => {
     whatsappAPI.getContacts().then(res => {
@@ -1532,8 +1534,9 @@ const BroadcastView: React.FC = () => {
         .filter((c: WAContact) => selectedContacts.includes(c.id))
         .map((c: WAContact) => c.id);
       if (selectedTemplate && contactIds.length > 0) {
-        await whatsappAPI.sendBroadcast({
+        const res = await whatsappAPI.sendBroadcast({
           templateName: selectedTemplate.name,
+          textContent: selectedTemplate.content || selectedTemplate.name,
           contactIds,
           templateId: selectedTemplate.id,
           drip: dripEnabled ? {
@@ -1547,9 +1550,11 @@ const BroadcastView: React.FC = () => {
             maxPerDay: dripMaxPerDay,
           } : undefined,
         });
+        lastBroadcastResult.current = res?.data?.data || null;
       }
       setStep('sent');
-    } catch {
+    } catch (e: any) {
+      broadcastError.current = e?.response?.data?.error || 'Broadcast failed';
       setStep('sent');
     } finally {
       setIsSending(false);
@@ -1557,21 +1562,30 @@ const BroadcastView: React.FC = () => {
   };
 
   if (step === 'sent') {
+    const result: any = lastBroadcastResult.current;
+    const hasError = !!broadcastError.current;
     return (
       <div className="flex-1 flex items-center justify-center bg-gradient-to-br from-green-50 dark:from-gray-800 to-emerald-50 dark:to-gray-900">
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-xl dark:shadow-2xl p-10 max-w-md text-center">
-          <div className="w-20 h-20 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle size={40} className="text-green-500" />
+          <div className={`w-20 h-20 rounded-full flex items-center justify-center mx-auto mb-6 ${hasError ? 'bg-red-100' : 'bg-green-100'}`}>
+            {hasError ? <AlertCircle size={40} className="text-red-500" /> : <CheckCircle size={40} className="text-green-500" />}
           </div>
-          <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">Broadcast Sent! ??</h2>
-          <p className="text-gray-600 dark:text-gray-300 mb-2">Successfully sent to {selectedContacts.length} contacts</p>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">Template: {selectedTemplate?.name.replace(/_/g, ' ')}</p>
-          <div className="grid grid-cols-3 gap-3 mb-6">
-            <div className="bg-blue-50 dark:bg-blue-900/20 rounded-lg p-3"><p className="text-lg font-bold text-blue-600 dark:text-blue-400">{selectedContacts.length}</p><p className="text-xs text-gray-500 dark:text-gray-400">Sent</p></div>
-            <div className="bg-green-50 dark:bg-green-900/20 rounded-lg p-3"><p className="text-lg font-bold text-green-600 dark:text-green-400">{Math.floor(selectedContacts.length * 0.95)}</p><p className="text-xs text-gray-500 dark:text-gray-400">Delivered</p></div>
-            <div className="bg-purple-50 dark:bg-purple-900/20 rounded-lg p-3"><p className="text-lg font-bold text-purple-600 dark:text-purple-400">{Math.floor(selectedContacts.length * 0.72)}</p><p className="text-xs text-gray-500 dark:text-gray-400">Read</p></div>
-          </div>
-          <button onClick={() => { setStep('select'); setSelectedContacts([]); setSelectedTemplate(null); }} className="px-4 sm:px-5 md:px-6 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 font-medium">
+          {hasError ? (
+            <>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">Broadcast Failed</h2>
+              <p className="text-sm text-red-600 dark:text-red-400 mb-6">{broadcastError.current}</p>
+            </>
+          ) : (
+            <>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">Broadcast Queued! 🎉</h2>
+              <p className="text-gray-600 dark:text-gray-300 mb-2">{result?.queued ?? selectedContacts.length} contacts ke liye queue ho gaya</p>
+              {result?.estimatedTime && <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Estimated time: {result.estimatedTime}</p>}
+              {result?.channel && <p className="text-sm text-gray-500 dark:text-gray-400 mb-1">Channel: {result.channel === 'evolution' ? 'Evolution (WhatsApp Web)' : 'Meta Cloud API'}</p>}
+              {!!result?.skippedDailyLimit && <p className="text-sm text-amber-600 mb-2">{result.skippedDailyLimit} contacts skipped (daily limit)</p>}
+              <p className="text-xs text-gray-400 mb-6">Messages background mein staggered delay ke saath jayenge — anti-ban pacing applied</p>
+            </>
+          )}
+          <button onClick={() => { setStep('select'); setSelectedContacts([]); setSelectedTemplate(null); broadcastError.current = null; }} className="px-4 sm:px-5 md:px-6 py-3 bg-green-500 text-white rounded-xl hover:bg-green-600 font-medium">
             Send Another Broadcast
           </button>
         </div>

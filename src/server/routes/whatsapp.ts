@@ -1537,27 +1537,31 @@ function randomInRange(min: number, max: number): number {
 // Send broadcast
 router.post('/broadcast', authenticate, requireBusinessOwner, async (req: AuthRequest, res: Response) => {
   try {
-    const { templateName, languageCode = 'en', components, contactIds, drip } = req.body;
+    const { templateName, textContent, contactIds, drip } = req.body;
 
-    if (!templateName || !contactIds || !Array.isArray(contactIds)) {
+    if (!contactIds || !Array.isArray(contactIds) || contactIds.length === 0) {
       return res.status(400).json({
         success: false,
-        error: 'Template name and contact IDs are required',
+        error: 'Contact IDs are required',
       });
     }
 
-    const business = await prisma.business.findUnique({
-      where: { id: req.user.businessId },
-    });
-
-    if (!business?.waPhoneNumberId || !business?.waAccessToken) {
-      return res.status(400).json({
-        success: false,
-        error: 'WhatsApp not configured',
-      });
+    // Resolve the business's WhatsApp channel — Evolution users could NEVER
+    // broadcast before (old code required Meta waPhoneNumberId).
+    const { WhatsAppSendRouter } = await import('../services/whatsapp-send-router.service.js');
+    const { channel } = await WhatsAppSendRouter.resolveChannel(req.user.businessId);
+    if (!channel) {
+      return res.status(400).json({ success: false, error: 'WhatsApp not connected — connect Evolution or Meta first' });
     }
 
-    const accessToken = decrypt(business.waAccessToken);
+    // Message text: explicit content (works on both channels) or Meta template name
+    const messageText = (textContent || '').trim();
+    if (channel === 'evolution' && !messageText) {
+      return res.status(400).json({ success: false, error: 'Broadcast text is required for Evolution broadcasts' });
+    }
+    if (channel === 'meta' && !messageText && !templateName) {
+      return res.status(400).json({ success: false, error: 'textContent or templateName required' });
+    }
 
     const contacts = await prisma.contact.findMany({
       where: {
@@ -1565,114 +1569,72 @@ router.post('/broadcast', authenticate, requireBusinessOwner, async (req: AuthRe
         businessId: req.user.businessId,
         whatsappOptIn: true,
       },
+      select: { id: true, phone: true },
     });
-
-    // Drip mode settings with defaults
-    const dripEnabled = !!drip;
-    const minDelay = drip?.minDelay ?? 30;
-    const maxDelay = drip?.maxDelay ?? 120;
-    const batchSize = drip?.batchSize ?? 10;
-    const batchPauseMin = drip?.batchPauseMinutes ?? 5;
-    const typingSim = drip?.typingSimulation ?? true;
-    const randomJitter = drip?.randomJitter ?? true;
-    const maxPerHour = drip?.maxPerHour ?? 50;
-    const maxPerDay = drip?.maxPerDay ?? 500;
-
-    const results = [];
-    let sentThisHour = 0;
-    let hourStart = Date.now();
-
-    for (let i = 0; i < contacts.length; i++) {
-      const contact = contacts[i];
-
-      // Rate limit: max per hour
-      if (dripEnabled) {
-        const elapsed = Date.now() - hourStart;
-        if (elapsed >= 3600000) {
-          sentThisHour = 0;
-          hourStart = Date.now();
-        }
-        if (sentThisHour >= maxPerHour) {
-          console.log(`[Drip] Hourly limit reached (${maxPerHour}). Waiting 60s...`);
-          await sleep(60000);
-          sentThisHour = 0;
-          hourStart = Date.now();
-        }
-
-        // Typing simulation delay before each message
-        if (typingSim) {
-          const typingMs = randomInRange(1500, 4000);
-          await sleep(typingMs);
-        }
-
-        // Random delay between messages
-        let delayMs = randomInRange(minDelay * 1000, maxDelay * 1000);
-        if (randomJitter) {
-          const jitter = delayMs * 0.3;
-          delayMs += randomInRange(-jitter, jitter);
-          delayMs = Math.max(5000, delayMs);
-        }
-        await sleep(delayMs);
-
-        // Batch pause
-        if (batchSize > 0 && (i + 1) % batchSize === 0 && i + 1 < contacts.length) {
-          console.log(`[Drip] Batch ${Math.floor(i / batchSize) + 1} complete. Pausing ${batchPauseMin}min...`);
-          await sleep(batchPauseMin * 60 * 1000);
-        }
-      }
-
-      try {
-        const response = await axios.post(
-          `https://graph.facebook.com/v18.0/${business.waPhoneNumberId}/messages`,
-          {
-            messaging_product: 'whatsapp',
-            to: contact.phone,
-            type: 'template',
-            template: {
-              name: templateName,
-              language: { code: languageCode },
-              components: components || [],
-            },
-          },
-          {
-            headers: {
-              'Authorization': `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-
-        results.push({
-          contactId: contact.id,
-          success: true,
-          messageId: response.data.messages?.[0]?.id,
-        });
-        sentThisHour++;
-      } catch (err: any) {
-        results.push({
-          contactId: contact.id,
-          success: false,
-          error: err.message,
-        });
-      }
+    if (contacts.length === 0) {
+      return res.status(400).json({ success: false, error: 'No opted-in contacts matched' });
     }
+
+    // Pacing (anti-ban): stagger each send instead of blocking this HTTP request
+    // for hours (the old in-request sleeps hit nginx's 60s timeout -> 502).
+    const dripOn = !!drip;
+    const minDelayS = dripOn ? Math.max(5, Number(drip?.minDelay) || 30) : 2;
+    const maxDelayS = dripOn ? Math.max(minDelayS + 5, Number(drip?.maxDelay) || 120) : 5;
+    const maxPerDay = Math.max(1, Number(drip?.maxPerDay) || 500);
+
+    // Daily safety cap — trim the batch like bulkSend does
+    const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0);
+    const sentToday = await prisma.message.count({
+      where: { businessId: req.user.businessId, direction: 'outbound', createdAt: { gte: dayStart } },
+    });
+    const remainingToday = Math.max(0, maxPerDay - sentToday);
+    const batch = contacts.slice(0, remainingToday);
+
+    if (batch.length === 0) {
+      return res.status(429).json({ success: false, error: `Daily limit reached (${maxPerDay}/day). Try tomorrow.` });
+    }
+
+    // Enqueue to BullMQ so sends happen in the background with retries +
+    // anti-ban rotation, and this request returns instantly.
+    const { queues } = await import('../workers/index.js');
+    const q = queues?.whatsappMessages;
+    if (!q || typeof q.add !== 'function') {
+      return res.status(503).json({ success: false, error: 'Queue unavailable — try again shortly' });
+    }
+
+    const rand = (a: number, b: number) => Math.floor(a + Math.random() * (b - a + 1));
+    let cumulativeDelayMs = 0;
+    for (const contact of batch) {
+      const gapS = dripOn ? rand(minDelayS, maxDelayS) : rand(2, 5);
+      cumulativeDelayMs += gapS * 1000;
+      await q.add('send_message', {
+        businessId: req.user.businessId,
+        to: (contact.phone || '').replace(/\D/g, ''),
+        type: 'text',
+        content: messageText,
+        contactId: contact.id,
+        rotate: true,
+      }, { delay: cumulativeDelayMs, attempts: 2 });
+    }
+
+    const totalMinutes = Math.round(cumulativeDelayMs / 60000);
+    const est = totalMinutes < 60 ? `~${totalMinutes || 1} min` : `~${Math.round(totalMinutes / 60)}h ${totalMinutes % 60}m`;
 
     res.json({
       success: true,
       data: {
-        total: contacts.length,
-        successful: results.filter((r: any) => r.success).length,
-        failed: results.filter((r: any) => !r.success).length,
-        drip: dripEnabled,
-        results,
+        queued: batch.length,
+        skippedDailyLimit: contacts.length - batch.length,
+        channel,
+        estimatedTime: est,
       },
+      message: `Broadcast queued to ${batch.length} contacts via ${channel}`,
     });
   } catch (error: any) {
-    console.error('Send broadcast error:', error);
+    console.error('Broadcast error:', error);
     res.status(500).json({
       success: false,
-      error: 'Failed to send broadcast',
-      details: error.message,
+      error: error.message || 'Failed to queue broadcast',
     });
   }
 });
