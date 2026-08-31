@@ -25,6 +25,16 @@ export const publicRouter = Router();
 
 publicRouter.get("/:slug", async (req: Request, res: Response) => {
   try {
+    // Permissive CSP for THIS self-contained page only. The global helmet CSP
+    // blocks inline scripts; this page ships its own <script> (rating gate).
+    // Set INSIDE the handler — global helmet middleware has already run, so
+    // this setHeader is the final value (an app-level middleware placed before
+    // helmet was silently overwritten — that's why stars were dead).
+    res.setHeader(
+      "Content-Security-Policy",
+      "default-src 'self'; script-src 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https:; frame-ancestors 'none'"
+    );
+
     let qr = await prisma.reviewQRCode.findUnique({
       where: { slug: req.params.slug },
       include: { business: { select: { reviewQrNegativeRedirectUrl: true } } },
