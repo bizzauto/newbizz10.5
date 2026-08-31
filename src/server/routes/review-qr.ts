@@ -103,10 +103,10 @@ publicRouter.get("/:slug", async (req: Request, res: Response) => {
       p{color:#64748b;font-size:14px;margin:0 0 16px}
       .step{display:none}.step.active{display:block}
       .stars{display:flex;justify-content:center;gap:8px;margin:20px 0}
-      .star{font-size:36px;text-decoration:none;color:#cbd5e1;transition:transform .1s,color .1s;display:inline-block;padding:4px;cursor:pointer}
-      .star:hover{transform:scale(1.25);color:#f59e0b}
-      .star.selected{color:#f59e0b}
-      .star.selected~.star{color:#cbd5e1}
+      .star{font-size:36px;text-decoration:none;color:#cbd5e1;transition:transform .1s,color .1s,text-shadow .1s;display:inline-block;padding:4px;cursor:pointer}
+      .star:hover{transform:scale(1.15)}
+      .star.selected{color:#f59e0b;text-shadow:0 0 10px rgba(245,158,11,.55)}
+      .star.selected~.star{color:#cbd5e1;text-shadow:none}
       a{border-radius:12px}
       .actions{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:20px}
       .btn{display:inline-flex;align-items:center;gap:6px;padding:12px 20px;font-size:14px;font-weight:600;text-decoration:none;border:none;cursor:pointer}
@@ -241,6 +241,26 @@ publicRouter.get("/:slug", async (req: Request, res: Response) => {
           }, 300);
         });
       });
+
+      // --- Hover preview: light ALL stars up to the hovered one (previously
+      //     only the hovered star glowed — CSS :hover can't light preceding
+      //     siblings, so this needs JS) ---
+      var starsWrap = document.getElementById('stars');
+      document.querySelectorAll('#stars .star').forEach(function(star) {
+        star.addEventListener('mouseenter', function() {
+          var v = parseInt(star.dataset.value);
+          document.querySelectorAll('#stars .star').forEach(function(s) {
+            s.classList.toggle('selected', parseInt(s.dataset.value) <= v);
+          });
+        });
+      });
+      if (starsWrap) {
+        starsWrap.addEventListener('mouseleave', function() {
+          document.querySelectorAll('#stars .star').forEach(function(s) {
+            s.classList.toggle('selected', parseInt(s.dataset.value) <= selectedRating);
+          });
+        });
+      }
 
       // --- Render suggestion cards (4-5 star path) ---
       function renderSuggestions() {
