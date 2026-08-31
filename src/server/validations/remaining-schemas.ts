@@ -48,15 +48,37 @@ export const createTriggerLinkSchema = z.object({
   originalUrl: z.string().url('Must be a valid URL'),
   campaignId: z.string().optional(),
   workflowId: z.string().optional(),
-  tags: z.array(z.string()).optional(),
-}).strict();
+  // Frontend sends comma-separated string OR array — normalize to array
+  tags: z.union([z.string(), z.array(z.string())]).optional()
+    .transform((v) =>
+      Array.isArray(v)
+        ? v.map((s) => String(s).trim()).filter(Boolean)
+        : String(v || '').split(',').map((s) => s.trim()).filter(Boolean)
+    ),
+  // Frontend sends shortCode/customShortCode (custom short code)
+  shortCode: z.string().max(50).optional(),
+  customShortCode: z.string().max(50).optional(),
+  // Trigger type chosen in the UI (e.g. sms_click, form_submission) — stored
+  // as a namespaced tag so it survives without a schema migration
+  automationTrigger: z.string().max(50).optional(),
+  isActive: z.boolean().optional(),
+});
 
 export const updateTriggerLinkSchema = z.object({
   name: z.string().min(1).max(200).optional(),
   originalUrl: z.string().url().optional(),
   isActive: z.boolean().optional(),
-  tags: z.array(z.string()).optional(),
-}).strict();
+  tags: z.union([z.string(), z.array(z.string())]).optional()
+    .transform((v) =>
+      Array.isArray(v)
+        ? v.map((s) => String(s).trim()).filter(Boolean)
+        : String(v || '').split(',').map((s) => s.trim()).filter(Boolean)
+    )
+    .optional(),
+  campaignId: z.string().optional(),
+  workflowId: z.string().optional(),
+  automationTrigger: z.string().max(50).optional(),
+});
 
 // ==================== SUPPORT TICKETS VALIDATION ====================
 

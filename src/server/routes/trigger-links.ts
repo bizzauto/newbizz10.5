@@ -163,10 +163,19 @@ router.get('/:id', authenticate, async (req: AuthRequest, res: Response) => {
 router.post('/', authenticate, validate(createTriggerLinkSchema), async (req: AuthRequest, res: Response) => {
   try {
     const businessId = (req as any).user.businessId;
-    const { name, originalUrl, campaignId, workflowId, tags, customShortCode } = req.body;
+    const { name, originalUrl, campaignId, workflowId, tags, automationTrigger } = req.body;
+    // Frontend sends shortCode; schema also allows customShortCode (legacy)
+    const customShortCode = req.body.shortCode || req.body.customShortCode;
 
     if (!name || !originalUrl) {
       return res.status(400).json({ success: false, error: 'Name and original URL are required' });
+    }
+
+    // automationTrigger (UI dropdown) is stored as a namespaced tag so it
+    // survives without a schema migration and shows up in the tags UI.
+    const finalTags: string[] = [...(tags || [])];
+    if (automationTrigger && !finalTags.includes(`trigger:${automationTrigger}`)) {
+      finalTags.push(`trigger:${automationTrigger}`);
     }
 
     // Generate or validate shortCode
@@ -204,7 +213,7 @@ router.post('/', authenticate, validate(createTriggerLinkSchema), async (req: Au
         originalUrl,
         campaignId: campaignId || null,
         workflowId: workflowId || null,
-        tags: tags || [],
+        tags: finalTags,
       },
     });
 
@@ -391,6 +400,114 @@ router.get('/:id/clicks', authenticate, async (req: AuthRequest, res: Response) 
   }
 });
 
+// GET /api/trigger-links/:id/analytics — aggregate shape the frontend expects
+// (GET /:id/clicks above returns raw rows; the UI consumes this summary shape:
+// timeline/devices/browsers/referrers/totalClicks/uniqueVisitors/etc.)
+router.get('/:id/analytics', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const businessId = (req as any).user.businessId;
+
+    const link = await prisma.triggerLink.findFirst({
+      where: { id, businessId },
+    });
+    if (!link) {
+      return res.status(404).json({ success: false, error: 'Trigger link not found' });
+    }
+
+    const allClicks = await prisma.triggerLinkClick.findMany({
+      where: { linkId: id },
+      select: { device: true, browser: true, country: true, referer: true, ipAddress: true, userAgent: true, clickedAt: true },
+    });
+
+    const toMap = (arr: (string | null)[]): Record<string, number> =>
+      arr.filter(Boolean).reduce((acc, v) => {
+        const k = (v as string) || 'unknown';
+        acc[k] = (acc[k] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+    const mapToArr = (m: Record<string, number>) =>
+      Object.entries(m).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value);
+
+    const deviceMap = toMap(allClicks.map((c) => c.device));
+    const browserMap = toMap(allClicks.map((c) => c.browser));
+    const countryMap = toMap(allClicks.map((c) => c.country));
+    const referrerMap = toMap(allClicks.map((c) => c.referer || 'direct'));
+
+    // Clicks per day for last 30 days
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 3600_000);
+    const timelineMap: Record<string, number> = {};
+    allClicks
+      .filter((c) => c.clickedAt >= thirtyDaysAgo)
+      .forEach((c) => {
+        const day = c.clickedAt.toISOString().split('T')[0];
+        timelineMap[day] = (timelineMap[day] || 0) + 1;
+      });
+    const timeline = Object.entries(timelineMap)
+      .map(([date, clicks]) => ({ date, clicks }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+
+    const totalClicks = allClicks.length;
+    const uniqueVisitors = new Set(allClicks.map((c) => c.ipAddress || c.userAgent || '')).size;
+    const top = (m: Record<string, number>) =>
+      Object.entries(m).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
+
+    res.json({
+      success: true,
+      data: {
+        timeline,
+        devices: mapToArr(deviceMap),
+        browsers: mapToArr(browserMap),
+        countries: mapToArr(countryMap),
+        referrers: mapToArr(referrerMap),
+        totalClicks,
+        uniqueVisitors,
+        avgClicksPerDay: totalClicks > 0 ? Math.round((totalClicks / Math.max(1, Math.ceil((Date.now() - new Date(link.createdAt).getTime()) / 86400_000))) * 10) / 10 : 0,
+        topCountry: top(countryMap),
+        topDevice: top(deviceMap),
+        topBrowser: top(browserMap),
+      },
+    });
+  } catch (error: any) {
+    console.error('Error getting link analytics:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+// GET /api/trigger-links/:id/qr — QR SVG for the tracking URL
+// (frontend triggerLinksAPI.qrCode expected this; it never existed)
+router.get('/:id/qr', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const { id } = req.params;
+    const link = await prisma.triggerLink.findFirst({
+      where: { id, businessId: (req as any).user.businessId },
+    });
+    if (!link) {
+      return res.status(404).json({ success: false, error: 'Trigger link not found' });
+    }
+
+    // tracking URL — same shape the public redirect serves
+    const baseUrl = process.env.FRONTEND_URL || `${req.protocol}://${req.get('host')}`;
+    const trackingUrl = `${baseUrl.replace(/\/$/, '')}/api/trigger-links/s/${link.shortCode}`;
+
+    const QRCode = (await import('qrcode')).default;
+    const svg = await QRCode.toString(trackingUrl, {
+      type: 'svg',
+      width: 512,
+      margin: 2,
+      color: { dark: '#000000', light: '#ffffff' },
+    });
+
+    res.setHeader('Content-Type', 'image/svg+xml');
+    res.setHeader('Content-Disposition', `inline; filename="trigger-link-${link.shortCode}.svg"`);
+    res.send(svg);
+  } catch (error: any) {
+    console.error('Error generating QR:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
 // Public redirect (no auth required)
 router.get('/s/:shortCode', async (req: AuthRequest, res: Response) => {
   try {
@@ -441,6 +558,31 @@ router.get('/s/:shortCode', async (req: AuthRequest, res: Response) => {
         },
       })
       .catch((err) => console.error('Error incrementing click count:', err));
+
+    // FIRE THE TRIGGER: emit a domain event so automations (workflows/n8n)
+    // can react to the click. The link's workflowId/campaignId/tags were
+    // stored but never used before — this is the actual "trigger" half.
+    import('../events/eventBus.js')
+      .then(({ emitEvent }) =>
+        emitEvent(
+          'triggerLink.clicked',
+          {
+            linkId: link.id,
+            linkName: link.name,
+            shortCode: link.shortCode,
+            originalUrl: link.originalUrl,
+            workflowId: link.workflowId,
+            campaignId: link.campaignId,
+            tags: link.tags,
+            device: parsed.device,
+            browser: parsed.browser,
+            referer: (req.headers['referer'] as string) || null,
+            clickedAt: new Date().toISOString(),
+          },
+          { businessId: link.businessId }
+        )
+      )
+      .catch((err) => console.warn('[TriggerLink] event emit failed:', err?.message));
 
     // Redirect to original URL
     res.redirect(302, link.originalUrl);
