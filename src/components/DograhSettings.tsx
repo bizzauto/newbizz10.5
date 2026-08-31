@@ -48,6 +48,8 @@ const DograhSettings: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [checking, setChecking] = useState(false);
   const [message, setMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
+  const businessId = typeof localStorage !== 'undefined' ? localStorage.getItem('businessId') || '' : '';
+  const webhookUrl = `${window.location.origin}/api/dograh/webhook/${businessId || ':YOUR_BUSINESS_ID'}`;
 
   useEffect(() => {
     loadSettings();
@@ -309,6 +311,31 @@ const DograhSettings: React.FC = () => {
                   >
                     Generate
                   </button>
+                </div>
+                {/* Webhook URL — MUST be configured in the Dograh dashboard or
+                    calls never complete (no transcript/duration/wallet sync). */}
+                <div className="mt-3 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-xl">
+                  <p className="text-xs font-semibold text-amber-700 dark:text-amber-300 mb-1">
+                    Webhook URL (paste this in your Dograh dashboard):
+                  </p>
+                  <div className="flex gap-2 items-center">
+                    <code className="flex-1 text-xs bg-white dark:bg-gray-800 px-2 py-1.5 rounded-lg border border-amber-200 dark:border-amber-800 break-all text-gray-700 dark:text-gray-300">
+                      {webhookUrl}
+                    </code>
+                    <button
+                      onClick={() => {
+                        navigator.clipboard.writeText(webhookUrl);
+                        setMessage({ type: 'success', text: 'Webhook URL copied!' });
+                        setTimeout(() => setMessage(null), 2000);
+                      }}
+                      className="px-3 py-1.5 text-xs font-medium text-amber-700 dark:text-amber-300 bg-white dark:bg-gray-800 border border-amber-200 dark:border-amber-800 rounded-lg hover:bg-amber-50"
+                    >
+                      Copy
+                    </button>
+                  </div>
+                  <p className="text-[11px] text-amber-600 dark:text-amber-400 mt-1.5">
+                    Dograh iske saath Webhook Secret bhi bhejega (X-Webhook-Signature header). Bina is webhook ke call transcripts, duration aur wallet deduction kaam nahi karenge.
+                  </p>
                 </div>
               </div>
 

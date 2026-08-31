@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+﻿import { useState, useRef, useEffect } from 'react';
 import { useToast } from '../components/Toast';
 import { Mic, MicOff, Copy, Trash2, Save, Clock, Check } from 'lucide-react';
 
@@ -9,13 +9,32 @@ interface VoiceNote {
   createdAt: string;
 }
 
+const NOTES_KEY = "bz-voice-notes";
+
+function loadNotes(): VoiceNote[] {
+  try {
+    const raw = localStorage.getItem(NOTES_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
 export default function VoiceToTextPage() {
   const toast = useToast();
   const [isRecording, setIsRecording] = useState(false);
   const [transcript, setTranscript] = useState('');
-  const [notes, setNotes] = useState<VoiceNote[]>([]);
+  const [notes, setNotes] = useState<VoiceNote[]>(loadNotes);
   const [copied, setCopied] = useState(false);
   const recognitionRef = useRef<any>(null);
+
+  // Persist notes to localStorage — previously they lived only in state and
+  // a page refresh silently deleted every saved note.
+  useEffect(() => {
+    try {
+      localStorage.setItem(NOTES_KEY, JSON.stringify(notes));
+    } catch { /* storage full — non-fatal */ }
+  }, [notes]);
 
   const startRecording = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
@@ -111,7 +130,7 @@ export default function VoiceToTextPage() {
           {isRecording ? <MicOff size={36} className="text-white" /> : <Mic size={36} className="text-white" />}
         </button>
         <p className="text-sm text-gray-500">
-          {isRecording ? '🔴 Recording... Click to stop' : 'Click to start recording'}
+          {isRecording ? 'ðŸ”´ Recording... Click to stop' : 'Click to start recording'}
         </p>
       </div>
 
