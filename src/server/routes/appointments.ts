@@ -337,6 +337,41 @@ router.delete('/:id', authenticate, async (req: AuthRequest, res: Response) => {
   }
 });
 
+// POST /:id/remind — send a WhatsApp reminder NOW (frontend "Send Reminder"
+// button called this endpoint but it never existed — 404 every time)
+router.post('/:id/remind', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const appointment = await prisma.appointment.findFirst({
+      where: { id: req.params.id, businessId: req.user.businessId },
+      include: { contact: { select: { id: true, name: true, phone: true } } },
+    });
+    if (!appointment) return res.status(404).json({ success: false, error: 'Appointment not found' });
+    if (!appointment.contact?.phone) {
+      return res.status(400).json({ success: false, error: 'Contact has no phone number' });
+    }
+
+    const when = appointment.startTime
+      ? new Date(appointment.startTime).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })
+      : 'your appointment';
+    const message = `Hi {name}! Reminder: your appointment${appointment.service ? ` (${appointment.service})` : ''} is scheduled for ${when}. See you then!`;
+
+    const { WhatsAppSendRouter } = await import('../services/whatsapp-send-router.service.js');
+    await WhatsAppSendRouter.sendText(req.user.businessId, appointment.contact.phone, message, {
+      contactId: appointment.contact.id,
+      applyAntiBan: false, // single deliberate send
+    });
+
+    const updated = await prisma.appointment.update({
+      where: { id: appointment.id },
+      data: { reminderSent: true },
+    });
+    res.json({ success: true, data: updated, message: 'Reminder sent via WhatsApp' });
+  } catch (error: any) {
+    console.error('Send appointment reminder error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to send reminder' });
+  }
+});
+
 // Confirm appointment
 router.patch('/:id/confirm', authenticate, async (req: AuthRequest, res: Response) => {
   try {

@@ -469,6 +469,66 @@ router.post('/:id/send', authenticate, requireRole('OWNER', 'ADMIN'), async (req
       });
     }
 
+    // ═══ EMAIL CAMPAIGNS ═══
+    // The old path queued an outreach send-bulk job that only reads
+    // outreachLog rows (which were never created here) AND sent via the
+    // WhatsApp router — so "email" campaigns either sent nothing or went out
+    // as WhatsApp texts. Email campaigns now send real emails.
+    if (campaign.type === 'email') {
+      const where: any = {
+        businessId: req.user.businessId,
+        email: { not: null },
+      };
+      if (campaign.targetTags && campaign.targetTags.length > 0) {
+        where.tags = { hasSome: campaign.targetTags };
+      }
+
+      const contacts = await prisma.contact.findMany({
+        where,
+        select: { id: true, name: true, email: true },
+        take: 200, // safety cap — bigger sends should use a proper mail service
+      });
+      if (contacts.length === 0) {
+        return res.status(400).json({ success: false, error: 'No contacts with email matched this campaign' });
+      }
+
+      const content = (campaign.content as any) || {};
+      const subject = content.subject || campaign.name;
+      const bodyText = content.message || campaign.name;
+
+      const { EmailService } = await import('../services/email.service.js');
+      let sent = 0;
+      let failed = 0;
+      for (const contact of contacts) {
+        try {
+          const html = `<p>Hi ${contact.name || 'there'},</p><p>${bodyText.replace(/\n/g, '<br/>')}</p>`
+            .replace(/\{name\}/gi, contact.name || 'there');
+          const result = await EmailService.sendEmail(contact.email!, subject, html);
+          if (result && result.success === false) failed++;
+          else sent++;
+        } catch {
+          failed++;
+        }
+      }
+
+      await prisma.campaign.update({
+        where: { id: campaign.id, businessId: req.user.businessId },
+        data: {
+          status: 'active',
+          startedAt: new Date(),
+          totalSent: { increment: sent },
+          targetContacts: contacts.length,
+        },
+      });
+
+      return res.json({
+        success: true,
+        message: `Email campaign: ${sent} sent, ${failed} failed`,
+        data: { contactCount: contacts.length, sent, failed, channel: 'email' },
+      });
+    }
+
+    // ═══ WHATSAPP / DEFAULT CAMPAIGNS ═══
     // Get target contacts
     const where: any = {
       businessId: req.user.businessId,
