@@ -517,6 +517,42 @@ router.post('/export/sheets', authenticate, async (req: AuthRequest, res: Respon
 });
 
 /**
+ * POST /api/leads/import/sheets
+ * Import leads FROM a Google Sheet into the Leads section.
+ * Sheet pehla row header hona chahiye (naam/phone/email/... kisi bhi order mein).
+ * Requires an active 'google_sheets' integration for the business (same as export).
+ */
+router.post('/import/sheets', authenticate, async (req: AuthRequest, res: Response) => {
+  try {
+    const businessId = req.user.businessId;
+    const { spreadsheetId, sheetName, range } = req.body || {};
+
+    if (!spreadsheetId) {
+      return res.status(400).json({
+        success: false,
+        error: 'spreadsheetId required — Google Sheet ka URL/ID paste karo (Sheet ko "Anyone with link: Viewer" share karna na bhoolna)',
+      });
+    }
+
+    const { GoogleSheetsService } = await import('../services/google-sheets.service.js');
+    const result = await GoogleSheetsService.importContacts(businessId, {
+      spreadsheetId,
+      ...(sheetName ? { sheetName } : {}),
+      ...(range ? { range } : {}),
+    });
+
+    res.json({
+      success: true,
+      message: `${result.imported} leads imported, ${result.skipped} skipped`,
+      data: result,
+    });
+  } catch (error: any) {
+    console.error('Sheets import error:', error);
+    res.status(500).json({ success: false, error: error.message });
+  }
+});
+
+/**
  * POST /api/leads/bulk-reply
  * Send bulk reply to leads via WhatsApp/Email/SMS
  */

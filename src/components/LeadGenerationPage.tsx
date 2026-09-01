@@ -34,6 +34,7 @@ export default function LeadGenerationPage(){
   const[loading,setLoading]=useState(true);
   const[showForm,setShowForm]=useState(false);
   const[showBulkAdd,setShowBulkAdd]=useState(false);
+  const[importingSheets,setImportingSheets]=useState(false);
   const[form,setForm]=useState<FormData>(EF);
   const[sel,setSel]=useState<Set<string>>(new Set());
   const[fSrc,setFSrc]=useState('all');
@@ -522,6 +523,52 @@ export default function LeadGenerationPage(){
             placeholder={`Rahul Sharma, 7972888023, rahul@gmail.com, indiamart, Hair Oil, Mumbai\nPriya Patel, 9876543211, priya@gmail.com, facebook_ads, Shampoo, Delhi\nAmit Kumar, 9876543212, , justdial, Face Cream, Bangalore`}
             className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white font-mono text-sm"
           />
+
+          {/* Google Sheet import — sheet ke columns header row: Name, Phone, Email, ... */}
+          <div className="border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/20 rounded-lg p-4">
+            <p className="text-sm font-medium text-blue-700 dark:text-blue-300 mb-2 flex items-center gap-1.5">Google Sheet se Import</p>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <input
+                id="sheetUrl"
+                type="text"
+                placeholder="https://docs.google.com/spreadsheets/d/..."
+                className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 text-gray-900 dark:text-white text-sm"
+              />
+              <button
+                onClick={async () => {
+                  const el = document.getElementById('sheetUrl') as HTMLInputElement;
+                  const raw = (el?.value || '').trim();
+                  if (!raw) { toast_('Sheet URL paste karo', 'error'); return; }
+                  const m = raw.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+                  const sid = m ? m[1] : raw;
+                  setImportingSheets(true);
+                  try {
+                    const token = localStorage.getItem('token');
+                    const r = await fetch(`${API}/leads/import/sheets`, {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+                      body: JSON.stringify({ spreadsheetId: sid }),
+                    });
+                    const d = await r.json();
+                    if (d.success) {
+                      toast_(d.message || 'Imported!', 'success');
+                      setShowBulkAdd(false);
+                      fetchLeads();
+                    } else toast_(d.error || 'Import failed', 'error');
+                  } catch { toast_('Import failed — Google Sheets connected hai? (Settings → Integrations)', 'error'); }
+                  setImportingSheets(false);
+                }}
+                disabled={importingSheets}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium disabled:opacity-50"
+              >
+                {importingSheets ? 'Importing…' : 'Import from Sheet'}
+              </button>
+            </div>
+            <p className="text-[11px] text-blue-500 dark:text-blue-400 mt-1.5">
+              Sheet ka pehla row headers ho (Name, Phone, Email, Company, ...). Sheet ko "Anyone with link: Viewer" share karna + Settings → Integrations → Google Sheets connected hona chahiye.
+            </p>
+          </div>
+
           <div className="flex justify-end gap-3">
             <button onClick={()=>setShowBulkAdd(false)} className="px-4 py-2 border border-gray-200 dark:border-gray-600 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 text-sm">Cancel</button>
             <button onClick={handleBulkAdd} className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm font-medium">Import Leads</button>
