@@ -1076,6 +1076,19 @@ export const settingsAPI = {
   }) => apiClient.put('/settings', data),
 };
 
+// ==================== BYOK: AI PROVIDER KEYS ====================
+export const aiKeysAPI = {
+  listProviders: () => apiClient.get('/ai/keys/providers'),
+  list: () => apiClient.get('/ai/keys'),
+  add: (data: { provider: string; key: string; label?: string; baseUrl?: string; defaultModel?: string }) =>
+    apiClient.post('/ai/keys', data),
+  update: (id: string, data: { label?: string; isActive?: boolean; priority?: number; defaultModel?: string; baseUrl?: string }) =>
+    apiClient.patch(`/ai/keys/${id}`, data),
+  remove: (id: string) => apiClient.delete(`/ai/keys/${id}`),
+  test: (id: string) => apiClient.post(`/ai/keys/${id}/test`),
+  status: () => apiClient.get('/ai/keys/status'),
+};
+
 // ==================== WORKFLOWS (Visual Builder) ====================
 export const workflowsAPI = {
   list: (params?: Record<string, any>) => apiClient.get('/workflows', { params }),

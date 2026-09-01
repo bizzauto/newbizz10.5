@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../lib/authStore';
 import { useToast } from '../components/Toast';
 import { businessAPI, authAPI, settingsAPI } from '../lib/api';
+import AiKeysPanel from './AiKeysPanel';
 import { Save, Building, Phone, Mail, MapPin, Globe, Clock, Palette, Image, Lock, Loader2, ArrowRight, ExternalLink } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -534,6 +535,9 @@ export default function SettingsPage() {
           </button>
         </div>
       </form>
+
+      {/* BYOK: Customer's own AI provider keys */}
+      <AiKeysPanel />
 
       {/* Social Media Connections */}
       <div className="mt-8 bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-4 sm:p-5 md:p-6 border border-gray-200 dark:border-gray-700">

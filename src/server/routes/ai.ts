@@ -1,6 +1,7 @@
 import { prisma } from '../db.js';
 import { authenticate } from '../middleware/auth.js';
 import { AIService } from '../services/ai.service.js';
+import { hasActiveUserKeys, completeWithUserKeys } from '../services/byok-ai.service.js';
 import axios from 'axios';
 import express, { Request, Response } from 'express';
 
@@ -19,6 +20,34 @@ router.post('/generate', authenticate, async (req: any, res: any) => {
     }
 
     const sanitizedPrompt = prompt;
+
+    // ── BYOK: try the customer's own keys first (no platform credits used) ──
+    try {
+      if (await hasActiveUserKeys(req.user.businessId)) {
+        const { result } = await completeWithUserKeys(
+          req.user.businessId,
+          [{ role: 'user', content: context ? `${context}\n\n${sanitizedPrompt}` : sanitizedPrompt }],
+          { maxTokens: 1000 }
+        );
+        if (result) {
+          return res.json({
+            success: true,
+            data: {
+              text: result.text,
+              model: result.model,
+              tokensUsed: result.tokensIn + result.tokensOut,
+              creditsDeducted: 0,
+              usedByok: true,
+              byokProvider: result.provider,
+              byokLabel: result.keyLabel,
+            },
+          });
+        }
+        // No user key succeeded → fall through to platform keys below.
+      }
+    } catch (byokError: any) {
+      console.warn('[AI] BYOK path failed, falling back to platform keys:', byokError?.message);
+    }
 
     const model = getOptimalModel(type);
     const response = await callAIProvider(model, sanitizedPrompt);
@@ -40,6 +69,7 @@ router.post('/generate', authenticate, async (req: any, res: any) => {
         model: model.model,
         tokensUsed,
         creditsDeducted: creditCost,
+        usedByok: false,
       },
     });
   } catch (error: any) {

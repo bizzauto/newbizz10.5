@@ -128,6 +128,7 @@ model Business {
   analyticsIntegration        AnalyticsIntegration?
   apiKeys                     ApiKey[]
   externalIntegrations        ExternalIntegration[]
+  aiProviderKeys              AiProviderKey[]
   appointments                Appointment[]
   appointmentReminders        AppointmentReminder[]
   auditLogs                   AuditLog[]
@@ -1613,6 +1614,34 @@ model ExternalIntegration {
   business        Business  @relation(fields: [businessId], references: [id])
 
   @@index([businessId, provider])
+  @@index([businessId])
+}
+
+// ==================== BYOK: User-owned AI provider keys ====================
+// Customers store their own free/paid keys (Groq, OpenRouter, Nvidia NIM, etc).
+// Keys are AES-256-GCM encrypted at rest via data-encryption.service.
+// Calls using BYOK keys bypass platform AI credits; platform keys remain the fallback.
+model AiProviderKey {
+  id              String    @id @default(cuid())
+  businessId      String
+  provider        String // "groq" | "openrouter" | "nvidia" | "openai" | "custom"
+  label           String // User-friendly name, e.g. "My Groq key"
+  keyEncrypted    String // AES-256-GCM encrypted via encryptData()
+  keyLast4        String // Last 4 chars for UI display (never expose full key)
+  baseUrl         String? // Optional override for custom/self-hosted providers
+  defaultModel    String? // Optional model override, e.g. "openai/gpt-oss-120b"
+  priority        Int       @default(0) // Lower = tried first
+  isActive        Boolean   @default(true)
+  // Health tracking (best-effort, in-memory breaker is primary)
+  lastUsedAt      DateTime?
+  lastError       String?
+  failCount       Int       @default(0)
+  totalRequests   Int       @default(0)
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  business        Business  @relation(fields: [businessId], references: [id])
+
+  @@index([businessId, isActive, priority])
   @@index([businessId])
 }
 

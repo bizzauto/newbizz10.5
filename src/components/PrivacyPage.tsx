@@ -5,7 +5,7 @@ const PrivacyPage: React.FC = () => (
   <div className="min-h-screen bg-gray-50">
     <div className="max-w-4xl mx-auto px-4 sm:px-6 md:px-8 py-8 sm:py-12 md:py-16">
       <h1 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2">Privacy Policy</h1>
-      <p className="text-sm sm:text-base text-gray-500 mb-6 sm:mb-8">Last updated: April 8, 2026</p>
+      <p className="text-sm sm:text-base text-gray-500 mb-6 sm:mb-8">Last updated: September 2, 2026</p>
 
       <div className="space-y-4 sm:space-y-6">
         {[
@@ -17,6 +17,7 @@ const PrivacyPage: React.FC = () => (
               'Communication data: WhatsApp messages, emails (with your consent)',
               'Payment data: processed securely through Razorpay (we do not store card details)',
               'Device info: IP address, browser, operating system',
+              'AI provider keys you voluntarily add (Bring Your Own Key) — see Section 8',
             ],
           },
           {
@@ -42,8 +43,8 @@ const PrivacyPage: React.FC = () => (
           {
             title: '4. Data Security',
             content: [
-              '256-bit AES encryption for sensitive data',
-              'JWT-based authentication with refresh tokens',
+              '256-bit AES-256-GCM encryption for sensitive data (including your AI provider keys)',
+              'JWT-based authentication with CSRF protection',
               'Regular security audits and penetration testing',
               'Role-based access control within your organization',
               'Audit logs for all data access and modifications',
@@ -57,6 +58,7 @@ const PrivacyPage: React.FC = () => (
               'Deletion: Request deletion of your data ("Right to be Forgotten")',
               'Export: Download your data in machine-readable format (CSV/JSON)',
               'Opt-out: Unsubscribe from marketing communications anytime',
+              'Withdraw consent for optional integrations (including AI keys) at any time',
             ],
           },
           {
@@ -76,17 +78,36 @@ const PrivacyPage: React.FC = () => (
             ],
           },
           {
-            title: '8. Third-Party Services',
+            title: '8. Your AI Provider Keys (Bring Your Own Key)',
+            content: [
+              'You may optionally connect your own API keys from third-party AI providers (e.g., Groq, OpenRouter, NVIDIA, OpenAI)',
+              'Keys are encrypted at rest using AES-256-GCM and never displayed in full after saving (only the last 4 characters)',
+              'Keys are used solely to process your own AI requests; they are not used for other customers, shared, or sold',
+              'Your prompt/content may be transmitted to the selected AI provider to fulfil your request — that provider processes it under its own privacy policy',
+              'You may view, deactivate, or permanently delete your keys anytime from Settings; deletion removes the encrypted key from our systems',
+              'We store usage metadata (request counts, latency, error summaries) for reliability and billing clarity, but never the key itself',
+            ],
+          },
+          {
+            title: '9. Third-Party Services',
             content: [
               'WhatsApp (Meta): Message delivery',
-              'OpenRouter/AI Providers: Content generation',
+              'AI Providers (Groq, OpenRouter, NVIDIA, OpenAI): Content generation — your prompts and our system prompts are processed by the provider whose key you use, or our platform keys when no BYOK key is active',
               'Razorpay: Payment processing',
               'Google: Email and Sheets integration',
               'Each has their own privacy policies',
             ],
           },
           {
-            title: '9. Compliance',
+            title: '10. Children\'s Privacy',
+            content: [
+              'The Service is not directed at individuals under 18',
+              'We do not knowingly collect personal data from minors',
+              'If you believe a minor has provided data, contact us and we will delete it',
+            ],
+          },
+          {
+            title: '11. Compliance',
             content: [
               'We comply with India\'s Digital Personal Data Protection Act (DPDPA) 2023',
               'We follow GDPR principles for EU users',
@@ -94,10 +115,9 @@ const PrivacyPage: React.FC = () => (
             ],
           },
           {
-            title: '10. Contact Us',
+            title: '12. Contact Us',
             content: [
               '📧 privacy@bizzauto.in',
-              '📞 +91 98765 43210',
               '📍 Mumbai, Maharashtra, India',
             ],
           },
