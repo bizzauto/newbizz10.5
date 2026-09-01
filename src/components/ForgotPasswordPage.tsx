@@ -1,4 +1,5 @@
-﻿import React, { useState } from 'react';
+﻿import { getWLBrandShort } from '../lib/wl-brand';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, ArrowLeft, CheckCircle, AlertCircle, Zap, TrendingUp, Users, MessageSquare, BarChart3, Shield, Star } from 'lucide-react';
 import { authAPI } from '../lib/api';
@@ -178,10 +179,10 @@ const ForgotPasswordPage: React.FC<{ onNavigate?: (page: string) => void }> = ({
             <div className="w-9 h-9 bg-gradient-to-br from-blue-500 to-orange-500 rounded-lg flex items-center justify-center">
               <Zap size={18} className="text-white" />
             </div>
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-orange-500 bg-clip-text text-transparent">BizzAuto</span>
+            <span className="text-xl font-bold bg-gradient-to-r from-blue-600 to-orange-500 bg-clip-text text-transparent">{getWLBrandShort()}</span>
           </div>
 
-          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-orange-500 bg-clip-text text-transparent mb-2 text-center sm:text-left">BizzAuto Solutions</h1>
+          <h1 className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-blue-600 to-orange-500 bg-clip-text text-transparent mb-2 text-center sm:text-left">{getWLBrandShort()} Solutions</h1>
 
           {error && (
             <div className="mb-4 p-3 bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg flex items-center gap-2 text-sm text-red-700 dark:text-red-400">

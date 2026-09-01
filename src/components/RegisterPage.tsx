@@ -1,4 +1,5 @@
-﻿import React, { useState } from 'react';
+﻿import { getWLBrandShort } from '../lib/wl-brand';
+import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, User, Phone, Building2, Eye, EyeOff, ArrowRight, Check, ArrowLeft, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../lib/authStore';

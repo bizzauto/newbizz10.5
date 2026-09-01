@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, Shield, Zap, AlertCircle, TrendingUp, Users, MessageSquare, BarChart3, CheckCircle, Star, Brain, ShoppingCart, Phone, Sparkles, Wand2, Bot, Megaphone, FileText } from 'lucide-react';
 import { useAuthStore } from '../lib/authStore';
+import { getWLBrandShort, getWLBrand } from '../lib/wl-brand';
 import { useTranslation } from 'react-i18next';
 import GoogleLoginButton from './GoogleLoginButton';
 import AppleLogin from './AppleLogin';
@@ -107,7 +108,7 @@ const LoginPage: React.FC = () => {
                 <div className="flex items-center justify-center gap-1 text-emerald-200 mb-0.5">
                   <BarChart3 size={12} />
                 </div>
-                <p className="text-white font-bold text-base sm:text-lg">₹4.2L</p>
+                <p className="text-white font-bold text-base sm:text-lg">â‚¹4.2L</p>
                 <p className="text-blue-200 text-[10px] sm:text-xs">Revenue</p>
               </div>
             </div>
@@ -245,10 +246,10 @@ const LoginPage: React.FC = () => {
               <div className="mb-6 sm:mb-8 text-center sm:text-left">
                 <div className="flex items-center gap-2 justify-center sm:justify-start mb-3 lg:hidden">
                   <Zap className="w-6 h-6 text-blue-600" />
-                  <span className="text-xl font-bold text-blue-600">BizzAuto</span>
+                  <span className="text-xl font-bold text-blue-600">{getWLBrandShort()}</span>
                 </div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-blue-600">
-                  {t('login.title', 'BizzAuto Solutions')}
+                  {t("login.title", `${getWLBrandShort()} Solutions`)}
                 </h1>
                 <p className="text-sm sm:text-base text-gray-500 mt-1">
                   {t('login.subtitle', 'Platform Automation')}

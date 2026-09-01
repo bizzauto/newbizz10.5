@@ -1,4 +1,5 @@
-﻿import { useState, useEffect, useRef, useMemo } from 'react';
+﻿import { getWLBrandShort } from '../lib/wl-brand';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, MessageSquare, Users, Palette, Star,
@@ -329,7 +330,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
             <img src={(window as any).__WL_BRANDING?.logoUrl || "/logo.svg"} alt={(window as any).__WL_BRANDING?.brandName || "BizzAuto AI Logo"} className="h-9 w-auto flex-shrink-0" />
             {!collapsed && (
               <div className="min-w-0">
-                <p className="text-white font-semibold text-[15px] leading-tight truncate">BizzAuto</p>
+                <p className="text-white font-semibold text-[15px] leading-tight truncate">{getWLBrandShort()}</p>
                 <p className="text-[10px] text-slate-400 leading-tight truncate">Business OS</p>
               </div>
             )}
@@ -528,7 +529,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
               <Zap size={14} className="text-white sm:w-4 sm:h-4" />
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="text-xs sm:text-sm font-bold text-white truncate">BizzAuto</h1>
+              <h1 className="text-xs sm:text-sm font-bold text-white truncate">{getWLBrandShort()}</h1>
               <p className="text-[10px] text-slate-300 truncate">
                 {getPageTitle()}
               </p>

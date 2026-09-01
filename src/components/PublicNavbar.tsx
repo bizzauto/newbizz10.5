@@ -1,3 +1,4 @@
+﻿import { getWLBrandShort, getWLBrand } from '../lib/wl-brand';
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Zap, Moon, Sun, Menu, X } from 'lucide-react';
@@ -44,7 +45,7 @@ const PublicNavbar: React.FC<PublicNavbarProps> = ({ isDark: forcedDark, onToggl
     }`}>
       <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/logo.svg" alt="BizzAuto Ai Logo" className="h-20 w-auto" />
+          <img src={getWLBrand().logoUrl} alt={`${getWLBrandShort()} Logo`} className="h-20 w-auto" />
         </Link>
 
         <div className="hidden md:flex items-center gap-1">

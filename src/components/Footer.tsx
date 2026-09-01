@@ -1,3 +1,4 @@
+﻿import { getWLBrandShort, getWLBrand } from '../lib/wl-brand';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Mail, Phone, MapPin, Heart, Shield } from 'lucide-react';
@@ -37,17 +38,17 @@ const Footer: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-8">
           {/* Brand */}
           <div className="lg:col-span-2">
-            <img src="/logo.svg" alt="BizzAuto Ai Logo" className="h-24 w-auto mb-4" />
+            <img src={getWLBrand().logoUrl} alt={`${getWLBrandShort()} Logo`} className="h-24 w-auto mb-4" />
             <p className="text-gray-400 mb-4 max-w-xs">
               India's most powerful WhatsApp marketing & business automation platform. Built for small businesses & agencies.
             </p>
             <div className="flex gap-3">
               {[
                 { icon: 'f', label: 'Facebook' },
-                { icon: '𝕏', label: 'Twitter' },
-                { icon: '📷', label: 'Instagram' },
+                { icon: 'ð•', label: 'Twitter' },
+                { icon: 'ðŸ“·', label: 'Instagram' },
                 { icon: 'in', label: 'LinkedIn' },
-                { icon: '▶', label: 'YouTube' },
+                { icon: 'â–¶', label: 'YouTube' },
               ].map((social, i) => (
                 <button
                   key={i}
@@ -164,7 +165,7 @@ const Footer: React.FC = () => {
       <div className="border-t border-gray-800">
         <div className="max-w-7xl mx-auto px-8 py-4 flex flex-col md:flex-row items-center justify-between gap-2">
           <p className="text-sm text-gray-500">
-            © {currentYear} BizzAuto Solutions. All rights reserved.
+            Â© {currentYear} {`${getWLBrandShort()} Solutions`}. All rights reserved.
           </p>
           <p className="text-sm text-gray-500 flex items-center gap-1">
             Made with <Heart size={12} className="text-red-500" /> in India
