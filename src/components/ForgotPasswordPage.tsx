@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, ArrowRight, ArrowLeft, CheckCircle, AlertCircle, Zap, TrendingUp, Users, MessageSquare, BarChart3, Shield, Star } from 'lucide-react';
 import { authAPI } from '../lib/api';
@@ -91,7 +91,7 @@ const ForgotPasswordPage: React.FC<{ onNavigate?: (page: string) => void }> = ({
           </Link>
 
           <div className="mb-6">
-            <img src="/logo.svg" alt="BizzAuto Ai Logo" className="h-28 w-auto" />
+            <img src={(window as any).__WL_BRANDING?.logoUrl || "/logo.svg"} alt={(window as any).__WL_BRANDING?.brandName || "BizzAuto AI Logo"} className="h-28 w-auto" />
           </div>
 
           <h2 className="text-3xl xl:text-4xl font-bold text-white mb-3">
@@ -149,7 +149,7 @@ const ForgotPasswordPage: React.FC<{ onNavigate?: (page: string) => void }> = ({
                 <div className="flex items-center justify-center gap-1 text-pink-200 mb-0.5">
                   <BarChart3 size={12} />
                 </div>
-                <p className="text-white font-bold text-base sm:text-lg">₹2.8L</p>
+                <p className="text-white font-bold text-base sm:text-lg">â‚¹2.8L</p>
                 <p className="text-purple-200 text-[10px] sm:text-xs">Revenue</p>
               </div>
             </div>

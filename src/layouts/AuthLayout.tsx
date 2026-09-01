@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useMemo } from 'react';
+﻿import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
   Home, MessageSquare, Users, Palette, Star,
@@ -27,7 +27,7 @@ interface MenuItem {
   isExternal?: boolean;
 }
 
-// ── Primary navigation (clean, grouped, no duplicates) ──
+// â”€â”€ Primary navigation (clean, grouped, no duplicates) â”€â”€
 const menuItems: MenuItem[] = [
   { id: '/dashboard', label: 'Dashboard', icon: <Home size={20} /> },
   { id: '/whatsapp', label: 'WhatsApp', icon: <MessageSquare size={20} />, badge: 6 },
@@ -44,7 +44,7 @@ const menuItems: MenuItem[] = [
   { id: '/analytics', label: 'Analytics', icon: <BarChart3 size={20} /> },
 ];
 
-// ── Secondary sections (collapsed by default, expandable) ──
+// â”€â”€ Secondary sections (collapsed by default, expandable) â”€â”€
 const menuSections: { label: string; items: MenuItem[] }[] = [
   {
     label: 'Growth',
@@ -84,7 +84,7 @@ const menuSections: { label: string; items: MenuItem[] }[] = [
   },
 ];
 
-// ── Settings (grouped into logical sections) ──
+// â”€â”€ Settings (grouped into logical sections) â”€â”€
 const settingsSections: { label: string; items: MenuItem[] }[] = [
   {
     label: 'Account',
@@ -326,7 +326,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
         {/* Logo */}
         <div className="shell-brand p-5">
           <div className="flex items-center gap-3">
-            <img src="/logo.svg" alt="BizzAuto Ai Logo" className="h-9 w-auto flex-shrink-0" />
+            <img src={(window as any).__WL_BRANDING?.logoUrl || "/logo.svg"} alt={(window as any).__WL_BRANDING?.brandName || "BizzAuto AI Logo"} className="h-9 w-auto flex-shrink-0" />
             {!collapsed && (
               <div className="min-w-0">
                 <p className="text-white font-semibold text-[15px] leading-tight truncate">BizzAuto</p>
@@ -352,7 +352,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
                   setShowSearchResults(true);
                 }}
                 onFocus={() => searchQuery && setShowSearchResults(true)}
-                placeholder="Search… (Ctrl+K)"
+                placeholder="Searchâ€¦ (Ctrl+K)"
                 className="shell-search w-full rounded-lg pl-9 pr-3 py-2 text-sm placeholder:text-slate-500 focus:outline-none"
                 aria-label="Search"
               />
@@ -514,14 +514,14 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
       </div>
 
       {/* ===== MAIN CONTENT AREA ===== */}
-      {/* On desktop, sidebar is a flex item so no margin needed — flex-1 handles sizing */}
+      {/* On desktop, sidebar is a flex item so no margin needed â€” flex-1 handles sizing */}
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${
         isMobile ? 'ml-0' :
         isTablet ? (sidebarOpen ? 'ml-72' : 'ml-0') :
         ''
       }`}>
         {/* ===== MOBILE TOP BAR (visible only on mobile) =====
-            Solid bg (no backdrop-blur) — kills Android scroll perf. */}
+            Solid bg (no backdrop-blur) â€” kills Android scroll perf. */}
         <div className="shell-topbar-mobile md:hidden px-3 sm:px-4 py-2.5 sm:py-3 flex items-center justify-between sticky top-0 z-40 ios-status-bar" style={{ transform: 'translateZ(0)' }}>
           <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
             <div className="w-7 h-7 sm:w-8 sm:h-8 bg-blue-600 rounded-lg flex items-center justify-center flex-shrink-0">
@@ -614,7 +614,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
             </div>
             {businessPlan === 'FREE' && (
               <button onClick={() => navigate('/billing')} className="hidden sm:inline-flex items-center gap-2 px-3 py-1.5 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors">
-                ⚡ Upgrade Plan
+                âš¡ Upgrade Plan
               </button>
             )}
           </div>
@@ -670,7 +670,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
             </div>
             {businessPlan === 'FREE' && (
               <button onClick={() => navigate('/billing')} className="inline-flex items-center gap-2 px-4 py-2 bg-amber-50 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 rounded-lg text-sm font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/50 transition-colors">
-                ⚡ Upgrade Plan
+                âš¡ Upgrade Plan
               </button>
             )}
           </div>
@@ -750,7 +750,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
                   <p className="font-semibold text-gray-900 dark:text-white">{userName}</p>
                   <p className="text-xs text-gray-500 dark:text-gray-400">{userEmail}</p>
                   <span className="inline-block mt-1 px-2 py-0.5 bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-[10px] font-medium rounded-full">
-                    {businessPlan} Plan • {userRole}
+                    {businessPlan} Plan â€¢ {userRole}
                   </span>
                 </div>
               </div>
@@ -828,7 +828,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
               <div className="flex items-center justify-center gap-2 px-3 py-2 bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-500/20 rounded-xl">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
                 <span className="text-[10px] font-mono text-green-600 dark:text-green-400">
-                  v12.0.1 • {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
+                  v12.0.1 â€¢ {new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}
                 </span>
               </div>
             </div>

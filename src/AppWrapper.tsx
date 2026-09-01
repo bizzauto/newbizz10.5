@@ -199,6 +199,39 @@ function AppRoutes() {
     }
   }, [initialize]);
 
+  // ── White-label branding: load once + apply app-wide ──
+  // Previously settings saved fine but NOTHING applied them — login kept the
+  // hardcoded logo, favicon never swapped, no CSS variables. This effect
+  // fetches public branding and injects it before first paint of routes.
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch('/api/settings/branding');
+        const json = await res.json();
+        if (cancelled || !json?.success) return;
+        const b = json.data;
+        const root = document.documentElement;
+        if (b.primaryColor) root.style.setProperty('--brand-primary', b.primaryColor);
+        if (b.customCss) {
+          let tag = document.getElementById('wl-custom-css') as HTMLStyleElement | null;
+          if (!tag) {
+            tag = document.createElement('style');
+            tag.id = 'wl-custom-css';
+            document.head.appendChild(tag);
+          }
+          tag.textContent = String(b.customCss).slice(0, 20000);
+        }
+        if (b.faviconUrl && b.isActive) {
+          const link = document.querySelector<HTMLLinkElement>("link[rel='icon']")!;
+          link.href = b.faviconUrl;
+        }
+        (window as any).__WL_BRANDING = b; // LoginPage/AuthLayout read this
+      } catch { /* fail-open: BizzAuto defaults stay */ }
+    })();
+    return () => { cancelled = true; };
+  }, []);
+
   return (
     <ToastProvider>
       <Suspense fallback={<PageSkeleton />}>

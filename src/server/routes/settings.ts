@@ -1,15 +1,66 @@
-import { Router } from 'express';
+﻿import { Router } from 'express';
 import { prisma } from '../db.js';
 import { authenticate, requireRole } from '../middleware/auth.js';
 import { cacheResponse } from '../middleware/cache.js';
 
 const router = Router();
-router.use(authenticate);
+
+// ==================== PUBLIC BRANDING (white-label apply) ====================
+// GET /api/settings/branding?domain=... â€” NO AUTH.
+// The app shell (AppWrapper) calls this BEFORE login so the login screen,
+// favicon and CSS variables reflect the reseller's brand. Falls back to
+// BizzAuto defaults when no active white-label config exists.
+router.get('/branding', cacheResponse(120), async (req: any, res: any) => {
+  try {
+    const domain = (req.query.domain as string) || req.hostname || '';
+    let settings = null;
+    if (domain) {
+      settings = await prisma.whiteLabel.findFirst({
+        where: { customDomain: domain, isActive: true },
+      });
+    }
+    if (!settings) {
+      // No domain match â†’ default tenant branding (single-brand installs)
+      settings = await prisma.whiteLabel.findFirst({ where: { isActive: true } });
+    }
+
+    res.json({
+      success: true,
+      data: {
+        brandName: settings?.brandName || 'BizzAuto AI',
+        logoUrl: settings?.logoUrl || '/logo.svg',
+        faviconUrl: settings?.faviconUrl || '/favicon.svg',
+        primaryColor: settings?.primaryColor || '#1B6EF3',
+        customCss: settings?.customCss || '',
+        customDomain: settings?.customDomain || null,
+        isActive: !!settings?.isActive,
+      },
+    });
+  } catch (error: any) {
+    // Fail-open with BizzAuto defaults â€” a branding lookup failure must never
+    // blank the app.
+    res.json({
+      success: true,
+      data: {
+        brandName: 'BizzAuto AI',
+        logoUrl: '/logo.svg',
+        faviconUrl: '/favicon.svg',
+        primaryColor: '#1B6EF3',
+        customCss: '',
+        customDomain: null,
+        isActive: false,
+      },
+    });
+  }
+});
+
+const routerAuth = Router();
+routerAuth.use(authenticate);
 
 // ==================== WHITE LABEL ====================
 
 // Get white-label settings
-router.get('/', cacheResponse(60), async (req: any, res: any) => {
+routerAuth.get('/', cacheResponse(60), async (req: any, res: any) => {
   try {
     let settings = await prisma.whiteLabel.findUnique({
       where: { businessId: req.user.businessId },
@@ -28,7 +79,7 @@ router.get('/', cacheResponse(60), async (req: any, res: any) => {
 });
 
 // Update white-label settings
-router.put('/', requireRole('OWNER', 'ADMIN'), async (req: any, res: any) => {
+routerAuth.put('/', requireRole('OWNER', 'ADMIN'), async (req: any, res: any) => {
   try {
     const { brandName, logoUrl, faviconUrl, primaryColor, customCss, customDomain, isActive } = req.body;
     const settings = await prisma.whiteLabel.upsert({
@@ -44,7 +95,7 @@ router.put('/', requireRole('OWNER', 'ADMIN'), async (req: any, res: any) => {
 
 // ==================== THEME PREFERENCES ====================
 
-router.get('/theme', cacheResponse(60), async (req: any, res: any) => {
+routerAuth.get('/theme', cacheResponse(60), async (req: any, res: any) => {
   try {
     let prefs = await prisma.themePreference.findUnique({
       where: { userId: req.user.id },
@@ -62,7 +113,7 @@ router.get('/theme', cacheResponse(60), async (req: any, res: any) => {
   }
 });
 
-router.put('/theme', async (req: any, res: any) => {
+routerAuth.put('/theme', async (req: any, res: any) => {
   try {
     const { theme, sidebarCollapsed, accentColor } = req.body;
     const prefs = await prisma.themePreference.upsert({
@@ -79,7 +130,7 @@ router.put('/theme', async (req: any, res: any) => {
 // ==================== APPOINTMENTS ====================
 
 // Get appointments
-router.get('/appointments', cacheResponse(60), async (req: any, res: any) => {
+routerAuth.get('/appointments', cacheResponse(60), async (req: any, res: any) => {
   try {
     const { status, startDate, endDate } = req.query;
     const where: any = { businessId: req.user.businessId };
@@ -105,7 +156,7 @@ router.get('/appointments', cacheResponse(60), async (req: any, res: any) => {
 });
 
 // Create appointment
-router.post('/appointments', requireRole('OWNER', 'ADMIN'), async (req: any, res: any) => {
+routerAuth.post('/appointments', requireRole('OWNER', 'ADMIN'), async (req: any, res: any) => {
   try {
     const { title, description, service, startTime, endTime, contactId, location, isOnline, meetingLink, meetingUrl, status } = req.body;
     const appointment = await prisma.appointment.create({
@@ -119,7 +170,7 @@ router.post('/appointments', requireRole('OWNER', 'ADMIN'), async (req: any, res
 });
 
 // Update appointment
-router.put('/appointments/:id', requireRole('OWNER', 'ADMIN'), async (req: any, res: any) => {
+routerAuth.put('/appointments/:id', requireRole('OWNER', 'ADMIN'), async (req: any, res: any) => {
   try {
     const appointment = await prisma.appointment.findFirst({
       where: { id: req.params.id, businessId: req.user.businessId },
@@ -138,7 +189,7 @@ router.put('/appointments/:id', requireRole('OWNER', 'ADMIN'), async (req: any, 
 });
 
 // Delete appointment
-router.delete('/appointments/:id', requireRole('OWNER', 'ADMIN'), async (req: any, res: any) => {
+routerAuth.delete('/appointments/:id', requireRole('OWNER', 'ADMIN'), async (req: any, res: any) => {
   try {
     await prisma.appointment.delete({
       where: { id: req.params.id, businessId: req.user.businessId },
@@ -149,4 +200,5 @@ router.delete('/appointments/:id', requireRole('OWNER', 'ADMIN'), async (req: an
   }
 });
 
-export default router;
+export default routerAuth;
+export const brandingRouter = router;

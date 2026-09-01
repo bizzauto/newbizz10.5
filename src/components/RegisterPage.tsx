@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, User, Phone, Building2, Eye, EyeOff, ArrowRight, Check, ArrowLeft, AlertCircle } from 'lucide-react';
 import { useAuthStore } from '../lib/authStore';
@@ -47,7 +47,7 @@ const RegisterPage: React.FC = () => {
       <div className="w-full lg:w-1/2 flex items-center justify-center p-4 sm:p-6 md:p-8 bg-white dark:bg-gray-900">
         <div className="w-full max-w-md">
           <div className="mb-4 sm:mb-6">
-            <img src="/logo.svg" alt="BizzAuto Ai Logo" className="h-24 w-auto" />
+            <img src={(window as any).__WL_BRANDING?.logoUrl || "/logo.svg"} alt={(window as any).__WL_BRANDING?.brandName || "BizzAuto AI Logo"} className="h-24 w-auto" />
           </div>
 
           <div className="flex items-center gap-2 mb-6 sm:mb-8">

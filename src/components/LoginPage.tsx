@@ -43,7 +43,11 @@ const LoginPage: React.FC = () => {
 
         <div className="relative z-10 max-w-lg w-full">
           <div className="mb-8">
-            <img src="/logo.svg" alt="BizzAuto Ai Logo" className="h-28 w-auto" />
+            <img
+              src={(window as any).__WL_BRANDING?.logoUrl || '/logo.svg'}
+              alt={(window as any).__WL_BRANDING?.brandName || 'BizzAuto AI Logo'}
+              className="h-28 w-auto"
+            />
             <p className="text-blue-100 text-sm mt-2">Trusted by 200+ businesses</p>
           </div>
 

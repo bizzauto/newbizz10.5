@@ -72,7 +72,7 @@ import qwenPreviewRoutes from './routes/qwen-preview.js';
 import reportsRoutes from './routes/reports.js';
 import reviewsRoutes from './routes/reviews.js';
 import reviewsV2Routes from './routes/reviews-v2.js';
-import settingsRoutes from './routes/settings.js';
+import settingsRoutes, { brandingRouter } from './routes/settings.js';
 import socialAccountsRoutes from './routes/social-accounts.js';
 import subscriptionsRoutes from './routes/subscriptions.js';
 import superAdminRoutes from './routes/super-admin.js';
@@ -423,6 +423,10 @@ app.use('/api/qwen-preview', qwenPreviewRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/reviews/v2', reviewsV2Routes);
+// PUBLIC branding (login screen ke liye — auth se pehle chahiye) — MUST be
+// mounted BEFORE the authenticatedCsrf + settingsRoutes catch-all below.
+app.use('/api/settings', brandingRouter);
+// Authed settings (white-label save, theme, appointments settings)
 app.use('/api/settings', authenticatedCsrf, settingsRoutes);
 app.use('/api/social-accounts', socialAccountsRoutes);
 app.use('/api/social-accounts/facebook', socialFacebookRoutes);
