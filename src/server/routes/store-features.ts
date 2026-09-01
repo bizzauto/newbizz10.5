@@ -930,37 +930,41 @@ notificationsRouter.post('/order-status', async (req: AuthRequest, res: Response
       },
     });
 
-    // Try to send via available services
+    // Deliver via requested channel. NOTE: EmailService.sendEmail is positional
+    // (to, subject, html) and WhatsApp must route through the send-router so
+    // Evolution businesses work too. The previous detached-calls with object
+    // args silently crashed and were swallowed — nothing was ever delivered.
+    const sendErrors: string[] = [];
     if (channel === 'email' && order.contact?.email) {
       try {
-        const emailMod = await import('../services/email.service.js') as any;
-        const sendEmail = emailMod.sendEmail || emailMod.EmailService?.sendEmail;
-        await sendEmail({
-          to: order.contact.email,
-          subject: `Order ${order.orderNumber} - ${status.charAt(0).toUpperCase() + status.slice(1)}`,
-          html: `<p>Hi ${order.contact.name || 'Customer'},</p><p>${message}</p><p>Total: ₹${order.total}</p>`,
-          businessId: order.businessId,
-        });
-      } catch (e) {
-        // Email service unavailable, don't fail
+        const { EmailService } = await import('../services/email.service.js');
+        const result = await EmailService.sendEmail(
+          order.contact.email,
+          `Order ${order.orderNumber} - ${status.charAt(0).toUpperCase() + status.slice(1)}`,
+          `<p>Hi ${order.contact.name || 'Customer'},</p><p>${message}</p><p>Total: ₹${order.total}</p>`
+        );
+        if (result && result.success === false) sendErrors.push(`email: ${result.error}`);
+      } catch (e: any) {
+        sendErrors.push(`email: ${e?.message || 'send failed'}`);
       }
     }
 
     if (channel === 'whatsapp' && order.contact?.phone) {
       try {
-        const waMod = await import('../services/whatsapp.service.js') as any;
-        const sendWhatsAppMessage = waMod.sendWhatsAppMessage || waMod.WhatsAppService?.sendTextMessage;
-        await sendWhatsAppMessage({
-          phone: order.contact.phone,
-          message,
-          businessId: order.businessId,
+        const { WhatsAppSendRouter } = await import('../services/whatsapp-send-router.service.js');
+        await WhatsAppSendRouter.sendText(order.businessId, order.contact.phone, message, {
+          contactId: (order.contact as any).id,
         });
-      } catch (e) {
-        // WhatsApp service unavailable, don't fail
+      } catch (e: any) {
+        sendErrors.push(`whatsapp: ${e?.message || 'send failed'}`);
       }
     }
 
-    res.json({ success: true, data: notification });
+    res.json({
+      success: true,
+      data: notification,
+      ...(sendErrors.length ? { warnings: sendErrors } : {}),
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
@@ -992,35 +996,38 @@ notificationsRouter.post('/stock-alert-notify', async (req: AuthRequest, res: Re
 
     const message = `Great news! "${alert.product.name}" is back in stock and available for purchase. Order now before it sells out again!`;
 
-    // Try email
+    // Deliver via email and/or WhatsApp with CORRECT call signatures.
+    // (Previously both calls passed object args to positional APIs and the
+    // errors were swallowed — customer was marked notified without any
+    // message actually going out.)
+    const sendErrors: string[] = [];
     if (alert.customerEmail) {
       try {
-        const emailMod = await import('../services/email.service.js') as any;
-        const sendEmail = emailMod.sendEmail || emailMod.EmailService?.sendEmail;
-        await sendEmail({
-          to: alert.customerEmail,
-          subject: `${alert.product.name} is back in stock!`,
-          html: `<p>Hi,</p><p>${message}</p><p>Price: ₹${alert.product.price}</p>`,
-          businessId: alert.businessId,
-        });
-      } catch (e) {
-        // Service unavailable
+        const { EmailService } = await import('../services/email.service.js');
+        const result = await EmailService.sendEmail(
+          alert.customerEmail,
+          `${alert.product.name} is back in stock!`,
+          `<p>Hi,</p><p>${message}</p><p>Price: ₹${alert.product.price}</p>`
+        );
+        if (result && result.success === false) sendErrors.push(`email: ${result.error}`);
+      } catch (e: any) {
+        sendErrors.push(`email: ${e?.message || 'send failed'}`);
       }
     }
 
-    // Try WhatsApp
     if (alert.customerPhone) {
       try {
-        const waMod = await import('../services/whatsapp.service.js') as any;
-        const sendWhatsAppMessage = waMod.sendWhatsAppMessage || waMod.WhatsAppService?.sendTextMessage;
-        await sendWhatsAppMessage({
-          phone: alert.customerPhone,
-          message,
-          businessId: alert.businessId,
+        const { WhatsAppSendRouter } = await import('../services/whatsapp-send-router.service.js');
+        await WhatsAppSendRouter.sendText(alert.businessId, alert.customerPhone, message, {
+          contactId: alert.contactId || undefined,
         });
-      } catch (e) {
-        // Service unavailable
+      } catch (e: any) {
+        sendErrors.push(`whatsapp: ${e?.message || 'send failed'}`);
       }
+    }
+
+    if (sendErrors.length && !alert.customerEmail && !alert.customerPhone) {
+      return res.status(400).json({ success: false, error: 'No contact info on this alert — cannot notify' });
     }
 
     await prisma.stockAlert.update({
@@ -1028,7 +1035,11 @@ notificationsRouter.post('/stock-alert-notify', async (req: AuthRequest, res: Re
       data: { status: 'notified', notifiedAt: new Date() },
     });
 
-    res.json({ success: true, message: 'Customer notified successfully' });
+    res.json({
+      success: true,
+      message: 'Customer notified successfully',
+      ...(sendErrors.length ? { warnings: sendErrors } : {}),
+    });
   } catch (error: any) {
     res.status(500).json({ success: false, error: error.message });
   }
