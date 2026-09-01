@@ -1,10 +1,10 @@
-import OpenAI from 'openai';
+﻿import OpenAI from 'openai';
 import axios from 'axios';
 import { prisma } from '../db.js';
 
-// AI Provider Configuration — lazy init to avoid crash when env vars are missing
+// AI Provider Configuration â€” lazy init to avoid crash when env vars are missing
 
-// Nvidia NIM (FREE — first priority)
+// Nvidia NIM (FREE â€” first priority)
 let _nvidiaClient: OpenAI | null = null;
 function getNvidiaClient(): OpenAI {
   if (!_nvidiaClient) {
@@ -18,7 +18,7 @@ function getNvidiaClient(): OpenAI {
   return _nvidiaClient;
 }
 
-// Groq (FREE — fast inference, second priority)
+// Groq (FREE â€” fast inference, second priority)
 let _groqClient: OpenAI | null = null;
 function getGroqClient(): OpenAI {
   if (!_groqClient) {
@@ -50,8 +50,11 @@ const providers = {
   groq: {
     get client() { return getGroqClient(); },
     models: {
-      text: 'llama-3.3-70b-versatile',
-      code: 'llama-3.3-70b-versatile',
+      // Sep 2026 Groq lineup: gpt-oss-120b (quality) / gpt-oss-20b (fast).
+      // llama-3.3-70b-versatile was deprecated upstream.
+      text: 'openai/gpt-oss-120b',
+      code: 'openai/gpt-oss-120b',
+      fast: 'openai/gpt-oss-20b',
     },
   },
   openrouter: {
@@ -81,7 +84,7 @@ const providers = {
 
 /**
  * AI Service with automatic fallback
- * Priority: Nvidia NIM (Free) → Groq (Free/Fast) → OpenRouter (Free) → Ollama (Local)
+ * Priority: Nvidia NIM (Free) â†’ Groq (Free/Fast) â†’ OpenRouter (Free) â†’ Ollama (Local)
  */
 export class AIService {
   /**
@@ -106,7 +109,7 @@ export class AIService {
     // 1) Try Nvidia NIM (FREE, highest quality)
     try {
       return await this.tryNvidiaNIM(prompt, {
-        model: model || 'meta/llama-3.3-70b-instruct',
+        model: model || 'openai/gpt-oss-120b',
         maxTokens,
         temperature,
       });
@@ -114,7 +117,7 @@ export class AIService {
       console.warn('[AI] Nvidia NIM failed, trying Groq:', error.message);
     }
 
-    // 2) Try Groq (FREE — insane speed, Llama 3.3 70B)
+    // 2) Try Groq (FREE â€” insane speed, Llama 3.3 70B)
     try {
       return await this.tryGroq(prompt, {
         model: model || providers.groq.models.text,
@@ -205,7 +208,7 @@ export class AIService {
   }
 
   /**
-   * Try Nvidia NIM (FREE — 1000 req/day)
+   * Try Nvidia NIM (FREE â€” 1000 req/day)
    */
   private static async tryNvidiaNIM(
     prompt: string,
@@ -226,7 +229,7 @@ export class AIService {
   }
 
   /**
-   * Try Groq (FREE — ultra-fast inference, Llama 3.3 70B)
+   * Try Groq (FREE â€” ultra-fast inference, Llama 3.3 70B)
    */
   private static async tryGroq(
     prompt: string,

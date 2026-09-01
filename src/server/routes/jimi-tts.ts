@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response } from 'express';
 import { execSync } from 'child_process';
 import { readFileSync, writeFileSync, unlinkSync, existsSync } from 'fs';
 import { join } from 'path';
@@ -12,7 +12,7 @@ const router = Router();
 // All Jimi routes require authentication
 router.use(authenticate);
 
-// Rate limiter for Jimi TTS — prevent abuse
+// Rate limiter for Jimi TTS â€” prevent abuse
 const jimiTtsRateLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 30,
@@ -38,62 +38,62 @@ router.post('/chat', async (req: Request, res: Response) => {
     const employeePrompt = `Naam: Jimi. Employee Mode. Professional Hindi/English. Sirf 1 line.
 
 JAWAB SIRF 1 LINE MEIN:
-- leads/लीड्स/prospects/customers → "Leads page dikha rahi hun ji"
-- reviews/समीक्षा/ratings → "Reviews page dikha rahi hun ji"
-- dashboard/home/डैशबोर्ड → "Dashboard khol rahi hun ji"
-- whatsapp/messages/व्हाट्सएप/chat → "WhatsApp khol rahi hun ji"
-- campaigns/promotions/कैंपेन → "Campaigns page dikha rahi hun ji"
-- appointments/bookings/अपॉइंटमेंट → "Appointments page dikha rahi hun ji"
-- email/ईमेल/mail/marketing → "Email Marketing page dikha rahi hun ji"
-- revenue/income/paise/कमाई → Revenue update with numbers
-- social media/facebook/instagram → "Social Media page dikha rahi hun ji"
-- analytics/insights/एनालिटिक्स → "Analytics page dikha rahi hun ji"
-- settings/सेटिंग्स → "Settings page khol rahi hun ji"
-- documents/files/दस्तावेज़ → "Documents page dikha rahi hun ji"
-- creatives/posters/design/डिजाइन → "Creative page khol rahi hun ji"
+- leads/à¤²à¥€à¤¡à¥à¤¸/prospects/customers â†’ "Leads page dikha rahi hun ji"
+- reviews/à¤¸à¤®à¥€à¤•à¥à¤·à¤¾/ratings â†’ "Reviews page dikha rahi hun ji"
+- dashboard/home/à¤¡à¥ˆà¤¶à¤¬à¥‹à¤°à¥à¤¡ â†’ "Dashboard khol rahi hun ji"
+- whatsapp/messages/à¤µà¥à¤¹à¤¾à¤Ÿà¥à¤¸à¤à¤ª/chat â†’ "WhatsApp khol rahi hun ji"
+- campaigns/promotions/à¤•à¥ˆà¤‚à¤ªà¥‡à¤¨ â†’ "Campaigns page dikha rahi hun ji"
+- appointments/bookings/à¤…à¤ªà¥‰à¤‡à¤‚à¤Ÿà¤®à¥‡à¤‚à¤Ÿ â†’ "Appointments page dikha rahi hun ji"
+- email/à¤ˆà¤®à¥‡à¤²/mail/marketing â†’ "Email Marketing page dikha rahi hun ji"
+- revenue/income/paise/à¤•à¤®à¤¾à¤ˆ â†’ Revenue update with numbers
+- social media/facebook/instagram â†’ "Social Media page dikha rahi hun ji"
+- analytics/insights/à¤à¤¨à¤¾à¤²à¤¿à¤Ÿà¤¿à¤•à¥à¤¸ â†’ "Analytics page dikha rahi hun ji"
+- settings/à¤¸à¥‡à¤Ÿà¤¿à¤‚à¤—à¥à¤¸ â†’ "Settings page khol rahi hun ji"
+- documents/files/à¤¦à¤¸à¥à¤¤à¤¾à¤µà¥‡à¤œà¤¼ â†’ "Documents page dikha rahi hun ji"
+- creatives/posters/design/à¤¡à¤¿à¤œà¤¾à¤‡à¤¨ â†’ "Creative page khol rahi hun ji"
 
 AGAR NAHI PATA TOH BOLO "app mein check karo ji". Galat mat bolo.`;
 
     const projectManagerPrompt = `Tu BizzAuto CRM ka Project Manager hai. Naam: PM. Language: Hinglish.
 
 JAWAB SIRF 1 LINE MEIN. SHORT AUR ACTIONABLE:
-- leads/लीड्स/prospects/customers → "Leads page khol raha hun, wahan sab contacts hain"
-- reviews/समीक्षा/ratings → "Reviews page khol raha hun, sab reviews dikhenge"
-- dashboard/home/डैशबोर्ड → "Dashboard khol raha hun, full overview milega"
-- whatsapp/messages/chat/व्हाट्सएप → "WhatsApp page khol raha hun, sab chats hain"
-- campaigns/promotions/कैंपेन → "Campaigns page khol raha hun, campaigns dikhenge"
-- appointments/bookings/schedule → "Appointments page khol raha hun, bookings dikhenge"
-- email/ईमेल/marketing → "Email Marketing page khol raha hun"
-- social/facebook/instagram/linkedin → "Social Media page khol raha hun"
-- analytics/insights/data → "Analytics page khol raha hun, reports dikhenge"
-- revenue/income/paise/kamai → "Revenue update - Analytics mein dekho ji"
-- settings/सेटिंग्स → "Settings page khol raha hun"
-- documents/files/invoices → "Documents page khol raha hun"
-- creatives/posters/design → "Creative page khol raha hun"
-- ecommerce/store/shop/dukaan → "E-Commerce page khol raha hun"
-- automation/workflows → "Automation page khol raha hun"
-- billing/subscription → "Billing page khol raha hun"
-- courses/training → "Courses page khol raha hun"
-- surveys/polls → "Surveys page khol raha hun"
-- reports → "Reports page khol raha hun"
-- funnels/landing → "Funnels page khol raha hun"
-- team/members → "Team page khol raha hun"
-- profile → "Profile page khol raha hun"
-- conversations/chat history → "Conversations page khol raha hun"
-- google business/posts → "Google Business page khol raha hun"
-- voice call/phone call → "Voice Call page khol raha hun"
-- api keys → "API Keys page khol raha hun"
-- client portal → "Client Portal page khol raha hun"
-- custom fields → "Custom Fields page khol raha hun"
-- blog/articles → "Blog page khol raha hun"
-- trigger links → "Trigger Links page khol raha hun"
-- payment links → "Payment Links page khol raha hun"
-- import leads/bulk import → "Import Leads page khol raha hun"
-- team management → "Team Management page khol raha hun"
-- review requests → "Review Requests page khol raha hun"
-- missed call/dograh → "Dograh Settings page khol raha hun"
-- store share → "Store Share page khol raha hun"
-- funnels/landing pages → "Funnels page khol raha hun"
+- leads/à¤²à¥€à¤¡à¥à¤¸/prospects/customers â†’ "Leads page khol raha hun, wahan sab contacts hain"
+- reviews/à¤¸à¤®à¥€à¤•à¥à¤·à¤¾/ratings â†’ "Reviews page khol raha hun, sab reviews dikhenge"
+- dashboard/home/à¤¡à¥ˆà¤¶à¤¬à¥‹à¤°à¥à¤¡ â†’ "Dashboard khol raha hun, full overview milega"
+- whatsapp/messages/chat/à¤µà¥à¤¹à¤¾à¤Ÿà¥à¤¸à¤à¤ª â†’ "WhatsApp page khol raha hun, sab chats hain"
+- campaigns/promotions/à¤•à¥ˆà¤‚à¤ªà¥‡à¤¨ â†’ "Campaigns page khol raha hun, campaigns dikhenge"
+- appointments/bookings/schedule â†’ "Appointments page khol raha hun, bookings dikhenge"
+- email/à¤ˆà¤®à¥‡à¤²/marketing â†’ "Email Marketing page khol raha hun"
+- social/facebook/instagram/linkedin â†’ "Social Media page khol raha hun"
+- analytics/insights/data â†’ "Analytics page khol raha hun, reports dikhenge"
+- revenue/income/paise/kamai â†’ "Revenue update - Analytics mein dekho ji"
+- settings/à¤¸à¥‡à¤Ÿà¤¿à¤‚à¤—à¥à¤¸ â†’ "Settings page khol raha hun"
+- documents/files/invoices â†’ "Documents page khol raha hun"
+- creatives/posters/design â†’ "Creative page khol raha hun"
+- ecommerce/store/shop/dukaan â†’ "E-Commerce page khol raha hun"
+- automation/workflows â†’ "Automation page khol raha hun"
+- billing/subscription â†’ "Billing page khol raha hun"
+- courses/training â†’ "Courses page khol raha hun"
+- surveys/polls â†’ "Surveys page khol raha hun"
+- reports â†’ "Reports page khol raha hun"
+- funnels/landing â†’ "Funnels page khol raha hun"
+- team/members â†’ "Team page khol raha hun"
+- profile â†’ "Profile page khol raha hun"
+- conversations/chat history â†’ "Conversations page khol raha hun"
+- google business/posts â†’ "Google Business page khol raha hun"
+- voice call/phone call â†’ "Voice Call page khol raha hun"
+- api keys â†’ "API Keys page khol raha hun"
+- client portal â†’ "Client Portal page khol raha hun"
+- custom fields â†’ "Custom Fields page khol raha hun"
+- blog/articles â†’ "Blog page khol raha hun"
+- trigger links â†’ "Trigger Links page khol raha hun"
+- payment links â†’ "Payment Links page khol raha hun"
+- import leads/bulk import â†’ "Import Leads page khol raha hun"
+- team management â†’ "Team Management page khol raha hun"
+- review requests â†’ "Review Requests page khol raha hun"
+- missed call/dograh â†’ "Dograh Settings page khol raha hun"
+- store share â†’ "Store Share page khol raha hun"
+- funnels/landing pages â†’ "Funnels page khol raha hun"
 
 AGAR NAHI PATA: "Sir, aap Dashboard dekhenge? Ya mujhe batao kya karna hai"
 GALAT MAT BOLO. Feature exist nahi karta toh bolo "Sir, yeh feature abhi available nahi hai".`;
@@ -126,7 +126,7 @@ STYLE: Sirf 1 line. Plain text. NO emojis.`;
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'meta/llama-3.3-70b-instruct',
+        model: 'openai/gpt-oss-120b',
         messages: [
           { role: 'system', content: systemPrompt },
           ...sanitizedHistory,
@@ -169,7 +169,7 @@ STYLE: Sirf 1 line. Plain text. NO emojis.`;
 
 // ==================== JIMI VOICE TTS ====================
 
-// Sanitize text for safe shell execution — strip shell metacharacters
+// Sanitize text for safe shell execution â€” strip shell metacharacters
 function sanitizeForShell(text: string): string {
   return text
     .replace(/[`$\\!|&;(){}<>[\]'"#~]/g, ' ')
@@ -334,7 +334,7 @@ router.post('/tts/gemini', jimiTtsRateLimiter, async (req: Request, res: Respons
     // Find audio part (Gemini returns inlineData with audio)
     const audioPart = parts.find((p: any) => p.inlineData?.mimeType?.startsWith('audio/'));
     if (audioPart?.inlineData?.data) {
-      console.log('[Jimi Gemini] TTS success with Aoede voice 🎤');
+      console.log('[Jimi Gemini] TTS success with Aoede voice ðŸŽ¤');
       // Return actual mimeType from Gemini response so client plays correct format
       const mimeType = audioPart.inlineData.mimeType || 'audio/mpeg';
       const format = mimeType.includes('wav') ? 'wav' : mimeType.includes('ogg') ? 'ogg' : 'mp3';
@@ -491,7 +491,7 @@ function tryEdgeTTS(text: string, lang: string, voiceStyle: string = 'natural'):
     // Voice style presets - MYRA-like Indian female voice tuning
     // MYRA uses Gemini Live Aoede voice: warm, caring, emotionally expressive
     const stylePresets: Record<string, { rate: string; pitch: string; volume: string }> = {
-      myra: { rate: '-5%', pitch: '+8Hz', volume: '-3%' },      // 🎯 MYRA mode: Slow & sweet, warm & caring
+      myra: { rate: '-5%', pitch: '+8Hz', volume: '-3%' },      // ðŸŽ¯ MYRA mode: Slow & sweet, warm & caring
       sweet: { rate: '-3%', pitch: '+5Hz', volume: '+0%' },      // Sweet & warm, not squeaky
       natural: { rate: '+0%', pitch: '+2Hz', volume: '+0%' },    // Natural flow
       warm: { rate: '-5%', pitch: '+3Hz', volume: '-3%' },       // Calm & caring

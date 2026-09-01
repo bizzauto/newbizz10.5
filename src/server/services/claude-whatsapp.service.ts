@@ -1,4 +1,4 @@
-import crypto from 'crypto';
+﻿import crypto from 'crypto';
 import axios from 'axios';
 import { prisma } from '../db.js';
 import { decrypt, encrypt } from '../utils/auth.js';
@@ -10,7 +10,7 @@ import { decrypt, encrypt } from '../utils/auth.js';
  *  - Aggregates WhatsApp (Meta + Evolution) and SMS (MSG91, Textlocal, Twilio)
  *  - Uses Claude AI to optimize message content (tone, length, translation)
  *  - Auto-routes to cheapest available channel per recipient
- *  - Falls back WhatsApp → SMS if WA fails or recipient is offline
+ *  - Falls back WhatsApp â†’ SMS if WA fails or recipient is offline
  *  - Tracks cost per message and provides savings analytics
  *
  * Configuration is stored in `Integration` table (type='claude_whatsapp')
@@ -92,7 +92,7 @@ export interface CostStats {
 }
 
 // ---------------------------------------------------------------------------
-// Cost table (INR per message) — official published rates
+// Cost table (INR per message) â€” official published rates
 // ---------------------------------------------------------------------------
 const CHANNEL_RATES: Record<Channel, { marketing: number; utility: number; auth: number }> = {
   whatsapp_meta:     { marketing: 0.70, utility: 0.35, auth: 0.25 },   // Meta India
@@ -211,7 +211,7 @@ Return ONLY the rewritten message, no explanation.`;
         const response = await axios.post(
           'https://integrate.api.nvidia.com/v1/chat/completions',
           {
-            model: 'meta/llama-3.3-70b-instruct',
+            model: 'openai/gpt-oss-120b',
             messages: [
               { role: 'system', content: systemPrompt },
               { role: 'user', content: body },
@@ -728,14 +728,14 @@ Return ONLY the rewritten message, no explanation.`;
 
   /**
    * Test a specific channel with a sample message.
-   * Cost: only the test amount (typically ₹0.05-0.20).
+   * Cost: only the test amount (typically â‚¹0.05-0.20).
    */
   static async testChannel(
     businessId: string,
     channel: Channel,
     testPhone: string
   ): Promise<SendResult> {
-    const testBody = `🎉 Your BizzAuto ${channel} channel is now active! Test message sent at ${new Date().toLocaleString('en-IN')}.`;
+    const testBody = `ðŸŽ‰ Your BizzAuto ${channel} channel is now active! Test message sent at ${new Date().toLocaleString('en-IN')}.`;
 
     return this.dispatch(
       businessId,
@@ -750,31 +750,31 @@ export const CLAUDE_CHANNEL_LABELS: Record<Channel, { name: string; description:
   whatsapp_meta: {
     name: 'WhatsApp Business (Meta)',
     description: 'Official Meta WhatsApp Business API. Best deliverability, highest cost.',
-    icon: '🟢',
-    costRange: '₹0.25-0.70/message',
+    icon: 'ðŸŸ¢',
+    costRange: 'â‚¹0.25-0.70/message',
   },
   whatsapp_evolution: {
     name: 'WhatsApp (Evolution API)',
     description: '3rd-party WhatsApp gateway. Lower cost, decent deliverability.',
-    icon: '💚',
-    costRange: '₹0.10-0.25/message',
+    icon: 'ðŸ’š',
+    costRange: 'â‚¹0.10-0.25/message',
   },
   sms_msg91: {
     name: 'SMS via MSG91',
     description: 'DLT-compliant Indian SMS provider. Reliable fallback.',
-    icon: '📱',
-    costRange: '₹0.20/message',
+    icon: 'ðŸ“±',
+    costRange: 'â‚¹0.20/message',
   },
   sms_textlocal: {
     name: 'SMS via Textlocal',
     description: 'Affordable global SMS provider with India DLT support.',
-    icon: '💬',
-    costRange: '₹0.18/message',
+    icon: 'ðŸ’¬',
+    costRange: 'â‚¹0.18/message',
   },
   sms_twilio: {
     name: 'SMS via Twilio',
     description: 'Premium international SMS. Best for overseas recipients.',
-    icon: '🌍',
-    costRange: '₹2.50/message',
+    icon: 'ðŸŒ',
+    costRange: 'â‚¹2.50/message',
   },
 };

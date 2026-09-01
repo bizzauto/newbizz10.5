@@ -1,4 +1,4 @@
-import { Router, Request, Response } from 'express';
+﻿import { Router, Request, Response } from 'express';
 import { authenticate } from '../middleware/auth.js';
 import { avaIntelligence } from '../services/ava-intelligence.service.js';
 import { AIService } from '../services/ai.service.js';
@@ -19,7 +19,7 @@ function safeJson(res: Response, status: number, body: any): void {
   res.status(status).json(body);
 }
 
-// Rate limiter for Ava chat — prevent credit exhaustion
+// Rate limiter for Ava chat â€” prevent credit exhaustion
 const avaChatRateLimiter = rateLimit({
   windowMs: 60 * 1000,
   max: 15,
@@ -90,15 +90,15 @@ router.post('/chat', authenticate, avaChatRateLimiter, async (req: any, res: Res
     // Language names mapping
     const languageNames: Record<string, string> = {
       'en-IN': 'English',
-      'hi-IN': 'Hindi (हिन्दी)',
-      'mr-IN': 'Marathi (मराठी)',
-      'gu-IN': 'Gujarati (ગુજરાતી)',
-      'ta-IN': 'Tamil (தமிழ்)',
-      'te-IN': 'Telugu (తెలుగు)',
-      'bn-IN': 'Bengali (বাংলা)',
-      'kn-IN': 'Kannada (ಕನ್ನಡ)',
-      'ml-IN': 'Malayalam (മലയാളം)',
-      'pa-IN': 'Punjabi (ਪੰਜਾਬੀ)',
+      'hi-IN': 'Hindi (à¤¹à¤¿à¤¨à¥à¤¦à¥€)',
+      'mr-IN': 'Marathi (à¤®à¤°à¤¾à¤ à¥€)',
+      'gu-IN': 'Gujarati (àª—à«àªœàª°àª¾àª¤à«€)',
+      'ta-IN': 'Tamil (à®¤à®®à®¿à®´à¯)',
+      'te-IN': 'Telugu (à°¤à±†à°²à±à°—à±)',
+      'bn-IN': 'Bengali (à¦¬à¦¾à¦‚à¦²à¦¾)',
+      'kn-IN': 'Kannada (à²•à²¨à³à²¨à²¡)',
+      'ml-IN': 'Malayalam (à´®à´²à´¯à´¾à´³à´‚)',
+      'pa-IN': 'Punjabi (à¨ªà©°à¨œà¨¾à¨¬à©€)',
     };
 
     const selectedLanguage = languageNames[language] || 'English';
@@ -152,7 +152,7 @@ RULES:
           'Authorization': `Bearer ${process.env.NVIDIA_NIM_API_KEY || process.env.VITE_NVIDIA_NIM_API_KEY}`
         },
         body: JSON.stringify({
-          model: 'meta/llama-3.3-70b-instruct',
+          model: 'openai/gpt-oss-120b',
           messages,
           max_tokens: 500,
           temperature: 0.7,
@@ -230,15 +230,15 @@ router.post('/command', authenticate, async (req: any, res: Response) => {
     let result: any = { success: true, action: '' };
 
     // Read commands
-    if (lower.includes('revenue') || lower.includes('पैसा') || lower.includes('कमाई')) {
+    if (lower.includes('revenue') || lower.includes('à¤ªà¥ˆà¤¸à¤¾') || lower.includes('à¤•à¤®à¤¾à¤ˆ')) {
       const briefing = await avaIntelligence.getDailyBriefing(businessId);
       result = {
         success: true,
         action: 'revenue_update',
         data: briefing.revenue,
-        message: `Revenue today: ₹${briefing.revenue.today.toLocaleString('en-IN')}. This month: ₹${briefing.revenue.thisMonth.toLocaleString('en-IN')}`
+        message: `Revenue today: â‚¹${briefing.revenue.today.toLocaleString('en-IN')}. This month: â‚¹${briefing.revenue.thisMonth.toLocaleString('en-IN')}`
       };
-    } else if (lower.includes('leads') || lower.includes('लीड')) {
+    } else if (lower.includes('leads') || lower.includes('à¤²à¥€à¤¡')) {
       const briefing = await avaIntelligence.getDailyBriefing(businessId);
       result = {
         success: true,
@@ -246,15 +246,15 @@ router.post('/command', authenticate, async (req: any, res: Response) => {
         data: briefing.leads,
         message: `${briefing.leads.newToday} new leads today. ${briefing.leads.totalActive} active leads total.`
       };
-    } else if (lower.includes('pipeline') || lower.includes('डील')) {
+    } else if (lower.includes('pipeline') || lower.includes('à¤¡à¥€à¤²')) {
       const briefing = await avaIntelligence.getDailyBriefing(businessId);
       result = {
         success: true,
         action: 'pipeline_update',
         data: briefing.pipeline,
-        message: `Pipeline value: ₹${briefing.pipeline.totalValue.toLocaleString('en-IN')}. ${briefing.pipeline.stuckDeals.length} stuck deals.`
+        message: `Pipeline value: â‚¹${briefing.pipeline.totalValue.toLocaleString('en-IN')}. ${briefing.pipeline.stuckDeals.length} stuck deals.`
       };
-    } else if (lower.includes('appointment') || lower.includes('मीटिंग')) {
+    } else if (lower.includes('appointment') || lower.includes('à¤®à¥€à¤Ÿà¤¿à¤‚à¤—')) {
       const briefing = await avaIntelligence.getDailyBriefing(businessId);
       result = {
         success: true,
@@ -324,7 +324,7 @@ router.post('/command', authenticate, async (req: any, res: Response) => {
           }
         }
       }
-    } else if (lower.includes('follow up') || lower.includes('follow-up') || lower.includes('reminder') || lower.includes('remind') || lower.includes('followup') || lower.includes('फॉलो')) {
+    } else if (lower.includes('follow up') || lower.includes('follow-up') || lower.includes('reminder') || lower.includes('remind') || lower.includes('followup') || lower.includes('à¤«à¥‰à¤²à¥‹')) {
       await prisma.activity.create({
         data: {
           businessId,
@@ -341,7 +341,7 @@ router.post('/command', authenticate, async (req: any, res: Response) => {
         action: 'followup_created',
         message: 'Follow-up reminder has been created. I\'ll make sure you don\'t forget.'
       };
-    } else if (lower.includes('schedule') || lower.includes('meeting') || lower.includes('शेड्यूल')) {
+    } else if (lower.includes('schedule') || lower.includes('meeting') || lower.includes('à¤¶à¥‡à¤¡à¥à¤¯à¥‚à¤²')) {
       await prisma.activity.create({
         data: {
           businessId,
@@ -358,7 +358,7 @@ router.post('/command', authenticate, async (req: any, res: Response) => {
         action: 'meeting_scheduled',
         message: 'Meeting has been scheduled. Check your calendar for details.'
       };
-    } else if (lower.includes('create invoice') || lower.includes('invoice') || lower.includes('bill') || lower.includes('इनवॉइस') || lower.includes('बिल')) {
+    } else if (lower.includes('create invoice') || lower.includes('invoice') || lower.includes('bill') || lower.includes('à¤‡à¤¨à¤µà¥‰à¤‡à¤¸') || lower.includes('à¤¬à¤¿à¤²')) {
       result = {
         success: true,
         action: 'invoice_created',
