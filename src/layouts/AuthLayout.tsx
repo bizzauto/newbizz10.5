@@ -1,4 +1,5 @@
-﻿import { getWLBrandShort } from '../lib/wl-brand';
+﻿import LanguageSwitcher from '../components/LanguageSwitcher';
+import { getWLBrandShort } from '../lib/wl-brand';
 import { useState, useEffect, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import {
@@ -503,6 +504,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
               </div>
             )}
           </button>
+          <LanguageSwitcher collapsed={collapsed} />
           <button
             onClick={handleLogout}
             className="flex items-center gap-3 w-full hover:bg-red-500/10 rounded-xl p-2.5 transition-colors mt-1 text-gray-400 hover:text-red-400"
