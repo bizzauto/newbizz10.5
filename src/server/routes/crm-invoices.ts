@@ -242,6 +242,58 @@ router.put('/:id/pay', authenticate, validate(markInvoicePaidSchema), async (req
   }
 });
 
+// POST /api/crm-invoices/:id/send — send invoice as WhatsApp message (text-formatted,
+// readable on WhatsApp without a PDF viewer — Indian SMB customers prefer this)
+router.post('/:id/send', authenticate, async (req: AuthRequest, res: any) => {
+  try {
+    const { id } = req.params;
+    const businessId = req.user.businessId;
+    const doc = await prisma.document.findFirst({
+      where: { id, businessId, type: 'invoice' },
+      include: { contact: { select: { id: true, name: true, phone: true } } },
+    });
+    if (!doc) return res.status(404).json({ success: false, error: 'Invoice not found' });
+
+    const phone = doc.clientPhone || doc.contact?.phone;
+    if (!phone) return res.status(400).json({ success: false, error: 'No phone number on invoice' });
+
+    const content = (doc.content as any) || {};
+    const items: any[] = content.items || [];
+    const itemsText = items.map((i: any, idx: number) =>
+      `${idx + 1}. ${i.description} × ${i.quantity} = ₹${i.amount}`
+    ).join('\n');
+    const dueDate = content.dueDate || '—';
+
+    const message =
+      `🧾 *Invoice ${doc.documentNumber}*\n\n` +
+      `Hi ${doc.clientName || 'there'}!\n\n` +
+      `${itemsText}\n\n` +
+      `Subtotal: ₹${content.subtotal || 0}\n` +
+      `Tax (${content.taxRate ?? 18}%): ₹${content.tax || 0}\n` +
+      `*Total: ₹${content.total || doc.amount || 0}*\n` +
+      `Due Date: ${dueDate}\n\n` +
+      (content.notes ? `Notes: ${content.notes}\n\n` : '') +
+      `${doc.status === 'paid' ? '✅ Paid! Thank you!' : 'Please pay before the due date.'}\n` +
+      `— ${req.body?.businessName || 'Team'}`;
+
+    const { WhatsAppSendRouter } = await import('../services/whatsapp-send-router.service.js');
+    await WhatsAppSendRouter.sendText(businessId, phone, message, {
+      contactId: doc.contactId || undefined,
+      applyAntiBan: false, // single deliberate send
+    });
+
+    // Update invoice status from draft to sent
+    if (doc.status === 'draft') {
+      await prisma.document.update({ where: { id: doc.id }, data: { status: 'sent' } });
+    }
+
+    res.json({ success: true, message: `Invoice sent to ${phone} via WhatsApp` });
+  } catch (error: any) {
+    console.error('Send invoice error:', error);
+    res.status(500).json({ success: false, error: error.message || 'Failed to send invoice' });
+  }
+});
+
 // DELETE /api/crm-invoices/:id - Delete an invoice
 router.delete('/:id', authenticate, async (req: AuthRequest, res: any) => {
   try {

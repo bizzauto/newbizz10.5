@@ -1027,6 +1027,7 @@ export const crmInvoicesAPI = {
   }) => apiClient.post('/crm-invoices', data),
   update: (id: string, data: Record<string, any>) => apiClient.put(`/crm-invoices/${id}`, data),
   markPaid: (id: string, data?: { paymentMethod?: string }) => apiClient.put(`/crm-invoices/${id}/pay`, data || {}),
+  sendToWhatsApp: (id: string) => apiClient.post(`/crm-invoices/${id}/send`),
   delete: (id: string) => apiClient.delete(`/crm-invoices/${id}`),
 };
 

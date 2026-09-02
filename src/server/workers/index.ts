@@ -401,18 +401,43 @@ leadProcessingWorker = new Worker(
         roundRobin: true,
       });
       if (assignedUserId) {
+        // Set the actual assignment on the contact (was only logged before —
+        // contact.assignedTo stayed null and leads showed unassigned in CRM)
+        await prisma.contact.update({
+          where: { id: contact.id },
+          data: { assignedTo: assignedUserId },
+        }).catch(() => {});
+        const assignee = await prisma.user.findUnique({
+          where: { id: assignedUserId },
+          select: { name: true, phone: true },
+        });
         await prisma.activity.create({
           data: {
             businessId,
             contactId: contact.id,
             type: 'lead_assigned',
             title: 'Lead auto-assigned',
-            content: `Lead from ${source} assigned to team member`,
+            content: `Lead from ${source} assigned to ${assignee?.name || 'team member'}`,
             createdBy: 'system',
             metadata: { source, assignedTo: assignedUserId, assignedBy: 'system' },
           },
         });
         results.assignedTo = assignedUserId;
+        // Notify the assigned sales rep on WhatsApp (best-effort)
+        try {
+          if (assignee?.phone) {
+            const contactName = contact.name || 'New lead';
+            const msg = `🎯 New lead assigned to you: ${contactName} (source: ${source}). Khologe CRM me details ke liye.`;
+            const { WhatsAppSendRouter } = await import('../services/whatsapp-send-router.service.js');
+            await WhatsAppSendRouter.sendText(businessId, assignee.phone, msg, {
+              contactId: contact.id,
+              applyAntiBan: false,
+            });
+            results.repNotified = true;
+          }
+        } catch (notifyErr: any) {
+          console.warn('Rep WhatsApp notify failed:', notifyErr?.message);
+        }
       }
     } catch (error: any) {
       console.error('Lead auto-assignment error:', error.message);
