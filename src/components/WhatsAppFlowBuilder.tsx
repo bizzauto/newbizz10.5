@@ -1,10 +1,113 @@
-import React, { useState, useEffect, useCallback } from 'react';
+﻿import React, { useState, useEffect, useCallback } from 'react';
 import {
   MessageSquare, Plus, Trash2, Edit3, ChevronUp, ChevronDown,
   Zap, Clock, Tag, UserX, GitBranch, ArrowDown, Save, X,
-  HelpCircle, Loader, CheckCircle
+  HelpCircle, Loader, Sparkles, BookOpen, Package, UserPlus, CheckCircle
 } from 'lucide-react';
 import { whatsappFlowAPI } from '../lib/api';
+
+// ==================== FLOW TEMPLATES ====================
+
+const FLOW_TEMPLATES = [
+  {
+    id: 'welcome',
+    name: 'Welcome Flow',
+    description: 'Greet new contacts + share catalog + collect interest',
+    icon: 'ðŸ‘‹',
+    reentryHours: 168,
+    trigger: { type: 'first_message' as const },
+    nodes: [
+      { id: 'w1', type: 'message' as const, data: { text: '{Namaste|Hello|Hi} {name}! ðŸ‘‹ {Welcome to|Thanks for reaching out to} {business}!' } },
+      { id: 'w2', type: 'message' as const, data: { text: 'We help businesses grow with:\n1ï¸âƒ£ Products & Services\n2ï¸âƒ£ Best Prices\n3ï¸âƒ£ Fast Delivery\n\nType a number or ask anything!' } },
+      { id: 'w3', type: 'question' as const, data: { text: 'What are you interested in?', saveAs: 'interest' } },
+      { id: 'w4', type: 'message' as const, data: { text: 'Great choice! Our team will share details shortly. Meanwhile, check our catalog ðŸ‘‡' } },
+      { id: 'w5', type: 'tag' as const, data: { tags: ['welcome-flow', 'interested'] } },
+    ],
+  },
+  {
+    id: 'lead_qualification',
+    name: 'Lead Qualification',
+    description: 'Qualify leads: budget + timeline + need â†’ tag hot/cold',
+    icon: 'ðŸ“‹',
+    reentryHours: 72,
+    trigger: { type: 'keyword' as const, keyword: 'price', matchType: 'contains' as const },
+    nodes: [
+      { id: 'q1', type: 'message' as const, data: { text: '{Hi|Hello} {name}! {Thanks for your interest|Great question}! Let me help you find the right solution ðŸŽ¯' } },
+      { id: 'q2', type: 'question' as const, data: { text: 'What product/service are you looking for?', saveAs: 'need' } },
+      { id: 'q3', type: 'question' as const, data: { text: 'What is your budget range? (e.g. â‚¹5K-10K)', saveAs: 'budget' } },
+      { id: 'q4', type: 'question' as const, data: { text: 'When do you need this? (ASAP / This month / Just exploring)', saveAs: 'timeline' } },
+      { id: 'q5', type: 'condition' as const, data: { variable: 'timeline', operator: 'contains', value: 'ASAP' } },
+      { id: 'q6', type: 'tag' as const, data: { tags: ['hot-lead', 'qualified'] } },
+      { id: 'q7', type: 'message' as const, data: { text: 'ðŸ”¥ {Excellent|Perfect}! Our team will call you within 1 hour with the best {offer|deal}!' } },
+      { id: 'q8', type: 'tag' as const, data: { tags: ['cold-lead'] } },
+      { id: 'q9', type: 'message' as const, data: { text: 'No problem! Take your time. {We will|I will} share our catalog for future reference ðŸ“–' } },
+      { id: 'q10', type: 'handoff' as const, data: { notes: 'Lead qualified via flow builder â€” follow up ASAP' } },
+    ],
+  },
+  {
+    id: 'order_status',
+    name: 'Order Status',
+    description: 'Check order status â†’ lookup â†’ reply with tracking',
+    icon: 'ðŸ“¦',
+    reentryHours: 0,
+    trigger: { type: 'keyword' as const, keyword: 'order', matchType: 'contains' as const },
+    nodes: [
+      { id: 'o1', type: 'message' as const, data: { text: '{Hi|Hello} {name}! Order status check à¤•à¤°à¤¤à¥‡ à¤¹à¥ˆà¤‚ ðŸ“¦' } },
+      { id: 'o2', type: 'question' as const, data: { text: 'à¤…à¤ªà¤¨à¤¾ Order Number à¤­à¥‡à¤œà¥‹ (e.g. ORD-12345)', saveAs: 'order_num' } },
+      { id: 'o3', type: 'message' as const, data: { text: 'Checking your order {order_num}... â³' } },
+      { id: 'o4', type: 'handoff' as const, data: { notes: 'Order status check requested â€” lookup in system and reply manually' } },
+    ],
+  },
+  {
+    id: 'faq',
+    name: 'FAQ Bot',
+    description: 'Auto-answer common questions: hours, location, payment',
+    icon: 'â“',
+    reentryHours: 0,
+    trigger: { type: 'keyword' as const, keyword: 'timing', matchType: 'contains' as const },
+    nodes: [
+      { id: 'f1', type: 'message' as const, data: { text: '{Hi|Hello}! ðŸ™ Main aapki {help|madad} kar sakta hoon. Type karo:\nðŸ• *timings* â€” Store hours\nðŸ“ *location* â€” Address\nðŸ’³ *payment* â€” Payment options\nðŸšš *delivery* â€” Delivery info' } },
+      { id: 'f2', type: 'condition' as const, data: { variable: '__message__', operator: 'contains', value: 'location' } },
+      { id: 'f3', type: 'message' as const, data: { text: 'ðŸ“ {Hum yahan hain|Our address}: {business}, Mumbai. Google Maps pe "Led Brighter" search karo!' } },
+      { id: 'f4', type: 'message' as const, data: { text: 'ðŸ’³ Payment options: UPI, Bank Transfer, Cash, Razorpay link. Sab accepted!' } },
+      { id: 'f5', type: 'message' as const, data: { text: 'ðŸšš Free delivery Mumbai mein â‚¹5000+ ke orders pe! Baaki â‚¹100 delivery charge.' } },
+      { id: 'f6', type: 'handoff' as const, data: { notes: 'FAQ flow ended â€” customer may need more help' } },
+    ],
+  },
+  {
+    id: 'feedback',
+    name: 'Feedback Collector',
+    description: 'Collect rating + review + auto-tag satisfied/unsatisfied',
+    icon: 'â­',
+    reentryHours: 720,
+    trigger: { type: 'any_message' as const },
+    nodes: [
+      { id: 'fb1', type: 'question' as const, data: { text: '{Hi|Hello}! How was your experience with {business}? Rate 1-5', saveAs: 'rating' } },
+      { id: 'fb2', type: 'condition' as const, data: { variable: 'rating', operator: 'contains', value: '4' } },
+      { id: 'fb3', type: 'message' as const, data: { text: 'ðŸŒŸ Thank you! Would you leave a Google review? {Here is the link|Bahut meherbani}: https://g.page/r/YOUR/review' } },
+      { id: 'fb4', type: 'tag' as const, data: { tags: ['satisfied-customer'] } },
+      { id: 'fb5', type: 'message' as const, data: { text: 'Sorry to hear that! Hamari team turant contact karegi ðŸ™ Your feedback matters.' } },
+      { id: 'fb6', type: 'tag' as const, data: { tags: ['needs-attention'] } },
+      { id: 'fb7', type: 'handoff' as const, data: { notes: 'Customer gave low rating â€” urgent follow-up needed' } },
+    ],
+  },
+  {
+    id: 'appointment',
+    name: 'Appointment Booking',
+    description: 'Collect preferred date/time â†’ confirm â†’ notify team',
+    icon: 'ðŸ“…',
+    reentryHours: 24,
+    trigger: { type: 'keyword' as const, keyword: 'book', matchType: 'contains' as const },
+    nodes: [
+      { id: 'a1', type: 'message' as const, data: { text: '{Hi|Hello} {name}! Appointment book karte hain ðŸ“…' } },
+      { id: 'a2', type: 'question' as const, data: { text: 'Preferred date batao (e.g. Monday, 15th Oct)', saveAs: 'date' } },
+      { id: 'a3', type: 'question' as const, data: { text: 'Preferred time? (Morning / Afternoon / Evening)', saveAs: 'time' } },
+      { id: 'a4', type: 'message' as const, data: { text: 'âœ… Noted! {date} at {time}. Team will confirm shortly ðŸ“²' } },
+      { id: 'a5', type: 'tag' as const, data: { tags: ['appointment-requested'] } },
+      { id: 'a6', type: 'handoff' as const, data: { notes: 'Appointment booking request â€” confirm date/time with customer' } },
+    ],
+  },
+];
 
 // ============================================================
 // TYPES
@@ -72,6 +175,7 @@ const WhatsAppFlowBuilder: React.FC = () => {
   const [flows, setFlows] = useState<FlowListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<{ id?: string; name: string; description: string; trigger: FlowTrigger; matchType: 'contains' | 'exact'; reentryHours: number; priority: number; nodes: FlowNode[] } | null>(null);
+  const [showTemplates, setShowTemplates] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const load = useCallback(async () => {
@@ -87,8 +191,25 @@ const WhatsAppFlowBuilder: React.FC = () => {
 
   const startNew = () => {
     const first = emptyNode();
-    first.data.text = '{Namaste|Hello|Hi} {name}! 👋';
+    first.data.text = '{Namaste|Hello|Hi} {name}! ðŸ‘‹';
     setEditing({ name: '', description: '', trigger: { type: 'keyword', keyword: '' }, matchType: 'contains', reentryHours: 24, priority: 0, nodes: [first] });
+  };
+
+  const startFromTemplate = () => {
+    setShowTemplates(true);
+  };
+
+  const useTemplate = (tpl: typeof FLOW_TEMPLATES[0]) => {
+    setEditing({
+      name: tpl.name,
+      description: tpl.description,
+      trigger: tpl.trigger,
+      matchType: 'contains',
+      reentryHours: tpl.reentryHours ?? 24,
+      priority: 5,
+      nodes: (tpl.nodes.map((n) => ({ ...n, id: `n_${Date.now()}_${Math.random().toString(36).slice(2, 6)}` })) as FlowNode[]),
+    });
+    setShowTemplates(false);
   };
 
   const startEdit = async (id: string) => {
@@ -157,17 +278,57 @@ const WhatsAppFlowBuilder: React.FC = () => {
     );
   }
 
+  if (showTemplates) {
+    return (
+      <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
+        <div className="max-w-4xl mx-auto p-4 sm:p-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><Sparkles size={22} className="text-green-600" /> Flow Templates</h2>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Ready-made flows â€” click to use, customize after</p>
+            </div>
+            <button onClick={() => setShowTemplates(false)} className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700">â† Back</button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {FLOW_TEMPLATES.map(tpl => (
+              <button key={tpl.id} onClick={() => useTemplate(tpl)} className="text-left bg-white dark:bg-gray-800 rounded-xl border border-gray-200 dark:border-gray-700 p-5 hover:border-green-400 hover:shadow-md transition-all group">
+                <div className="flex items-start gap-3">
+                  <span className="text-3xl">{tpl.icon}</span>
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-semibold text-gray-900 dark:text-white group-hover:text-green-600">{tpl.name}</h3>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">{tpl.description}</p>
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      <span className="text-[11px] bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300 px-2 py-0.5 rounded">
+                        {tpl.trigger.type === 'keyword' ? `"${tpl.trigger.keyword}"` : tpl.trigger.type === 'first_message' ? 'New contact' : 'Any message'}
+                      </span>
+                      <span className="text-[11px] text-gray-400">{tpl.nodes.length} steps</span>
+                    </div>
+                  </div>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex-1 overflow-y-auto bg-gray-50 dark:bg-gray-900">
       <div className="max-w-4xl mx-auto p-4 sm:p-6">
         <div className="flex items-center justify-between mb-5">
           <div>
             <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2"><Zap size={22} className="text-green-600" /> Flow Builder</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Visual chatbot flows — trigger → steps → branches. Runs before AI auto-reply.</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">Visual chatbot flows â€” trigger â†’ steps â†’ branches. Runs before AI auto-reply.</p>
           </div>
-          <button onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600">
-            <Plus size={16} /> New Flow
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={startFromTemplate} className="flex items-center gap-2 px-3 py-2 border border-green-300 text-green-600 rounded-lg text-sm font-medium hover:bg-green-50">
+              <Sparkles size={15} /> Templates
+            </button>
+            <button onClick={startNew} className="flex items-center gap-2 px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600">
+              <Plus size={16} /> New Flow
+            </button>
+          </div>
         </div>
 
         {loading ? (
@@ -176,7 +337,7 @@ const WhatsAppFlowBuilder: React.FC = () => {
           <div className="text-center py-16 bg-white dark:bg-gray-800 rounded-2xl border border-gray-200 dark:border-gray-700">
             <Zap size={48} className="mx-auto text-gray-300 mb-4" />
             <h3 className="font-semibold text-gray-900 dark:text-white mb-1">No flows yet</h3>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Create your first chatbot flow — e.g. keyword "price" → pricing info → ask budget → tag lead</p>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mb-4">Create your first chatbot flow â€” e.g. keyword "price" â†’ pricing info â†’ ask budget â†’ tag lead</p>
             <button onClick={startNew} className="px-4 py-2 bg-green-500 text-white rounded-lg text-sm font-medium hover:bg-green-600">+ New Flow</button>
           </div>
         ) : (
@@ -192,8 +353,8 @@ const WhatsAppFlowBuilder: React.FC = () => {
                     <TriggerBadge trigger={f.trigger} />
                   </div>
                   <div className="text-xs text-gray-400 mt-1">
-                    {f.nodeCount} steps · {f.runCount} runs · {f.activeSessions} active chats
-                    {f.description ? ` · ${f.description}` : ''}
+                    {f.nodeCount} steps Â· {f.runCount} runs Â· {f.activeSessions} active chats
+                    {f.description ? ` Â· ${f.description}` : ''}
                   </div>
                 </div>
                 <button onClick={() => startEdit(f.id)} className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg text-gray-500"><Edit3 size={16} /></button>
@@ -220,7 +381,7 @@ function TriggerBadge({ trigger }: { trigger: FlowTrigger }) {
 }
 
 /** Convert the ordered node list into the engine graph. Condition nodes carry
- *  explicit yes/no targets (chosen in the editor) → engine edges. */
+ *  explicit yes/no targets (chosen in the editor) â†’ engine edges. */
 function buildGraph(nodes: FlowNode[]): { nodes: any[]; edges: any[] } {
   const edges: any[] = [];
   nodes.forEach((n, i) => {
@@ -228,7 +389,7 @@ function buildGraph(nodes: FlowNode[]): { nodes: any[]; edges: any[] } {
       if (n.data.yesTarget) edges.push({ id: `e_${n.id}_y`, source: n.id, target: n.data.yesTarget, sourceHandle: 'yes' });
       if (n.data.noTarget) edges.push({ id: `e_${n.id}_n`, source: n.id, target: n.data.noTarget, sourceHandle: 'no' });
     } else if (n.type === 'jump' || n.type === 'handoff') {
-      // terminal/jump — no default edge (jump carries its own targetNodeId)
+      // terminal/jump â€” no default edge (jump carries its own targetNodeId)
     } else if (i < nodes.length - 1) {
       edges.push({ id: `e_${n.id}_${nodes[i + 1].id}`, source: n.id, target: nodes[i + 1].id });
     }
@@ -237,7 +398,7 @@ function buildGraph(nodes: FlowNode[]): { nodes: any[]; edges: any[] } {
 }
 
 // ============================================================
-// FLOW EDITOR (Stage 1 — ordered list editor)
+// FLOW EDITOR (Stage 1 â€” ordered list editor)
 // ============================================================
 
 const FlowEditor: React.FC<{
@@ -337,7 +498,7 @@ const FlowEditor: React.FC<{
 
               {(node.type === 'message' || node.type === 'question') && (
                 <div>
-                  <textarea rows={2} value={node.data.text || ''} onChange={(e) => updateNode(idx, { text: e.target.value })} placeholder={node.type === 'message' ? 'Message text… {Hi|Hello} {name} — spintax + {name}/{business} supported' : 'Question text… answer saved into variable'} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm" />
+                  <textarea rows={2} value={node.data.text || ''} onChange={(e) => updateNode(idx, { text: e.target.value })} placeholder={node.type === 'message' ? 'Message textâ€¦ {Hi|Hello} {name} â€” spintax + {name}/{business} supported' : 'Question textâ€¦ answer saved into variable'} className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg text-sm" />
                   {node.type === 'question' && (
                     <div className="mt-2 flex items-center gap-2">
                       <span className="text-xs text-gray-400">Save answer as:</span>
@@ -367,17 +528,17 @@ const FlowEditor: React.FC<{
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-green-600">YES → step</span>
+                      <span className="text-xs font-medium text-green-600">YES â†’ step</span>
                       <select value={node.data.yesTarget || ''} onChange={(e) => updateNode(idx, { yesTarget: e.target.value })} className="flex-1 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs">
                         <option value="">(end flow)</option>
-                        {draft.nodes.map((n: FlowNode, i: number) => i !== idx && <option key={n.id} value={n.id}>Step {i + 1} — {NODE_META[n.type].label}</option>)}
+                        {draft.nodes.map((n: FlowNode, i: number) => i !== idx && <option key={n.id} value={n.id}>Step {i + 1} â€” {NODE_META[n.type].label}</option>)}
                       </select>
                     </div>
                     <div className="flex items-center gap-2">
-                      <span className="text-xs font-medium text-red-500">NO → step</span>
+                      <span className="text-xs font-medium text-red-500">NO â†’ step</span>
                       <select value={node.data.noTarget || ''} onChange={(e) => updateNode(idx, { noTarget: e.target.value })} className="flex-1 px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs">
                         <option value="">(end flow)</option>
-                        {draft.nodes.map((n: FlowNode, i: number) => i !== idx && <option key={n.id} value={n.id}>Step {i + 1} — {NODE_META[n.type].label}</option>)}
+                        {draft.nodes.map((n: FlowNode, i: number) => i !== idx && <option key={n.id} value={n.id}>Step {i + 1} â€” {NODE_META[n.type].label}</option>)}
                       </select>
                     </div>
                   </div>
@@ -404,13 +565,13 @@ const FlowEditor: React.FC<{
                   <span className="text-xs text-gray-400">Jump to step:</span>
                   <select value={node.data.targetNodeId || ''} onChange={(e) => updateNode(idx, { targetNodeId: e.target.value })} className="px-2 py-1.5 border border-gray-300 dark:border-gray-600 rounded text-xs">
                     <option value="">(end flow)</option>
-                    {draft.nodes.map((n: FlowNode, i: number) => i !== idx && <option key={n.id} value={n.id}>Step {i + 1} — {NODE_META[n.type].label}</option>)}
+                    {draft.nodes.map((n: FlowNode, i: number) => i !== idx && <option key={n.id} value={n.id}>Step {i + 1} â€” {NODE_META[n.type].label}</option>)}
                   </select>
                 </div>
               )}
             </div>
 
-            {/* Connector arrow (skipped after a condition — it branches) */}
+            {/* Connector arrow (skipped after a condition â€” it branches) */}
             {idx < draft.nodes.length - 1 && node.type !== 'condition' && (
               <div className="flex justify-center text-gray-300 dark:text-gray-600"><ArrowDown size={16} /></div>
             )}
