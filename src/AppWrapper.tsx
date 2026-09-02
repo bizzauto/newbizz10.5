@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+﻿import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { useEffect } from 'react';
 import { useAuthStore } from './lib/authStore';
 import { MobileApp } from './lib/capacitor-app';
@@ -16,7 +16,7 @@ import { lazy, Suspense } from 'react';
 
 let mobileInitDone = false;
 
-// Public pages — lazy-loaded for code splitting
+// Public pages â€” lazy-loaded for code splitting
 const LandingPage = lazy(() => import('./components/LandingPage'));
 const LoginPage = lazy(() => import('./components/LoginPage'));
 const RegisterPage = lazy(() => import('./components/RegisterPage'));
@@ -35,9 +35,10 @@ const NotFoundPage = lazy(() => import('./components/NotFoundPage'));
 // Authenticated layout
 import AuthLayout from './layouts/AuthLayout';
 
-// Authenticated pages — lazy-loaded for code splitting
+// Authenticated pages â€” lazy-loaded for code splitting
 const Dashboard = lazy(() => import('./components/UnifiedDashboardPage'));
 const WhatsAppModule = lazy(() => import('./components/WhatsAppModule'));
+const WhatsAppCatalogPage = lazy(() => import('./components/WhatsAppCatalogPage'));
 const CRMPage = lazy(() => import('./components/CRMPage'));
 const LeadGenerationPage = lazy(() => import('./components/LeadGenerationPage'));
 const LeadFinderPage = lazy(() => import('./components/LeadFinderPage'));
@@ -199,8 +200,8 @@ function AppRoutes() {
     }
   }, [initialize]);
 
-  // ── White-label branding: load once + apply app-wide ──
-  // Previously settings saved fine but NOTHING applied them — login kept the
+  // â”€â”€ White-label branding: load once + apply app-wide â”€â”€
+  // Previously settings saved fine but NOTHING applied them â€” login kept the
   // hardcoded logo, favicon never swapped, no CSS variables. This effect
   // fetches public branding and injects it before first paint of routes.
   useEffect(() => {
@@ -319,6 +320,16 @@ function AppRoutes() {
           <ProtectedRoute>
             <AuthLayout>
               <WhatsAppModule />
+            </AuthLayout>
+          </ProtectedRoute>
+        }
+      />
+      <Route
+        path="/whatsapp-catalog"
+        element={
+          <ProtectedRoute>
+            <AuthLayout>
+              <WhatsAppCatalogPage />
             </AuthLayout>
           </ProtectedRoute>
         }
