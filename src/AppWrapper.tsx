@@ -10,6 +10,7 @@ import NetworkStatus from './components/NetworkStatus';
 import { UIModeProvider } from './contexts/UIModeContext';
 import { DesignVariantProvider } from './contexts/DesignVariantContext';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { initMobilePush } from './lib/mobile-push';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import CookieConsentBanner from './components/CookieConsentBanner';
 import { lazy, Suspense } from 'react';
@@ -201,6 +202,14 @@ function AppRoutes() {
       void MobileApp.init();
     }
   }, [initialize]);
+
+  // Mobile push (FCM via Capacitor) — native only, after auth
+  const { isAuthenticated: pushAuthenticated, user: pushUser } = useAuthStore();
+  useEffect(() => {
+    if (pushAuthenticated && (pushUser as any)?.businessId) {
+      void initMobilePush((pushUser as any).businessId);
+    }
+  }, [pushAuthenticated, (pushUser as any)?.businessId]);
 
   // â”€â”€ White-label branding: load once + apply app-wide â”€â”€
   // Previously settings saved fine but NOTHING applied them â€” login kept the

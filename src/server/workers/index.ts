@@ -423,7 +423,7 @@ leadProcessingWorker = new Worker(
           },
         });
         results.assignedTo = assignedUserId;
-        // Notify the assigned sales rep on WhatsApp (best-effort)
+        // Notify the assigned sales rep on WhatsApp (best-effort) + FCM push
         try {
           if (assignee?.phone) {
             const contactName = contact.name || 'New lead';
@@ -437,6 +437,18 @@ leadProcessingWorker = new Worker(
           }
         } catch (notifyErr: any) {
           console.warn('Rep WhatsApp notify failed:', notifyErr?.message);
+        }
+        // FCM mobile push to the assigned rep
+        try {
+          const { FcmService } = await import('../services/fcm.service.js');
+          await FcmService.sendToUser(
+            assignedUserId,
+            '🎯 New Lead Assigned!',
+            `${contact.name || 'New lead'} from ${source}. Open CRM for details.`,
+            { url: '/crm' }
+          );
+        } catch (pushErr: any) {
+          console.warn('Rep FCM push failed:', pushErr?.message);
         }
       }
     } catch (error: any) {
