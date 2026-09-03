@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+﻿import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   MessageSquare, Users, Calendar, Star, RefreshCw, Smartphone,
@@ -10,6 +10,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
   Legend, ResponsiveContainer
 } from 'recharts';
+import DashboardWidgets from './DashboardWidgets';
 import { useAuthStore } from '../lib/authStore';
 import { analyticsAPI, leadsAPI } from '../lib/api';
 
@@ -126,7 +127,7 @@ export default function DashboardPage() {
   const demoStats: StatCardProps[] = [
     {
       title: 'Revenue Today',
-      value: '₹45,200',
+      value: 'â‚¹45,200',
       change: '+18%',
       positive: true,
       icon: <DollarSign size={24} />,
@@ -154,7 +155,7 @@ export default function DashboardPage() {
     },
     {
       title: 'Pipeline Value',
-      value: '₹8.5L',
+      value: 'â‚¹8.5L',
       change: '+15%',
       positive: true,
       icon: <TrendingUp size={24} />,
@@ -203,7 +204,7 @@ export default function DashboardPage() {
 
   const demoActivityFeed = [
     { id: 1, type: 'lead', icon: <Users size={16} />, color: 'blue', message: 'New lead captured from WhatsApp', time: '2 min ago' },
-    { id: 2, type: 'deal', icon: <TrendingUp size={16} />, color: 'green', message: 'Deal closed: ₹45,000 - Priya Enterprises', time: '15 min ago' },
+    { id: 2, type: 'deal', icon: <TrendingUp size={16} />, color: 'green', message: 'Deal closed: â‚¹45,000 - Priya Enterprises', time: '15 min ago' },
     { id: 3, type: 'message', icon: <MessageSquare size={16} />, color: 'purple', message: '12 new messages received', time: '30 min ago' },
     { id: 4, type: 'review', icon: <Star size={16} />, color: 'orange', message: 'New 5-star review from Rahul Verma', time: '1 hour ago' },
     { id: 5, type: 'appointment', icon: <Calendar size={16} />, color: 'indigo', message: 'Meeting scheduled with Sharma Corp', time: '2 hours ago' },
@@ -522,7 +523,7 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <div className="bg-white/70 dark:bg-gray-800/70 rounded-xl p-3 border border-emerald-100 dark:border-emerald-800/50">
             <p className="text-[10px] sm:text-xs text-emerald-700 dark:text-emerald-300 font-medium mb-0.5">Saved This Month</p>
-            <p className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400">₹3,247</p>
+            <p className="text-lg sm:text-xl font-bold text-emerald-600 dark:text-emerald-400">â‚¹3,247</p>
             <p className="text-[10px] text-gray-500">vs. always-Meta baseline</p>
           </div>
           <div className="bg-white/70 dark:bg-gray-800/70 rounded-xl p-3 border border-emerald-100 dark:border-emerald-800/50">
@@ -635,8 +636,10 @@ export default function DashboardPage() {
               <span className="text-[10px] sm:text-xs font-medium text-orange-700 dark:text-orange-400">Workflow</span>
             </button>
           </div>
-        </div>
       </div>
+      </div>
+      {/* Live Overview — real-data widgets */}
+      <DashboardWidgets />
     </div>
   );
 }

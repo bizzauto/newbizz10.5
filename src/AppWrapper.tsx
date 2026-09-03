@@ -39,6 +39,8 @@ import AuthLayout from './layouts/AuthLayout';
 const Dashboard = lazy(() => import('./components/UnifiedDashboardPage'));
 const WhatsAppModule = lazy(() => import('./components/WhatsAppModule'));
 const WhatsAppCatalogPage = lazy(() => import('./components/WhatsAppCatalogPage'));
+const PublicBookingPage = lazy(() => import('./components/PublicBookingPage'));
+const DashboardWidgets = lazy(() => import('./components/DashboardWidgets'));
 const CRMPage = lazy(() => import('./components/CRMPage'));
 const LeadGenerationPage = lazy(() => import('./components/LeadGenerationPage'));
 const LeadFinderPage = lazy(() => import('./components/LeadFinderPage'));
@@ -245,6 +247,7 @@ function AppRoutes() {
       <Route path="/pricing" element={<PricingPage />} />
       <Route path="/forgot-password" element={<ForgotPasswordPage />} />
         <Route path="/verify-email" element={<VerifyEmailPage />} />
+      <Route path="/book/:businessId" element={<PublicBookingPage />} />
       <Route path="/terms" element={<TermsPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/refund" element={<RefundPolicyPage />} />
