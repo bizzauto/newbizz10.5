@@ -30,7 +30,7 @@ const avaChatRateLimiter = rateLimit({
 });
 
 // ==================== AVA EXECUTIVE ASSISTANT API ====================
-// All routes are FREE - uses Nvidia NIM + OpenRouter free models
+// All routes are FREE — uses Groq (primary) + OpenRouter (fallback)
 
 // GET /api/ava/briefing - Daily Executive Briefing
 router.get('/briefing', authenticate, async (req: any, res: Response) => {
@@ -140,16 +140,16 @@ RULES:
       { role: 'user', content: text }
     ];
 
-    // Call AI - try Nvidia NIM first (FREE), fallback to OpenRouter (FREE)
+    // Call AI - try Groq first (configured + FREE), fallback to OpenRouter (FREE)
     let responseText = '';
     
     try {
-      // Try Nvidia NIM (FREE)
-      const nvidiaResponse = await fetch('https://integrate.api.nvidia.com/v1/chat/completions', {
+      // Try Groq (configured + FREE)
+      const groqResponse = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${process.env.NVIDIA_NIM_API_KEY || process.env.VITE_NVIDIA_NIM_API_KEY}`
+          'Authorization': `Bearer ${process.env.GROQ_API_KEY}`
         },
         body: JSON.stringify({
           model: 'openai/gpt-oss-120b',
@@ -160,12 +160,12 @@ RULES:
         })
       });
 
-      if (nvidiaResponse.ok) {
-        const data = await nvidiaResponse.json() as any;
+      if (groqResponse.ok) {
+        const data = await groqResponse.json() as any;
         responseText = data.choices[0]?.message?.content || '';
       }
     } catch (e) {
-      console.warn('[Ava] Nvidia NIM failed, trying OpenRouter fallback');
+      console.warn('[Ava] Groq failed, trying OpenRouter fallback');
     }
 
     // Fallback to OpenRouter (FREE)
