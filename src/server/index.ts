@@ -1,4 +1,4 @@
-import './dns-config.js'; // MUST be first: forces IPv4-first DNS so GBP/Google calls don't time out on broken IPv6 egress
+﻿import './dns-config.js'; // MUST be first: forces IPv4-first DNS so GBP/Google calls don't time out on broken IPv6 egress
 import express from 'express';
 import { fileURLToPath } from 'url';
 import { dirname } from 'path';
@@ -56,6 +56,9 @@ import emailRoutes from './routes/email.js';
 import evolutionRoutes from './routes/evolution.js';
 import whatsappFlowRoutes from './routes/whatsapp-flows.js';
 import googleBusinessRoutes from './routes/google-business.js';
+import googleCalendarRoutes from './routes/google-calendar.js';
+import publicBookingRoutes from './routes/public-booking.js';
+import dashboardWidgetsRoutes from './routes/dashboard-widgets.js';
 import indiamartEmailRoutes from './routes/indiamart-email.js';
 import messageTemplateRoutes from './routes/message-templates.js';
 import integrationsRoutes from './routes/integrations.js';
@@ -197,7 +200,7 @@ const PORT = process.env.PORT || 4000;
 const HOST = process.env.HOST || '0.0.0.0';
 const NODE_ENV = process.env.NODE_ENV;
 if (!NODE_ENV) {
-  console.warn('⚠️ WARNING: NODE_ENV is not set. Defaulting to "development". Set NODE_ENV=production for production.');
+  console.warn('âš ï¸ WARNING: NODE_ENV is not set. Defaulting to "development". Set NODE_ENV=production for production.');
   process.env.NODE_ENV = 'development';
 }
 
@@ -223,7 +226,7 @@ if (NODE_ENV !== 'production') {
   }));
 }
 
-// Trust proxy — required when behind a reverse proxy (Nginx, Coolify, Cloudflare)
+// Trust proxy â€” required when behind a reverse proxy (Nginx, Coolify, Cloudflare)
 // so that rate-limiter and req.ip use the real client IP from X-Forwarded-For
 app.set('trust proxy', 1);
 
@@ -290,23 +293,23 @@ app.use(cookieParser());
 // Additional security headers
 app.use(securityHeaders);
 
-// Request ID middleware — also sets X-Request-Id response header
+// Request ID middleware â€” also sets X-Request-Id response header
 app.use((req, res, next) => {
   req.id = crypto.randomUUID();
   res.setHeader('X-Request-Id', req.id);
   next();
 });
 
-// Global input sanitization — XSS prevention on all request inputs
+// Global input sanitization â€” XSS prevention on all request inputs
 app.use(sanitizeInput);
 
-// PII masking middleware — masks sensitive customer data in logs
+// PII masking middleware â€” masks sensitive customer data in logs
 app.use(piiMaskingMiddleware);
 
-// Sanitize request body — removes XSS from request data
+// Sanitize request body â€” removes XSS from request data
 app.use(sanitizeRequestBody);
 
-// API versioning — extracts version from path/header/query
+// API versioning â€” extracts version from path/header/query
 app.use('/api', apiVersioning);
 
 // Auto-invalidate cache on mutations
@@ -324,14 +327,14 @@ app.use('/api', (req, res, next) => {
   next();
 });
 
-// Request timeout — prevent slow-client DoS
+// Request timeout â€” prevent slow-client DoS
 app.use(requestTimeout());
 
 // NEW: IP Blocking & Rate Limiting Middlewares
 app.use(ipBlockMiddleware);
 app.use(speedLimiter);
 
-// Request counting middleware — feeds /api/metrics with real traffic data
+// Request counting middleware â€” feeds /api/metrics with real traffic data
 app.use('/api', requestCounting);
 
 // NEW: AI API Rate Limiter (stricter for expensive calls)
@@ -340,14 +343,14 @@ app.use('/api/ai', aiApiRateLimiter);
 // NEW: Upload Rate Limiter
 app.use('/api/upload', uploadRateLimiter);
 
-// Audit log middleware — automatically logs state-changing API requests
+// Audit log middleware â€” automatically logs state-changing API requests
 app.use('/api', auditMiddleware);
 
 // API Security Headers
 app.use('/api', apiSecurityHeaders);
 
-// Global API Rate Limiter (500 requests per 15 minutes per IP — real-world friendly)
-// NOTE: Was 100 req/15min — too strict for real users browsing multiple pages.
+// Global API Rate Limiter (500 requests per 15 minutes per IP â€” real-world friendly)
+// NOTE: Was 100 req/15min â€” too strict for real users browsing multiple pages.
 // Auth endpoints use stricter separate limiters already.
 const globalApiLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
@@ -384,7 +387,7 @@ app.use((req, res, next) => {
 // API Routes
 
 // CSRF validation is now per-route via authenticatedCsrf middleware
-// (Global CSRF was broken — it ran before authenticate, so req.user was always undefined)
+// (Global CSRF was broken â€” it ran before authenticate, so req.user was always undefined)
 
 // Public store routes (no auth required)
 app.use('/api/store', storePublicRoutes);
@@ -412,6 +415,9 @@ app.use('/api/email', authenticatedCsrf, emailRoutes);
 app.use('/api/evolution', evolutionRoutes);
 app.use('/api/whatsapp-flows', whatsappFlowRoutes);
 app.use('/api/google-business', googleBusinessRoutes);
+app.use('/api/google-calendar', googleCalendarRoutes);
+app.use('/api/public-booking', publicBookingRoutes);
+app.use('/api/dashboard-widgets', dashboardWidgetsRoutes);
 app.use('/api/indiamart-email', indiamartEmailRoutes);
 app.use('/api/message-templates', messageTemplateRoutes);
 app.use('/api/integrations', integrationsRoutes);
@@ -425,7 +431,7 @@ app.use('/api/qwen-preview', qwenPreviewRoutes);
 app.use('/api/reports', reportsRoutes);
 app.use('/api/reviews', reviewsRoutes);
 app.use('/api/reviews/v2', reviewsV2Routes);
-// PUBLIC branding (login screen ke liye — auth se pehle chahiye) — MUST be
+// PUBLIC branding (login screen ke liye â€” auth se pehle chahiye) â€” MUST be
 // mounted BEFORE the authenticatedCsrf + settingsRoutes catch-all below.
 app.use('/api/settings', brandingRouter);
 // Authed settings (white-label save, theme, appointments settings)
@@ -439,8 +445,8 @@ app.use('/api/surveys', surveysRoutes);
 app.use('/api/subscriptions', authenticatedCsrf, subscriptionsRoutes);
 app.use('/api/super-admin', authenticatedCsrf, superAdminRoutes);
 app.use('/api/team', authenticatedCsrf, teamRoutes);
-// 2FA routes removed — two-step authentication disabled at user request.
-app.use('/api/webhooks/meta-leads', metaLeadsRoutes); // Meta Lead Ads — public; signature-verified
+// 2FA routes removed â€” two-step authentication disabled at user request.
+app.use('/api/webhooks/meta-leads', metaLeadsRoutes); // Meta Lead Ads â€” public; signature-verified
 app.use('/api/webhooks', webhooksRoutes);
 app.use('/api/whatsapp', authenticatedCsrf, whatsappRoutes);
 app.use('/api/whatsapp-media/cleanup', whatsappMediaCleanupRoutes);
@@ -471,7 +477,7 @@ app.use('/api/support-tickets', supportTicketsRoutes);
 app.use('/api/voice-calls', voiceCallsRoutes);
 app.use('/api/dograh/webhook', dograhWebhookRoutes);
 
-// Razorpay webhook — public endpoint for payment.captured / payment.failed events
+// Razorpay webhook â€” public endpoint for payment.captured / payment.failed events
 // Must be before CSRF/rate-limit to allow unauthenticated POST from Razorpay
 app.post('/api/payments/webhook', razorpayWebhook);
 app.post('/api/payments/verify', authenticate, verifyPaymentHandler);
@@ -511,7 +517,7 @@ app.use('/api/ava', avaRoutes);
 
 // Phase 3: Admin Platform Analytics (SUPER_ADMIN only)
 app.use('/api/admin', adminAnalyticsRoutes);
-// DLQ management — mount BEFORE generic /api/admin sub-apps that may shadow
+// DLQ management â€” mount BEFORE generic /api/admin sub-apps that may shadow
 app.use('/api/admin/queues', adminQueuesRoutes);
 
 // Audit log retention management (SUPER_ADMIN only)
@@ -520,7 +526,7 @@ app.use('/api/admin/audit-retention', auditRetentionRoutes);
 // Enterprise infrastructure management (SUPER_ADMIN only)
 app.use('/api/admin/infrastructure', adminInfrastructureRoutes);
 
-// Phase 3: Monitoring & Observability (no auth — for LB/monitoring tools)
+// Phase 3: Monitoring & Observability (no auth â€” for LB/monitoring tools)
 app.use('/api', monitoringRoutes);
 
 // Phase 4: Enterprise Data Export/Import
@@ -580,12 +586,12 @@ app.get('/health', (req, res) => {
   });
 });
 
-// §34: liveness = process is up (NO external dependencies — k8s/Coolify restart signal)
+// Â§34: liveness = process is up (NO external dependencies â€” k8s/Coolify restart signal)
 app.get('/live', (_req, res) => {
   res.status(200).json({ live: true, timestamp: new Date().toISOString() });
 });
 
-// §34: readiness = can serve traffic (DB must answer; Redis optional-degraded OK)
+// Â§34: readiness = can serve traffic (DB must answer; Redis optional-degraded OK)
 app.get('/ready', async (_req, res) => {
   try {
     await Promise.race([
@@ -598,7 +604,7 @@ app.get('/ready', async (_req, res) => {
   }
 });
 
-// Full detailed health check (includes DB query — use sparingly)
+// Full detailed health check (includes DB query â€” use sparingly)
 app.get('/health/details', async (req, res) => {
   try {
     const { getHealthCheck } = await import('./utils/healthCheck.js');
@@ -631,9 +637,9 @@ app.get('/health/ready', async (req, res) => {
     if (redisEnabled) {
       try {
         const { default: redisClient } = await import('./services/redis.service.js');
-        // redisClient may be null if not initialized — that's fine
+        // redisClient may be null if not initialized â€” that's fine
       } catch {
-        // Redis import failed — non-critical, continue
+        // Redis import failed â€” non-critical, continue
       }
     }
     res.json({ status: 'ready', timestamp: new Date().toISOString() });
@@ -642,7 +648,7 @@ app.get('/health/ready', async (req, res) => {
   }
 });
 
-// Serve uploads directory — with business ownership check when JWT is present
+// Serve uploads directory â€” with business ownership check when JWT is present
 app.use('/uploads', (req, res, next) => {
   // Extract businessId from URL path: /uploads/{businessId}/{category}/{filename}
   const pathParts = req.path.split('/').filter(Boolean);
@@ -660,7 +666,7 @@ app.use('/uploads', (req, res, next) => {
         return res.status(403).json({ success: false, error: 'Access denied' });
       }
     } catch {
-      // A token was supplied but is invalid/expired — reject rather than serve.
+      // A token was supplied but is invalid/expired â€” reject rather than serve.
       // Legitimate browser image loads send no Authorization header at all and
       // skip this branch entirely; only an explicitly bad token reaches here.
       return res.status(401).json({ success: false, error: 'Invalid token' });
@@ -696,7 +702,7 @@ if (NODE_ENV === 'production') {
 // Startup validation for critical secrets
 (async () => {
   try {
-    // Phase 5: Environment hardening — blocks insecure production configs
+    // Phase 5: Environment hardening â€” blocks insecure production configs
     const { validateProductionEnvironment, printEnvironmentReport } = await import('./middleware/env-hardening.js');
     const hardeningResult = validateProductionEnvironment();
     printEnvironmentReport(hardeningResult);
@@ -720,13 +726,13 @@ if (NODE_ENV === 'production') {
         fatal.push(`Placeholder secret(s) still in use: ${placeholderVars.join(', ')}. Generate real values (openssl rand).`);
       }
       if (fatal.length > 0) {
-        console.error('❌ FATAL: Production environment is misconfigured. Refusing to start:');
+        console.error('âŒ FATAL: Production environment is misconfigured. Refusing to start:');
         fatal.forEach((e) => console.error(`   ${e}`));
         console.error('   Set valid secrets and restart. See .env.example for how to generate each one.');
         process.exit(1);
       }
     } else if (!result.valid) {
-      console.warn('⚠️ Environment validation has issues (non-production — starting anyway).');
+      console.warn('âš ï¸ Environment validation has issues (non-production â€” starting anyway).');
     }
   } catch (e) {
     // Fallback basic check
@@ -744,7 +750,7 @@ if (NODE_ENV === 'production') {
 // Error handling middleware
 app.use((err: any, req: express.Request, res: express.Response, next: express.NextFunction) => {
   // If the response was already sent (e.g. an OAuth callback already issued a
-  // redirect and an async error fired afterwards), do NOT try to send again —
+  // redirect and an async error fired afterwards), do NOT try to send again â€”
   // that throws ERR_HTTP_HEADERS_SENT and surfaces to the client as a 502.
   if (res.headersSent) {
     logger.error('Error after headers sent (skipped second response):', {
@@ -782,7 +788,7 @@ process.on('unhandledRejection', (reason: any) => {
   // A single rejected promise (e.g. a response sent after the client
   // disconnected / request timed out, or a stray res.json) must NOT take
   // down the whole server. That caused a crash loop and site-wide 502s.
-  // Log it and keep serving — the offending request already failed.
+  // Log it and keep serving â€” the offending request already failed.
   console.error('UNHANDLED REJECTION (non-fatal, server continues):', reason);
   console.error('Stack:', reason?.stack);
   logger.error('Unhandled Rejection:', reason);
@@ -824,7 +830,7 @@ startIndiaMARTAutosync();
 
 // WhatsApp legacy queue drainer: sends rows stuck in 'queued' from before the
 // BullMQ dispatch path (or when Redis was down at enqueue time). Skips
-// BullMQ-dispatched rows — no double sends.
+// BullMQ-dispatched rows â€” no double sends.
 import { startWhatsAppQueueDrainer } from './services/whatsapp.service.js';
 startWhatsAppQueueDrainer();
 
