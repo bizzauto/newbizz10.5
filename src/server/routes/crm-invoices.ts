@@ -235,6 +235,16 @@ router.put('/:id/pay', authenticate, validate(markInvoicePaidSchema), async (req
       paymentMethod: req.body.paymentMethod || 'Bank Transfer',
     }, { businessId, actorId: req.user.id });
 
+    // Auto review request when invoice is paid
+    if (updated.contactId) {
+      try {
+        const { triggerAutoReview } = await import('./gbp-automation.js');
+        await triggerAutoReview(businessId, updated.contactId, 'invoice_paid', updated.id);
+      } catch (e: any) {
+        console.warn('[CRM] auto review request failed:', e?.message);
+      }
+    }
+
     res.json({ success: true, data: mapDocToInvoice(updated) });
   } catch (error: any) {
     console.error('Mark invoice paid error:', error);

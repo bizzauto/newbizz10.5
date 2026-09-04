@@ -1138,6 +1138,16 @@ router.patch('/orders/:id/status', requireRole('OWNER', 'ADMIN'), async (req: Au
             `<p>Hi ${full.contact.name || 'Customer'},</p><p>${message}</p><p>Total: ₹${full.total}</p>`
           ).catch(() => {});
         }
+
+        // Auto review request when order is delivered
+        if (status === 'delivered' && full.contact?.id) {
+          try {
+            const { triggerAutoReview } = await import('./gbp-automation.js');
+            await triggerAutoReview(req.user.businessId, full.contact.id, 'order_delivered', full.id);
+          } catch (e: any) {
+            console.warn('[Ecommerce] auto review request failed:', e?.message);
+          }
+        }
       } catch (e: any) {
         console.warn('[Ecommerce] order status notification failed:', e?.message);
       }
