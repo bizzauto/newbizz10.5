@@ -4,6 +4,7 @@ import { useAuthStore } from '../lib/authStore';
 import { useToast } from '../components/Toast';
 import { businessAPI, authAPI, settingsAPI } from '../lib/api';
 import AiKeysPanel from './AiKeysPanel';
+import ThemeSettingsPanel from './ThemeSettingsPanel';
 import { Save, Building, Phone, Mail, MapPin, Globe, Clock, Palette, Image, Lock, Loader2, ArrowRight, ExternalLink } from 'lucide-react';
 
 const API_URL = import.meta.env.VITE_API_URL || '';
@@ -535,6 +536,9 @@ export default function SettingsPage() {
           </button>
         </div>
       </form>
+
+      {/* Appearance Theme */}
+      <ThemeSettingsPanel />
 
       {/* BYOK: Customer's own AI provider keys */}
       <AiKeysPanel />

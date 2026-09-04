@@ -10,6 +10,7 @@ import NetworkStatus from './components/NetworkStatus';
 import { UIModeProvider } from './contexts/UIModeContext';
 import { DesignVariantProvider } from './contexts/DesignVariantContext';
 import { LanguageProvider } from './contexts/LanguageContext';
+import { ThemeProvider } from './contexts/ThemeContext';
 import { initMobilePush } from './lib/mobile-push';
 import PWAInstallBanner from './components/PWAInstallBanner';
 import CookieConsentBanner from './components/CookieConsentBanner';
@@ -993,7 +994,8 @@ export { ProtectedRoute, SuperAdminRoute };
 export default function AppWrapper() {
   return (
       <ErrorBoundary>
-        <LanguageProvider>
+        <ThemeProvider>
+      <LanguageProvider>
           <UIModeProvider>
             <DesignVariantProvider>
               <BrowserRouter>
@@ -1002,6 +1004,7 @@ export default function AppWrapper() {
             </DesignVariantProvider>
           </UIModeProvider>
         </LanguageProvider>
+    </ThemeProvider>
       </ErrorBoundary>
   );
 }
