@@ -135,7 +135,6 @@ const WebsiteBuilderProductPage = lazy(() => import('./components/WebsiteBuilder
 const ResellerDashboardPage = lazy(() => import('./components/ResellerDashboardPage'));
 const ResellerAuthPage = lazy(() => import('./components/ResellerAuthPage'));
 const WhiteLabelSettingsPage = lazy(() => import('./components/WhiteLabelSettingsPage'));
-const WaveSettings = lazy(() => import('./components/WaveSettings'));
 const PostHogSettings = lazy(() => import('./components/PostHogSettings'));
 const OneSignalSettings = lazy(() => import('./components/OneSignalSettings'));
 const BrevoEmailSettings = lazy(() => import('./components/BrevoEmailSettings'));
@@ -922,20 +921,6 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
-
-      {/* Wave Accounting Settings */}
-      <Route
-        path="/settings/wave"
-        element={
-          <ProtectedRoute>
-            <AuthLayout>
-              <WaveSettings />
-            </AuthLayout>
-          </ProtectedRoute>
-        }
-      />
-
-      {/* PostHog Analytics Settings */}
       <Route
         path="/settings/posthog"
         element={

@@ -10,7 +10,7 @@ import {
   FileText, Clock, Moon, Sun, Menu, X, Mail,
   Workflow, Link, GraduationCap, MessageCircle, FormInput, PenTool,
   CreditCard, Building2, PhoneOff, Camera, Upload, Store,
-  Globe, QrCode, Search, Key
+  Globe, QrCode, Search, Key, FileCheck, ExternalLink
 } from 'lucide-react';
 import { useAuthStore } from '../lib/authStore';
 import { useThemeStore } from '../lib/themeStore';
@@ -120,7 +120,7 @@ const settingsSections: { label: string; items: MenuItem[] }[] = [
       { id: '/dograh-settings', label: 'Voice AI', icon: <Bot size={20} /> },
       { id: '/snapshots', label: 'Snapshots', icon: <Camera size={20} /> },
       { id: '/audit-log', label: 'Audit Log', icon: <Shield size={20} />, roles: ['OWNER', 'ADMIN'] },
-      { id: '/settings/wave', label: 'Wave Accounting', icon: <Globe size={20} /> },
+      { id: 'https://invoice.bizzautoai.com', label: 'BillInvoice', icon: <FileCheck size={20} />, isExternal: true },
     ],
   },
 ];
@@ -392,7 +392,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
             return (
               <button
                 key={item.id}
-                onClick={() => navigate(item.id)}
+                onClick={() => item.id.startsWith("http") ? window.open(item.id, "_blank") : navigate(item.id)}
                 className={`shell-nav-item btn-press relative w-full flex items-center justify-between px-3 py-2.5 rounded-xl group ${
                   active ? 'shell-nav-item-active font-medium' : ''
                 }`}
@@ -425,7 +425,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => navigate(item.id)}
+                    onClick={() => item.id.startsWith("http") ? window.open(item.id, "_blank") : navigate(item.id)}
                     className={`shell-nav-item btn-press relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl group ${
                       active ? 'shell-nav-item-active font-medium' : ''
                     }`}
@@ -454,7 +454,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
                 return (
                   <button
                     key={item.id}
-                    onClick={() => navigate(item.id)}
+                    onClick={() => item.id.startsWith("http") ? window.open(item.id, "_blank") : navigate(item.id)}
                     className={`shell-nav-item btn-press relative w-full flex items-center gap-3 px-3 py-2.5 rounded-xl group ${
                       active ? 'shell-nav-item-active font-medium' : ''
                     }`}
@@ -764,7 +764,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
               {filteredMenuItems.filter(item => !bottomNavItems.find(b => b.id === item.id)).map((item) => (
                 <button
                   key={item.id}
-                  onClick={() => navigate(item.id)}
+                  onClick={() => item.id.startsWith("http") ? window.open(item.id, "_blank") : navigate(item.id)}
                   className={`flex flex-col items-center gap-1.5 p-3 rounded-xl transition-all ${
                     isActive(item.id)
                       ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
@@ -810,7 +810,7 @@ export default function AuthLayout({ children }: AuthLayoutProps) {
                     {section.items.map((item) => (
                       <button
                         key={item.id}
-                        onClick={() => navigate(item.id)}
+                        onClick={() => item.id.startsWith("http") ? window.open(item.id, "_blank") : navigate(item.id)}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all ${
                           isActive(item.id)
                             ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400'
