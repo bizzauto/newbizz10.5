@@ -11,7 +11,7 @@ import {
   Star, Tag, Calendar, BarChart3, ExternalLink,
   AlertCircle, CheckCircle, VolumeX
 , Loader, Server} from 'lucide-react';
-import apiClient, { whatsappAPI } from '../lib/api';
+import apiClient, { whatsappAPI, messageTemplateAPI } from '../lib/api';
 import { useIsMobile } from '../hooks/useViewport';
 import { useToast } from './Toast';
 import ClaudeWhatsAppSettings from './ClaudeWhatsAppSettings';

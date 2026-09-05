@@ -79,6 +79,22 @@ const BUILTIN_TEMPLATES: BuiltinTemplate[] = [
     content:
       'Hi {{name}}, how was your experience? ⭐\n\nIt takes 30 seconds: {{link}}\n\nYour feedback helps us improve — thank you!',
   },
+  // ===== LED / ELECTRONICS =====
+  { name: 'LED New Arrival', category: 'MARKETING', content: '✨ {{name}}, नए LED panels आ गए हैं!\n\n{{product}} — सिर्फ ₹{{price}}\n\nLimited stock! Reply INFO for details.' },
+  { name: 'LED Bulk Offer', category: 'MARKETING', content: '{{name}}, bulk order में extra discount! 💡\n\n10+ LED panels = 15% OFF\n20+ = 20% OFF + free delivery\n\nReply BULK for quote.' },
+  { name: 'LED Driver Promotion', category: 'MARKETING', content: 'Hi {{name}}! 🔌 LED drivers अब best price पर!\n\n{{product}} — {{offer}}\n\nGenuine products with warranty. Reply for details!' },
+  { name: 'SPD Safety Alert', category: 'MARKETING', content: '{{name}}, बरसात आ रही है! ⛈️\n\nSPD (Surge Protection Device) लगाओ — महंगे appliances safe रहेंगे.\n\n{{offer}} Reply for details!' },
+  { name: 'Sensor Promotion', category: 'MARKETING', content: 'Hi {{name}}! 💡 Automatic lights चाहिए?\n\nLDR sensors — light के आने-जाने से automatic on/off!\n\n{{offer}} Reply SENSOR for details!' },
+  // ===== RESTAURANT =====
+  { name: 'Restaurant Special', category: 'MARKETING', content: '{{name}}, आज का special dish! 🍽️\n\n{{dish}} — सिर्फ ₹{{price}}\n\nOrder now: {{phone}} or reply ORDER!' },
+  { name: 'Restaurant Offer', category: 'MARKETING', content: '{{name}}, आज dinner का plan? 🍴\n\n{{offer}} on all orders above ₹{{min_order}}\n\nBook your table now: {{phone}}' },
+  // ===== SALON =====
+  { name: 'Salon Booking', category: 'MARKETING', content: 'Hi {{name}}! 💇 Appointment लें और {{discount}} OFF पाएं!\n\n{{service}} available. Reply BOOK to schedule.' },
+  { name: 'Salon Reminder', category: 'MARKETING', content: '{{name}}, आपका next appointment कब? 💅\n\nIt has been {{days}} days since your last visit. Book now and get {{offer}}!' },
+  // ===== RETAIL / GENERAL =====
+  { name: 'Diwali Special', category: 'MARKETING', content: '🪔 {{name}}, Diwali की hardik shubhkamnayein!\n\nSpecial festive offer: {{offer}}\n\nLimited stock — reply NOW!' },
+  { name: 'Weekend Sale', category: 'MARKETING', content: '🛍️ {{name}}, weekend sale is LIVE!\n\n{{offer}}\n\nSaturday-Sunday only. Don\'t miss out! Reply SHOP.' },
+  { name: 'Loyalty Reward', category: 'MARKETING', content: 'Thank you for being loyal, {{name}}! 💙\n\nYou have earned {{points}} points! Redeem now: {{link}}' },
 ];
 
 function extractVariables(content: string): string[] {
