@@ -120,7 +120,7 @@ const settingsSections: { label: string; items: MenuItem[] }[] = [
       { id: '/dograh-settings', label: 'Voice AI', icon: <Bot size={20} /> },
       { id: '/snapshots', label: 'Snapshots', icon: <Camera size={20} /> },
       { id: '/audit-log', label: 'Audit Log', icon: <Shield size={20} />, roles: ['OWNER', 'ADMIN'] },
-      { id: 'https://invoice.bizzautoai.com', label: 'BillInvoice', icon: <FileCheck size={20} />, isExternal: true },
+      { id: 'https://invoice.bizzautoai.com/dashboard', label: 'BillInvoice', icon: <FileCheck size={20} />, isExternal: true },
     ],
   },
 ];
