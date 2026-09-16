@@ -174,6 +174,9 @@ export class ExternalIntegrationService {
         case 'zoho':
           result = await this.testZoho(apiKey, integration.config);
           break;
+        case 'apify':
+          result = await this.testApify(apiKey, integration.config);
+          break;
         case 'custom':
           result = await this.testCustom(apiKey, integration.config);
           break;
@@ -339,6 +342,28 @@ export class ExternalIntegrationService {
         userName: data.users?.[0]?.full_name,
         userEmail: data.users?.[0]?.email,
         role: data.users?.[0]?.role
+      }
+    };
+  }
+
+  private static async testApify(apiKey: string, _config: ExternalIntegrationConfig | null): Promise<TestIntegrationResult> {
+    // Apify API test — Apify account token (free tier includes platform credits)
+    const response = await fetch('https://api.apify.com/v2/users/me', {
+      headers: { Authorization: `Bearer ${apiKey}` },
+    });
+
+    if (!response.ok) {
+      const error = (await response.json().catch(() => ({}))) as any;
+      return { success: false, error: error.error?.message || `HTTP ${response.status}` };
+    }
+
+    const data = (await response.json()) as any;
+    return {
+      success: true,
+      details: {
+        username: data.data?.username,
+        plan: data.data?.plan?.name || data.data?.plan,
+        isPaying: data.data?.isPaying ?? false,
       }
     };
   }

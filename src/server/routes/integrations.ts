@@ -225,6 +225,13 @@ router.get('/providers/list', (req: AuthRequest, res) => {
       ],
     },
     {
+      id: 'apify',
+      name: 'Apify',
+      description: 'Run web scrapers & automation actors (Google Maps, Instagram, leads). Bring your own token — free tier included.',
+      authType: 'bearer',
+      configFields: [],
+    },
+    {
       id: 'custom',
       name: 'Custom REST API',
       description: 'Connect to any REST API with Bearer/Basic/Custom auth',

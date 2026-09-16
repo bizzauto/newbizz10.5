@@ -1,5 +1,26 @@
 ﻿# QA STATE - Session Continuity
 
+## Guardian Run 13 - Apify BYOK Integration
+
+**User goal:** har customer apna Apify token connect kare → free-tier actors (Google Maps/Instagram/FB/YouTube scrapers) CRM ke andar chalaye.
+
+### Implemented (BYOK, business-scoped)
+| Piece | Detail |
+|-------|--------|
+| Provider entry | integrations.ts providers list — connect UI auto-renders (generic modal) |
+| testApify | GET /v2/users/me → username/plan/isPaying; typed error mapping (401/402/429) |
+| apify.service.ts | requireKey (decrypted per-business key), getAccount, startRun (actorId regex `owner/name` guard, object-input guard), getRun (+idempotent cost record), getRunItems (limit clamp 1–1000), mapItemToContact (email validate, phone trim), importRunItems (dedupe phone/email intra-batch + vs DB, raw item in metadata, source='apify', tag support), getUsage (runs/cost/imports) |
+| apify.ts routes | status, actors, POST runs (OWNER/ADMIN), run status, items, import (OWNER/ADMIN), usage — all authenticate + businessId scoped |
+| Wiring | index.ts `/api/apify` mount + lib/api.ts apifyAPI client |
+| No migration | runs live on Apify (polled), spend in AiUsageLog(provider='apify', ~$0.25/CU), leads in contacts |
+
+### TDD evidence
+- First apify.test.ts run caught REAL bug: service used `api.apify.com/v21` (wrong) — fixed to v2 before any prod use
+- 16/16 tests pass; full regression 1706/1706 PASS (baseline 1690→1706)
+
+### Customer UX
+Settings → Integrations → Apify → paste token (apify.com free signup) → Test → runs actors from /api/apify (UI runner = future session if needed)
+
 ## Guardian Run 12 - 2026-09-09 (BYOK Email - per-user Brevo 300/day)
 
 **User goal:** har customer apna Brevo connect kare -> apna 300/day free quota -> platform cost zero, scale infinite.

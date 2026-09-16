@@ -257,6 +257,22 @@ export const evolutionAPI = {
   }) => apiClient.post('/evolution/rotation-settings', data),
 };
 
+// Apify BYOK — web scrapers & automation actors on the business's own token
+export const apifyAPI = {
+  getStatus: () => apiClient.get('/apify/status'),
+  getActors: () => apiClient.get('/apify/actors'),
+  startRun: (data: { actorId: string; input?: Record<string, unknown>; memoryMbs?: number; timeoutSecs?: number; build?: string }) =>
+    apiClient.post('/apify/runs', data),
+  getRun: (runId: string) => apiClient.get(`/apify/runs/${runId}`),
+  getRunItems: (runId: string, params?: { limit?: number; offset?: number; datasetId?: string }) =>
+    apiClient.get(`/apify/runs/${runId}/items`, { params }),
+  importRun: (runId: string, data?: { limit?: number; tag?: string }) =>
+    apiClient.post(`/apify/runs/${runId}/import`, data || {}),
+  importItems: (data: { items: Record<string, unknown>[]; limit?: number; tag?: string }) =>
+    apiClient.post('/apify/import', data),
+  getUsage: () => apiClient.get('/apify/usage'),
+};
+
 // WhatsApp Flow Builder (visual chatbot flows)
 export const whatsappFlowAPI = {
   list: () => apiClient.get('/whatsapp-flows'),
